@@ -1,12 +1,35 @@
-import { useStore } from '../store/useStore.js'
+import { useStore, hasData } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
-import { webauthnOK, passkeyLogin, passkeyRegister, api, BIO } from '../lib/api.js'
-import { hasData } from '../store/useStore.js'
+import { webauthnOK, passkeyLogin, passkeyRegister, api, BIO, createAppSessionWithSupabase } from '../lib/api.js'
+import { clearPendingRecoveryCode, createEmailAccount, getPendingRecoveryCode, savePendingRecoveryCode, signInWithEmail, signInWithGoogle, supabaseAuthConfigured } from '../lib/supabaseAuth.js'
 import { t } from '../lib/i18n.js'
 import { DEMO, REPO } from '../lib/demo.js'
 import { useState, useRef, useEffect } from 'react'
 import Icon from '../components/Icon.jsx'
 import { Button } from '../components/ui.jsx'
+
+function authErrorText(error) {
+  const message = String(error?.message || '')
+  if (/invalid login credentials/i.test(message)) return t('Email or password is incorrect.')
+  if (/user already registered|already been registered/i.test(message)) return t('An account already uses this email. Sign in instead.')
+  if (/email not confirmed/i.test(message)) return t('Confirm your email from the link we sent you, then sign in.')
+  if (/recovery code/i.test(message)) return t('That recovery code is invalid, already used, or belongs to another profile.')
+  if (/already linked to another account/i.test(message)) return t('That imported profile is already linked to another account.')
+  if (/supabase auth is not configured/i.test(message)) return t('Online sign-in is not configured yet. Add the Supabase Auth settings to the app and server environment.')
+  return message || t('Authentication failed. Please try again.')
+}
+
+function GuestWarning({ close }) {
+  const setGuest = useStore(s => s.setGuest)
+  return <>
+    <h3>{t('Continue as a guest?')}</h3>
+    <div className="card small muted" style={{ lineHeight: 1.55, margin: '12px 0 16px' }}>
+      {t('Your progress will stay only on this device and will not sync. You may lose it if you clear app data, uninstall GYMBOOK or change devices.')}
+    </div>
+    <Button variant="primary" onClick={() => { close(); setGuest(true) }}>{t('Continue as guest')}</Button>
+    <Button variant="ghost" onClick={close}>{t('Go back')}</Button>
+  </>
+}
 
 function RegisterSheet({ close }) {
   const { setUser, pushState, pullState } = useStore()
@@ -28,7 +51,7 @@ function RegisterSheet({ close }) {
     } catch (e) { if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') useUI.getState().toast(e.message || t('Registration failed')) }
   }
   return <>
-    <h3>{t('Create your profile')}</h3>
+    <h3>{t('Create a passkey profile')}</h3>
     <div className="muted small" style={{ marginBottom: 14 }}>{t('Pick a name, then confirm with {0}. The passkey is saved in your device — no password needed.', BIO)}</div>
     <input ref={ref} className="input" placeholder={t('Your name')} maxLength={40} value={name} onChange={e => setName(e.target.value)} />
     {inviteOnly && <>
@@ -44,17 +67,64 @@ function RegisterSheet({ close }) {
 
 export default function Login() {
   const { setUser, pullState, setGuest } = useStore()
-  const signIn = async () => {
+  const [mode, setMode] = useState('signin')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [recoveryCode, setRecoveryCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const authReady = supabaseAuthConfigured()
+
+  useEffect(() => {
+    const message = localStorage.getItem('gym_auth_error')
+    if (message) { setError(message); localStorage.removeItem('gym_auth_error') }
+  }, [])
+
+  const finishLogin = async (session, code = '') => {
+    if (!session?.access_token) throw new Error(t('Check your email to confirm your account, then sign in.'))
+    const user = await createAppSessionWithSupabase(session.access_token, code || getPendingRecoveryCode())
+    clearPendingRecoveryCode()
+    setUser(user)
+    await pullState()
+    useUI.getState().toast(t('Welcome, {0}', user.name))
+  }
+
+  const submit = async e => {
+    e.preventDefault()
+    setError(''); setNotice(''); setBusy(true)
+    savePendingRecoveryCode(recoveryCode)
+    try {
+      if (mode === 'signup') {
+        if (!name.trim()) throw new Error(t('Enter a name'))
+        const result = await createEmailAccount({ name, email, password })
+        if (result.confirmationRequired) setNotice(t('Account created. Check your email for a confirmation link before signing in.'))
+        else await finishLogin(result, recoveryCode)
+      } else {
+        await finishLogin(await signInWithEmail({ email, password }), recoveryCode)
+      }
+    } catch (e) { setError(authErrorText(e)) }
+    finally { setBusy(false) }
+  }
+
+  const google = async () => {
+    setError(''); setNotice(''); setBusy(true)
+    try { await signInWithGoogle(recoveryCode) }
+    catch (e) { setError(authErrorText(e)); setBusy(false) }
+  }
+
+  const signInPasskey = async () => {
     try { const u = await passkeyLogin(); setUser(u); await pullState(); useUI.getState().toast(t('Welcome back, {0}', u.name)) }
     catch (e) { if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') useUI.getState().toast(e.message || t('Sign-in failed')) }
   }
+
   const head = <>
     <div style={{ fontSize: 54, display: 'flex', justifyContent: 'center', color: 'var(--acc)' }}><Icon name="dumbbell" /></div>
     <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-.028em', margin: '10px 0 4px' }}>GYMBOOK</h1>
   </>
   const wrap = { display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '78vh', textAlign: 'center' }
 
-  // Demo build: no backend to sign in against — the only way in is the local guest profile.
   if (DEMO) return (
     <div className="narrow" style={wrap}>
       {head}
@@ -63,24 +133,42 @@ export default function Login() {
       <div className="card small muted" style={{ textAlign: 'left', marginTop: 16 }}>
         {t('This demo runs entirely in your browser on example data — nothing is sent anywhere. Passkey sign-in and sync across your devices come with the GYMBOOK server, which you get by self-hosting it.')}
       </div>
-      <div className="dim small" style={{ marginTop: 22, lineHeight: 1.6 }}>
-        <a href={REPO} target="_blank" rel="noopener">{t('Self-host it in a minute →')}</a>
-      </div>
+      <div className="dim small" style={{ marginTop: 22, lineHeight: 1.6 }}><a href={REPO} target="_blank" rel="noopener">{t('Self-host it in a minute →')}</a></div>
     </div>
   )
 
   return (
-    <div className="narrow" style={wrap}>
+    <div className="narrow" style={{ ...wrap, padding: '24px 0' }}>
       {head}
-      <div className="muted" style={{ marginBottom: 34 }}>{t('Your workouts. Your weights. Your profile.')}</div>
-      {webauthnOK() ? <>
-        <Button variant="primary" icon="person" onClick={signIn}>{t('Sign in with passkey')}</Button>
-        <div style={{ height: 10 }} />
-        <Button icon="sparkles" onClick={() => useUI.getState().openSheet(close => <RegisterSheet close={close} />)}>{t('Create new profile')}</Button>
-        <div style={{ height: 10 }} />
-      </> : <div className="card small muted" style={{ textAlign: 'left' }}>{t("This browser doesn't support passkeys — you can still use GYMBOOK locally on this device.")}</div>}
-      <Button variant="ghost" className="dim" onClick={() => setGuest(true)}>{t('Continue without account')}</Button>
-      <div className="dim small" style={{ marginTop: 26, lineHeight: 1.5 }}>{t('Passkeys use {0} — no passwords.', BIO)}<br />{t('Each profile keeps its own plan, workouts & body weight.')}</div>
+      <div className="muted" style={{ marginBottom: 20 }}>{t('Your workouts. Your weights. Your profile.')}</div>
+
+      {authReady ? <>
+        <input className="input" type="password" autoComplete="off" placeholder={t('One-time recovery code (optional)')} maxLength={40} value={recoveryCode}
+          onChange={e => setRecoveryCode(e.target.value.toUpperCase())} aria-label={t('One-time recovery code (optional)')} />
+        <div className="dim small" style={{ textAlign: 'left', margin: '-4px 2px 8px', lineHeight: 1.4 }}>{t('Enter this only if you are connecting a profile imported from your previous GYMBOOK installation.')}</div>
+        <Button onClick={google} disabled={busy}>{t('Continue with Google')}</Button>
+        <div className="dim small" style={{ margin: '16px 0' }}>{t('or use email')}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+          <Button className={mode === 'signin' ? 'tinted' : 'plain'} onClick={() => { setMode('signin'); setError(''); setNotice('') }}>{t('Sign in')}</Button>
+          <Button className={mode === 'signup' ? 'tinted' : 'plain'} onClick={() => { setMode('signup'); setError(''); setNotice('') }}>{t('Create account')}</Button>
+        </div>
+        <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
+          {mode === 'signup' && <input className="input" autoComplete="name" placeholder={t('Your name')} maxLength={40} value={name} onChange={e => setName(e.target.value)} required />}
+          <input className="input" type="email" autoComplete="email" placeholder={t('Email')} value={email} onChange={e => setEmail(e.target.value)} required />
+          <input className="input" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} placeholder={t('Password')} minLength={6} value={password} onChange={e => setPassword(e.target.value)} required />
+          <Button variant="primary" type="submit" disabled={busy}>{busy ? t('Please wait…') : mode === 'signup' ? t('Create account') : t('Sign in')}</Button>
+        </form>
+        {error && <div role="alert" className="small" style={{ color: 'var(--red)', textAlign: 'left', marginTop: 12 }}>{error}</div>}
+        {notice && <div role="status" className="card small muted" style={{ textAlign: 'left', marginTop: 12 }}>{notice}</div>}
+      </> : <div className="card small muted" style={{ textAlign: 'left' }}>{t('Online sign-in is not configured yet. Add the Supabase Auth settings to the app and server environment.')}</div>}
+
+      {webauthnOK() && <>
+        <div className="dim small" style={{ margin: '18px 0 8px' }}>{t('Already have a passkey profile?')}</div>
+        <Button variant="ghost" onClick={signInPasskey}>{t('Sign in with passkey')}</Button>
+      </>}
+      <Button variant="ghost" className="dim" onClick={() => useUI.getState().openSheet(close => <GuestWarning close={close} />)}>{t('Continue as a guest')}</Button>
+      <div className="dim small" style={{ marginTop: 12, lineHeight: 1.5 }}>{t('Guest progress stays on this device and is not synced.')}</div>
+      {authReady && <div className="dim small" style={{ marginTop: 16, lineHeight: 1.5 }}>{t('Your account keeps your profile and workout progress synced across devices.')}</div>}
     </div>
   )
 }

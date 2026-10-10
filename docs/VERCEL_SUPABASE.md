@@ -1,6 +1,6 @@
 # Vercel + Supabase deployment
 
-This deployment serves the Vite frontend from Vercel and routes `/api/*` to a Vercel Node function. The API keeps GYMBOOK's existing passkey and session-cookie behavior; Supabase Postgres stores the API's JSON snapshot. The service-role/database credential is server-side only.
+This deployment serves the Vite frontend from Vercel and routes `/api/*` to a Vercel Node function. Supabase Auth handles email/password and Google sign-in; the API exchanges verified Supabase sessions for its existing HttpOnly app cookie, while Postgres stores workout snapshots. Existing passkey sign-in remains available. Passwords and access tokens are not stored in the workout snapshot.
 
 ## Supabase setup
 
@@ -25,19 +25,29 @@ This deployment serves the Vite frontend from Vercel and routes `/api/*` to a Ve
 ## Vercel setup
 
 1. Import the repository into Vercel with the repository root as the project root. `vercel.json` installs the root/API/frontend dependencies and builds `frontend/dist`.
-2. Add these server-side environment variables to Vercel (Production and Preview only if needed):
+2. In Supabase **Authentication → URL Configuration**, set the production site URL and add the exact Vercel URL and local app URL (for example `http://localhost:8080/` in Docker or the Vite URL in development) to the redirect allow list.
+3. In Supabase **Authentication → Providers**, enable **Email** and **Google**. To enable Google, create a Google OAuth Web client, add the Supabase project's callback URL shown on the Google provider page as an authorized redirect URI, then paste the Google client ID and secret into Supabase. Also add the Vercel site's origin as an authorized JavaScript origin in Google Cloud.
+4. Add these environment variables to Vercel. The `VITE_` values are public client configuration; use only the Supabase publishable/anon key, never a `service_role` key:
 
-   - `SUPABASE_DB_URL`: the Transaction pooler connection string.
+   - `SUPABASE_DB_URL`: the Transaction pooler connection string (server only).
+   - `SUPABASE_URL`: the Supabase project URL (server only).
+   - `SUPABASE_ANON_KEY`: the Supabase publishable/anon key (server only, used to validate sessions).
+   - `VITE_SUPABASE_URL`: the same Supabase project URL (available during frontend build).
+   - `VITE_SUPABASE_ANON_KEY`: the same publishable/anon key (available during frontend build).
    - `RP_ID`: the exact hostname Vercel assigns, without `https://` (for example `gymbook-example.vercel.app`).
    - `ORIGIN`: the matching origin, with scheme and no trailing slash (for example `https://gymbook-example.vercel.app`).
    - `RP_NAME`: `GYMBOOK`.
-   - `INVITE_ONLY`: `1` during the first account restoration, so the one-time recovery code field is shown.
+   - `INVITE_ONLY`: optional; when `1`, it restricts passkey profile creation. Email/Google accounts remain available.
    - `VITE_IMG_BASE`: `https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/images/`
    - `VITE_GIF_BASE`: `https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/videos/`
 
-3. Deploy. Use the final, stable hostname before registering a new passkey; changing `RP_ID` later invalidates passkeys.
-4. Open the deployed site, choose **Create profile**, enter the existing profile name and its one-time recovery code. This creates a new passkey for the deployed hostname while keeping the imported user ID and workout data.
-5. Verify `/api/health` reports `ok: true` and open the profile to confirm its history. Keep the local Docker instance and `data` folder as a backup until this is confirmed.
+5. Deploy. Use the final, stable hostname before registering a new passkey; changing `RP_ID` later invalidates passkeys.
+6. On first sign-in with Google or email, enter the one-time recovery code for an imported profile in the optional recovery-code field. This links the Supabase Auth account to that profile and preserves its existing workout history. The code is consumed once. New users leave the field blank.
+7. Verify `/api/health` reports `ok: true`, then sign in and confirm that the expected profile and history appear. Keep the local Docker instance and `data` folder as a backup until confirmed.
+
+Email signup starts a session immediately when Supabase email confirmations are disabled. If confirmations are enabled, GYMBOOK asks the user to confirm their email and then sign in. The client stores only Supabase's refreshable session locally; the server stores the internal profile link and workout state.
+
+For local Docker, add `SUPABASE_URL` and `SUPABASE_ANON_KEY` to the existing root `.env` (keep its other settings) before rebuilding the web image. `.env.example` shows the expected names. For local Vite development, copy `frontend/.env.example` to `frontend/.env.local` and set the same two values; also set `SUPABASE_URL` and `SUPABASE_ANON_KEY` for the API process.
 
 ## Notes and limits
 
