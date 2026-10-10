@@ -4,6 +4,11 @@
       "id": "piYdx5GveQarq8u9",
       "name": "Arvids",
       "created": "2026-08-03T18:06:47.577Z"
+    },
+    {
+      "id": "-37ARklFtaomXJO6",
+      "name": "sebas arias",
+      "created": "2026-10-09T02:28:30.645Z"
     }
   ],
   "creds": [
@@ -15,6 +20,16 @@
       "transports": [
         "internal",
         "hybrid"
+      ]
+    },
+    {
+      "id": "Yzx1cz_2iLNvEqMSPt2XNQ",
+      "userId": "-37ARklFtaomXJO6",
+      "publicKey": "pQECAyYgASFYIFhEMrCAu6amu3b05elclX_VXtQjtyD1XXg26L4n3s1SIlgghuceqOH9GSRBHtXpGznP-BzWgoDNxopRJFkAJPLx6Cw",
+      "counter": 0,
+      "transports": [
+        "hybrid",
+        "internal"
       ]
     }
   ],
