@@ -1,4 +1,4 @@
-/* GYMBOOK API — passkey auth and per-user state.
+/* GYMBOOK API — Supabase Auth, passkeys and per-user state.
    Local Docker uses JSON files; Vercel uses a Supabase JSONB snapshot. */
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -17,6 +17,8 @@ const DATA = process.env.DATA_DIR || '/data';
 const RP_ID = process.env.RP_ID || 'localhost';
 const ORIGIN = process.env.ORIGIN || 'http://localhost:8080';
 const RP_NAME = process.env.RP_NAME || 'GYMBOOK';
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 // Admin dashboard (issue): admins are matched by uid; INVITE_ONLY gates new signups behind a
 // code the admin generates. Both default off so a fresh self-hosted instance stays open.
 const ADMIN_UIDS = (process.env.ADMIN_UIDS || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -35,7 +37,7 @@ if (!IS_VERCEL) fs.mkdirSync(DATA, { recursive: true });
 /* ---------- secret + db ---------- */
 const secretFile = path.join(DATA, 'secret');
 const dbFile = path.join(DATA, 'db.json');
-const emptyDb = () => ({ users: [], creds: [], subs: [], invites: [], states: {}, challenges: {}, presence: {}, sessionSecret: null, vapid: null });
+const emptyDb = () => ({ users: [], creds: [], subs: [], invites: [], authUsers: {}, states: {}, challenges: {}, presence: {}, sessionSecret: null, vapid: null });
 let SECRET = '';
 let db = emptyDb();
 if (!IS_VERCEL) {
@@ -45,6 +47,7 @@ if (!IS_VERCEL) {
 }
 db.subs = db.subs || [];
 db.invites = db.invites || [];
+db.authUsers = db.authUsers || {};
 db.states = db.states || {};
 db.challenges = db.challenges || {};
 db.presence = db.presence || {};
@@ -288,6 +291,58 @@ const routes = {
     const user = readSession(req);
     if (!user) return json(res, 401, { error: 'not signed in' });
     json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) } });
+  },
+
+  // Exchange a Supabase Auth access token for the app's existing HttpOnly session cookie.
+  // Supabase remains responsible for passwords and Google OAuth; the app database stores only
+  // a profile id/name and workout state, never credentials or access tokens.
+  'POST /api/auth/supabase': async (req, res) => {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY)
+      return json(res, 503, { error: 'Supabase Auth is not configured on the server' });
+    const body = await readBody(req);
+    const token = String(body.access_token || '');
+    if (!token || token.length > 8192) return json(res, 400, { error: 'access token required' });
+    let response;
+    try {
+      response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(8000)
+      });
+    } catch { return json(res, 502, { error: 'could not reach Supabase Auth' }); }
+    if (!response.ok) return json(res, 401, { error: 'Supabase session is invalid or expired' });
+    const authUser = await response.json().catch(() => null);
+    if (!authUser?.id) return json(res, 401, { error: 'Supabase session is invalid' });
+    const authId = String(authUser.id);
+    const metadata = authUser.user_metadata || {};
+    const emailName = String(authUser.email || '').split('@')[0];
+    const name = String(metadata.full_name || metadata.name || emailName || 'GYMBOOK user').trim().slice(0, 40);
+    let profileId = db.authUsers[authId] || authId;
+    let user = db.users.find(u => u.id === profileId);
+    const recoveryCode = String(body.recovery_code || '').trim().toUpperCase();
+    if (!user && recoveryCode) {
+      const invite = db.invites.find(i => i.code === recoveryCode && !i.usedBy && !i.revoked && i.restoreUserId);
+      if (!invite) return json(res, 403, { error: 'invalid or already used recovery code' });
+      user = db.users.find(u => u.id === invite.restoreUserId);
+      if (!user) return json(res, 403, { error: 'the recovery code does not match an existing profile' });
+      if (user.disabled) return json(res, 403, { error: 'this account has been disabled' });
+      const linkedElsewhere = Object.entries(db.authUsers).some(([otherAuthId, otherProfileId]) =>
+        otherAuthId !== authId && otherProfileId === user.id
+      );
+      if (linkedElsewhere) return json(res, 409, { error: 'this profile is already linked to another account' });
+      invite.usedBy = user.id;
+      invite.usedAt = new Date().toISOString();
+      user.linkedAuthUserId = authId;
+      profileId = user.id;
+      db.authUsers[authId] = profileId;
+    }
+    if (user?.disabled) return json(res, 403, { error: 'this account has been disabled' });
+    if (!user) {
+      user = { id: authId, name, created: new Date().toISOString(), authProvider: 'supabase' };
+      db.users.push(user);
+      db.authUsers[authId] = authId;
+    }
+    saveDb();
+    json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) } }, { 'Set-Cookie': sessionCookie(user) });
   },
 
   'POST /api/register/options': async (req, res) => {

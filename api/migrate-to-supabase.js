@@ -37,6 +37,8 @@ const snapshot = {
   creds: [],
   // Browser push subscriptions are scoped to the old localhost origin.
   subs: [],
+  // Supabase Auth user id → app profile id, populated when each person signs in.
+  authUsers: {},
   invites: [...(oldDb.invites || []), ...restoreInvites],
   states,
   challenges: {},

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { api } from '../lib/api.js'
+import { api, createAppSessionWithSupabase } from '../lib/api.js'
+import { clearPendingRecoveryCode, getAuthSession, getPendingRecoveryCode, processOAuthCallback, signOutSupabase } from '../lib/supabaseAuth.js'
 import { localTZ } from '../lib/format.js'
 import { registerCustom } from '../lib/exercises.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
@@ -123,6 +124,7 @@ export const useStore = create((set, get) => {
 
     async signOut() {
       try { await get().pushState(); await api('/api/logout', { method: 'POST', body: '{}' }) } catch (e) { /* */ }
+      await signOutSupabase(false)
       clearLocalSession()
     },
 
@@ -134,6 +136,7 @@ export const useStore = create((set, get) => {
     async signOutAll() {
       await get().pushState()   // never throws — stores gym_dirty and moves on when offline
       await api('/api/logout/all', { method: 'POST', body: '{}' })
+      await signOutSupabase(true)
       clearLocalSession()
     },
 
@@ -172,9 +175,33 @@ export const useStore = create((set, get) => {
         set({ ready: true })
         return
       }
-      try {
-        const me = await api('/api/me')
-        get().setUser(me.user)
+      let authSession = null
+      try { authSession = await processOAuthCallback() }
+      catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Google sign-in failed. Please try again.') }
+
+      let appUser = null
+      if (authSession?.access_token) {
+        try {
+          appUser = await createAppSessionWithSupabase(authSession.access_token, getPendingRecoveryCode())
+          clearPendingRecoveryCode()
+        }
+        catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not connect your account to GYMBOOK.') }
+      }
+      if (!authSession) {
+        try { appUser = (await api('/api/me')).user }
+        catch {
+          get().setUser(null)
+          try {
+            authSession = await getAuthSession()
+            if (authSession?.access_token) {
+              appUser = await createAppSessionWithSupabase(authSession.access_token, getPendingRecoveryCode())
+              clearPendingRecoveryCode()
+            }
+          } catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not connect your account to GYMBOOK.') }
+        }
+      }
+      if (appUser) {
+        get().setUser(appUser)
         await get().pullState()
         // Re-stamp the reminder's timezone on every load — keeps it correct if you're travelling,
         // without needing to revisit Settings.
@@ -182,8 +209,6 @@ export const useStore = create((set, get) => {
         if (get().S.reminder?.on && get().S.reminder.tz !== tz) {
           get().update(s => { s.reminder = { ...s.reminder, tz } })
         }
-      } catch (e) {
-        if (e.status === 401) get().setUser(null)
       }
       set({ ready: true })
     }
