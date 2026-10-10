@@ -1,0 +1,7 @@
+data
+media
+migration-backup
+.env
+.env.*
+frontend/node_modules
+api/node_modules

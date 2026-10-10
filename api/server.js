@@ -1,9 +1,10 @@
-/* opengym-api — passkey (WebAuthn) auth + per-user state storage for openGym
-   No framework, JSON-file storage, signed session cookies.               */
+/* GYMBOOK API — passkey auth and per-user state.
+   Local Docker uses JSON files; Vercel uses a Supabase JSONB snapshot. */
 import http from 'node:http';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import postgres from 'postgres';
 import {
   generateRegistrationOptions, verifyRegistrationResponse,
   generateAuthenticationOptions, verifyAuthenticationResponse
@@ -11,10 +12,11 @@ import {
 import webpush from 'web-push';
 
 const PORT = +(process.env.PORT || 3000);
+const IS_VERCEL = process.env.VERCEL === '1';
 const DATA = process.env.DATA_DIR || '/data';
 const RP_ID = process.env.RP_ID || 'localhost';
 const ORIGIN = process.env.ORIGIN || 'http://localhost:8080';
-const RP_NAME = process.env.RP_NAME || 'openGym';
+const RP_NAME = process.env.RP_NAME || 'GYMBOOK';
 // Admin dashboard (issue): admins are matched by uid; INVITE_ONLY gates new signups behind a
 // code the admin generates. Both default off so a fresh self-hosted instance stays open.
 const ADMIN_UIDS = (process.env.ADMIN_UIDS || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -28,20 +30,26 @@ const MAX_BODY = 5 * 1024 * 1024;
 // Secure cookies require HTTPS; over plain http://localhost the flag would drop the cookie
 const SECURE = /^https:/i.test(ORIGIN) ? ' Secure;' : '';
 
-fs.mkdirSync(DATA, { recursive: true });
+if (!IS_VERCEL) fs.mkdirSync(DATA, { recursive: true });
 
 /* ---------- secret + db ---------- */
 const secretFile = path.join(DATA, 'secret');
-if (!fs.existsSync(secretFile)) fs.writeFileSync(secretFile, crypto.randomBytes(32).toString('hex'), { mode: 0o600 });
-const SECRET = fs.readFileSync(secretFile, 'utf8').trim();
-
 const dbFile = path.join(DATA, 'db.json');
-let db = { users: [], creds: [], subs: [], invites: [] };
-try { db = JSON.parse(fs.readFileSync(dbFile, 'utf8')); } catch {}
+const emptyDb = () => ({ users: [], creds: [], subs: [], invites: [], states: {}, challenges: {}, presence: {}, sessionSecret: null, vapid: null });
+let SECRET = '';
+let db = emptyDb();
+if (!IS_VERCEL) {
+  if (!fs.existsSync(secretFile)) fs.writeFileSync(secretFile, crypto.randomBytes(32).toString('hex'), { mode: 0o600 });
+  SECRET = fs.readFileSync(secretFile, 'utf8').trim();
+  try { db = { ...emptyDb(), ...JSON.parse(fs.readFileSync(dbFile, 'utf8')) }; } catch {}
+}
 db.subs = db.subs || [];
 db.invites = db.invites || [];
+db.states = db.states || {};
+db.challenges = db.challenges || {};
+db.presence = db.presence || {};
 const isAdmin = user => !!user && (user.admin === true || ADMIN_UIDS.includes(user.id));
-function saveDb() { atomicWrite(dbFile, JSON.stringify(db, null, 2)); }
+function saveDb() { if (!IS_VERCEL) atomicWrite(dbFile, JSON.stringify(db, null, 2)); }
 function atomicWrite(file, content) {
   const tmp = file + '.tmp';
   fs.writeFileSync(tmp, content);
@@ -49,16 +57,23 @@ function atomicWrite(file, content) {
 }
 const stateFile = uid => path.join(DATA, 'state-' + uid.replace(/[^a-zA-Z0-9_-]/g, '') + '.json');
 function readState(uid) {
+  if (IS_VERCEL) return db.states?.[uid] || null;
   try { return JSON.parse(fs.readFileSync(stateFile(uid), 'utf8')); } catch { return null; }
+}
+function writeState(uid, state) {
+  if (IS_VERCEL) { db.states[uid] = state; return; }
+  atomicWrite(stateFile(uid), JSON.stringify(state));
 }
 
 /* ---------- push notifications (Web Push / VAPID) ---------- */
 const vapidFile = path.join(DATA, 'vapid.json');
-let vapid;
-try { vapid = JSON.parse(fs.readFileSync(vapidFile, 'utf8')); }
-catch { vapid = webpush.generateVAPIDKeys(); fs.writeFileSync(vapidFile, JSON.stringify(vapid), { mode: 0o600 }); }
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || (SECURE ? ORIGIN : 'mailto:admin@localhost');
-webpush.setVapidDetails(VAPID_SUBJECT, vapid.publicKey, vapid.privateKey);
+let vapid;
+if (!IS_VERCEL) {
+  try { vapid = JSON.parse(fs.readFileSync(vapidFile, 'utf8')); }
+  catch { vapid = webpush.generateVAPIDKeys(); fs.writeFileSync(vapidFile, JSON.stringify(vapid), { mode: 0o600 }); }
+  webpush.setVapidDetails(VAPID_SUBJECT, vapid.publicKey, vapid.privateKey);
+}
 
 async function sendPush(userId, payload) {
   const subs = db.subs.filter(s => s.userId === userId);
@@ -86,6 +101,8 @@ async function sendPush(userId, payload) {
 // this only fires when the tab was backgrounded/suspended and never got to cancel it itself.
 const restTimers = new Map(); // userId -> Timeout
 function scheduleRestTimer(userId, sec) {
+  // Serverless functions cannot keep a process alive until the timer expires.
+  if (IS_VERCEL) return;
   const t = restTimers.get(userId);
   if (t) clearTimeout(t);
   restTimers.set(userId, setTimeout(() => {
@@ -201,7 +218,7 @@ function sessionCookie(user) {
 const clearCookie = `gymsid=; Path=/; Max-Age=0; HttpOnly;${SECURE} SameSite=Lax`;
 
 /* ---------- challenge store (in-memory, 5 min TTL) ---------- */
-const challenges = new Map(); // cid -> {challenge, name?, uid?, exp}
+let challenges = new Map(); // cid -> {challenge, name?, uid?, exp}
 function putChallenge(data) {
   const cid = crypto.randomBytes(16).toString('base64url');
   challenges.set(cid, { ...data, exp: Date.now() + 5 * 60000 });
@@ -213,7 +230,7 @@ function takeChallenge(cid) {
   if (!c || c.exp < Date.now()) return null;
   return c;
 }
-setInterval(() => { for (const [k, v] of challenges) if (v.exp < Date.now()) challenges.delete(k); }, 60000).unref();
+if (!IS_VERCEL) setInterval(() => { for (const [k, v] of challenges) if (v.exp < Date.now()) challenges.delete(k); }, 60000).unref();
 
 /* ---------- helpers ---------- */
 function json(res, code, obj, extraHeaders) {
@@ -223,6 +240,15 @@ function json(res, code, obj, extraHeaders) {
 }
 function readBody(req) {
   return new Promise((resolve, reject) => {
+    if (req.body !== undefined) {
+      try {
+        const parsed = typeof req.body === 'string' || Buffer.isBuffer(req.body)
+          ? JSON.parse(Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body)
+          : req.body;
+        resolve(parsed || {});
+      } catch { reject(new Error('bad json')); }
+      return;
+    }
     let size = 0; const chunks = [];
     req.on('data', d => {
       size += d.length;
@@ -241,7 +267,7 @@ const b64uToBuf = s => Buffer.from(s, 'base64url');
 /* ---------- live presence (in-memory) ---------- */
 // Clients heartbeat /api/activity while a workout is on screen; the admin dashboard reads who's
 // live. Purely ephemeral — never persisted. Expires shortly after the last ping.
-const presence = new Map();               // uid -> { name, exIdx, exTotal, setsDone, setsTotal, startedAt, updatedAt }
+let presence = new Map();                  // uid -> { name, exIdx, exTotal, setsDone, setsTotal, startedAt, updatedAt }
 const PRESENCE_TTL = 70000;               // ~3.5× the 20s client heartbeat
 function livePresence(uid) {
   const p = presence.get(uid);
@@ -249,7 +275,7 @@ function livePresence(uid) {
   if (Date.now() - p.updatedAt > PRESENCE_TTL) { presence.delete(uid); return null; }
   return p;
 }
-setInterval(() => { for (const [k, v] of presence) if (Date.now() - v.updatedAt > PRESENCE_TTL) presence.delete(k); }, 30000).unref();
+if (!IS_VERCEL) setInterval(() => { for (const [k, v] of presence) if (Date.now() - v.updatedAt > PRESENCE_TTL) presence.delete(k); }, 30000).unref();
 
 /* ---------- routes ---------- */
 const routes = {
@@ -269,9 +295,15 @@ const routes = {
     const name = String(body.name || '').trim().slice(0, 40);
     if (!name) return json(res, 400, { error: 'name required' });
     const code = String(body.code || '').trim().toUpperCase();
-    if (INVITE_ONLY && !db.invites.some(i => i.code === code && !i.usedBy && !i.revoked))
+    const inviteForCode = db.invites.find(i => i.code === code && !i.usedBy && !i.revoked);
+    if (INVITE_ONLY && !inviteForCode)
       return json(res, 403, { error: 'a valid invite code is required' });
-    const uid = crypto.randomBytes(12).toString('base64url');
+    const restoreUser = inviteForCode?.restoreUserId
+      ? db.users.find(u => u.id === inviteForCode.restoreUserId)
+      : null;
+    if (inviteForCode?.restoreUserId && (!restoreUser || restoreUser.name.toLocaleLowerCase() !== name.toLocaleLowerCase()))
+      return json(res, 403, { error: 'the recovery code does not match this profile' });
+    const uid = restoreUser?.id || crypto.randomBytes(12).toString('base64url');
     const options = await generateRegistrationOptions({
       rpName: RP_NAME, rpID: RP_ID,
       userID: Buffer.from(uid), userName: name, userDisplayName: name,
@@ -279,7 +311,7 @@ const routes = {
       authenticatorSelection: { residentKey: 'required', userVerification: 'preferred' },
       excludeCredentials: []
     });
-    const cid = putChallenge({ challenge: options.challenge, name, uid, code });
+    const cid = putChallenge({ challenge: options.challenge, name, uid, code, restoreUserId: restoreUser?.id || null });
     json(res, 200, { cid, options });
   },
 
@@ -301,14 +333,23 @@ const routes = {
     const { credential } = verification.registrationInfo;
     if (db.creds.find(x => x.id === credential.id)) return json(res, 409, { error: 'credential already registered' });
     // Re-check the invite at the last moment (it may have been used/revoked since options), then burn it.
-    let invite = null;
+    let invite = db.invites.find(i => i.code === c.code && !i.usedBy && !i.revoked) || null;
     if (INVITE_ONLY) {
-      invite = db.invites.find(i => i.code === c.code && !i.usedBy && !i.revoked);
       if (!invite) return json(res, 403, { error: 'invite code is no longer valid — ask for a new one' });
     }
-    const user = { id: c.uid, name: c.name, created: new Date().toISOString() };
-    if (invite) { user.invitedBy = invite.code; invite.usedBy = user.id; invite.usedAt = user.created; }
-    db.users.push(user);
+    let user;
+    if (c.restoreUserId) {
+      invite = db.invites.find(i => i.code === c.code && i.restoreUserId === c.restoreUserId && !i.usedBy && !i.revoked);
+      user = db.users.find(u => u.id === c.restoreUserId);
+      if (!invite || !user || user.name.toLocaleLowerCase() !== c.name.toLocaleLowerCase())
+        return json(res, 403, { error: 'the recovery code is no longer valid' });
+      invite.usedBy = user.id;
+      invite.usedAt = new Date().toISOString();
+    } else {
+      user = { id: c.uid, name: c.name, created: new Date().toISOString() };
+      if (invite && INVITE_ONLY) { user.invitedBy = invite.code; invite.usedBy = user.id; invite.usedAt = user.created; }
+      db.users.push(user);
+    }
     db.creds.push({
       id: credential.id, userId: user.id,
       publicKey: Buffer.from(credential.publicKey).toString('base64url'),
@@ -375,10 +416,7 @@ const routes = {
   'GET /api/data': async (req, res) => {
     const user = readSession(req);
     if (!user) return json(res, 401, { error: 'not signed in' });
-    try {
-      const state = JSON.parse(fs.readFileSync(stateFile(user.id), 'utf8'));
-      json(res, 200, { state });
-    } catch { json(res, 200, { state: null }); }
+    json(res, 200, { state: readState(user.id) });
   },
 
   'PUT /api/data': async (req, res) => {
@@ -387,7 +425,7 @@ const routes = {
     const body = await readBody(req);
     if (!body.state || typeof body.state !== 'object') return json(res, 400, { error: 'state required' });
     delete body.state.active;              // in-progress workouts stay device-local
-    atomicWrite(stateFile(user.id), JSON.stringify(body.state));
+    writeState(user.id, body.state);
     json(res, 200, { ok: true, ts: body.state._ts || null });
   },
 
@@ -417,7 +455,7 @@ const routes = {
   'POST /api/push/test': async (req, res) => {
     const user = readSession(req);
     if (!user) return json(res, 401, { error: 'not signed in' });
-    await sendPush(user.id, { title: 'openGym', body: 'Test notification ✅ — this is what alerts look like.', tag: 'test' });
+    await sendPush(user.id, { title: 'GYMBOOK', body: 'Test notification ✅ — this is what alerts look like.', tag: 'test' });
     json(res, 200, { ok: true });
   },
 
@@ -541,7 +579,7 @@ const routes = {
   }
 };
 
-http.createServer(async (req, res) => {
+async function dispatch(req, res) {
   const url = new URL(req.url, 'http://x');
   const key = req.method + ' ' + url.pathname;
   const handler = routes[key];
@@ -551,4 +589,55 @@ http.createServer(async (req, res) => {
     console.error(key, e);
     if (!res.headersSent) json(res, 500, { error: 'server error' });
   }
-}).listen(PORT, () => console.log(`gym-api on :${PORT} (rpID=${RP_ID}, origin=${ORIGIN})`));
+}
+
+function captureResponse(realRes) {
+  let status = 200;
+  let headers = {};
+  let body = '';
+  let ended = false;
+  return {
+    get headersSent() { return ended; },
+    writeHead(code, values = {}) { status = code; headers = { ...headers, ...values }; ended = true; },
+    end(value = '') { body = value; ended = true; },
+    flush() { if (!realRes.headersSent) realRes.writeHead(status, headers); realRes.end(body); }
+  };
+}
+
+async function dispatchVercel(req, res) {
+  const databaseUrl = process.env.SUPABASE_DB_URL;
+  if (!databaseUrl) return json(res, 500, { error: 'SUPABASE_DB_URL is not configured' });
+  const sql = postgres(databaseUrl, { max: 1, prepare: false, ssl: 'require', connect_timeout: 10 });
+  const captured = captureResponse(res);
+  try {
+    await sql.begin(async tx => {
+      const rows = await tx`select payload from public.opengym_snapshot where id = 1 for update`;
+      if (!rows.length) throw new Error('Supabase schema is missing; run supabase/001_opengym_snapshot.sql first');
+      db = { ...emptyDb(), ...rows[0].payload };
+      SECRET = db.sessionSecret || crypto.randomBytes(32).toString('hex');
+      db.sessionSecret = SECRET;
+      vapid = db.vapid || webpush.generateVAPIDKeys();
+      db.vapid = vapid;
+      webpush.setVapidDetails(VAPID_SUBJECT, vapid.publicKey, vapid.privateKey);
+      challenges = new Map(Object.entries(db.challenges || {}));
+      presence = new Map(Object.entries(db.presence || {}));
+      await dispatch(req, captured);
+      db.challenges = Object.fromEntries(challenges);
+      db.presence = Object.fromEntries(presence);
+      await tx`update public.opengym_snapshot set payload = ${JSON.stringify(db)}::jsonb, updated_at = now() where id = 1`;
+    });
+    captured.flush();
+  } catch (e) {
+    console.error('Vercel/Supabase request failed', e);
+    if (!res.headersSent) json(res, 500, { error: 'server storage unavailable' });
+  } finally {
+    await sql.end({ timeout: 2 }).catch(() => {});
+  }
+}
+
+export default async function handler(req, res) {
+  if (IS_VERCEL) return dispatchVercel(req, res);
+  return dispatch(req, res);
+}
+
+if (!IS_VERCEL) http.createServer(dispatch).listen(PORT, () => console.log(`gym-api on :${PORT} (rpID=${RP_ID}, origin=${ORIGIN})`));
