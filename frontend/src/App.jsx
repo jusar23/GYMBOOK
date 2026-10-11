@@ -31,7 +31,12 @@ const MAIN_TABS = new Set(['/home', '/plan', '/workout', '/stats', '/library'])
 function applyPrefs(theme, accent) {
   const de = document.documentElement
   de.dataset.theme = theme === 'light' ? 'light' : 'dark'
-  de.dataset.accent = ACCENTS[accent] ? accent : 'lime'
+  const accentKey = ACCENTS[accent] ? accent : 'lime'
+  const colors = ACCENTS[accentKey]
+  de.dataset.accent = accentKey
+  de.style.setProperty('--acc', de.dataset.theme === 'light' ? colors.light : colors.dark)
+  de.style.setProperty('--acc-2', de.dataset.theme === 'light' ? colors.light : colors.dark)
+  de.style.setProperty('--on-acc', de.dataset.theme === 'light' ? '#fff' : '#000')
   const meta = document.querySelector('meta[name="theme-color"]')
   if (meta) meta.content = de.dataset.theme === 'light' ? '#f2f2f7' : '#000000'
 }
