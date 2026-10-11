@@ -408,17 +408,36 @@ function usageMap(st) {
   st.workouts.forEach(w => w.entries.forEach(e => { u[e.id] = (u[e.id] || 0) + 1 }))
   return u
 }
+const MUSCLE_FILTERS = {
+  'upper arms': [
+    { label: 'biceps', targets: ['biceps'] },
+    { label: 'triceps', targets: ['triceps'] },
+  ],
+  'upper legs': [
+    { label: 'glutes', targets: ['glutes'] },
+    { label: 'hamstrings', targets: ['hamstrings'] },
+    { label: 'quadriceps', targets: ['quads', 'quadriceps'] },
+    { label: 'abductors', targets: ['abductors'] },
+    { label: 'adductors', targets: ['adductors'] },
+  ],
+}
+const QUICK_FILTERS = BODYPARTS.flatMap(part =>
+  MUSCLE_FILTERS[part]
+    ? MUSCLE_FILTERS[part].map(({ label, targets }) => ({ key: `muscle:${label}`, label, targets }))
+    : [{ key: part, label: part }]
+)
 function ExercisePicker({ onPick, close }) {
   const st = useStore(s => s.S)
   const usage = usageMap(st)
   const [q, setQ] = useState('')
-  const [bp, setBp] = useState('')          // '' = all, '★' = chosen, else a body part
+  const [bp, setBp] = useState('')          // '' = all, '★' = chosen, otherwise a body part or target muscle
   const [eq, setEq] = useState('')          // '' = any equipment
   const [shown, setShown] = useState(50)
   const ql = q.toLowerCase().trim()
   const all = allExercises(st)
+  const muscleTargets = QUICK_FILTERS.find(f => f.key === bp)?.targets
   let base = all.filter(e =>
-    (bp === '★' ? usage[e.id] : (!bp || e.bp === bp)) &&
+    (bp === '★' ? usage[e.id] : muscleTargets ? muscleTargets.includes(e.tg) : (!bp || e.bp === bp)) &&
     (!ql || e.n.toLowerCase().includes(ql) || e.tg.includes(ql) || e.eq.includes(ql) || (e.desc || '').toLowerCase().includes(ql)))
   if (bp === '★') base = [...base].sort((a, b) => (usage[b.id] - usage[a.id]) || (a.n < b.n ? -1 : 1))
   const eqOpts = equipmentOf(base)
@@ -427,13 +446,16 @@ function ExercisePicker({ onPick, close }) {
   const f = eqOn ? base.filter(e => e.eq === eqOn) : base
   const chosenCount = Object.keys(usage).length
   return <>
-    <h3>{t('Add exercise')}</h3>
+    <div className="sheet-full-head">
+      <button className="iconbtn" onClick={close} aria-label={t('Cancel')}><Icon name="chevronLeft" /></button>
+      <h3>{t('Add exercise')}</h3>
+    </div>
     <div className="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
       <input className="input" placeholder={t('Search {0} exercises…', all.length)} value={q} onChange={e => { setQ(e.target.value); setShown(50) }} /></div>
     <div className="chips" style={{ margin: eqOpts.length > 1 ? '10px 0 6px' : '10px 0' }}>
       {chosenCount > 0 && <button className={'chip' + (bp === '★' ? ' on' : '')} onClick={() => { setBp('★'); setEq(''); setShown(50) }}><Icon name="starFill" style={{ fontSize: 12, display: 'inline-block', marginRight: 4, verticalAlign: '-1px' }} />{t('Chosen')} ({chosenCount})</button>}
       <button className={'chip nocap' + (!bp ? ' on' : '')} onClick={() => { setBp(''); setEq(''); setShown(50) }}>{t('All')}</button>
-      {BODYPARTS.map(b => <button key={b} className={'chip' + (bp === b ? ' on' : '')} onClick={() => { setBp(b); setEq(''); setShown(50) }}>{t(b)}</button>)}
+      {QUICK_FILTERS.map(({ key, label }) => <button key={key} className={'chip' + (bp === key ? ' on' : '')} onClick={() => { setBp(key); setEq(''); setShown(50) }}>{t(label)}</button>)}
     </div>
     {eqOpts.length > 1 && <div className="chips" style={{ marginBottom: 10 }}>
       <button className={'chip nocap' + (!eqOn ? ' on' : '')} onClick={() => { setEq(''); setShown(50) }}>{t('Any equipment')}</button>
@@ -453,7 +475,7 @@ function ExercisePicker({ onPick, close }) {
     {f.length > shown && <><div style={{ height: 8 }} /><Button onClick={() => setShown(s => s + 50)}>{t('Show more')}</Button></>}
   </>
 }
-export const exercisePicker = onPick => ui().openSheet(close => <ExercisePicker onPick={onPick} close={close} />)
+export const exercisePicker = onPick => ui().openSheet(close => <ExercisePicker onPick={onPick} close={close} />, { kind: 'full', locked: true })
 
 /* ============================ exercise config ============================ */
 // Progression settings for one exercise (issue #17). Shown inside the config sheet because

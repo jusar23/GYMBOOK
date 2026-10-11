@@ -11,12 +11,15 @@ import { Button } from '../components/ui.jsx'
 
 export default function Library() {
   const S = useStore(s => s.S)
+  const update = useStore(s => s.update)
   const [q, setQ] = useState('')
   const [bp, setBp] = useState('')
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [eq, setEq] = useState('')
   const [shown, setShown] = useState(40)
   const ql = q.toLowerCase().trim()
-  const base = allExercises(S).filter(e => (!bp || e.bp === bp) && (!ql || e.n.toLowerCase().includes(ql) || e.tg.includes(ql) || e.eq.includes(ql) || (e.desc || '').toLowerCase().includes(ql)))
+  const favorites = new Set(S.favoriteEx || [])
+  const base = allExercises(S).filter(e => (!favoritesOnly || favorites.has(e.id)) && (!bp || e.bp === bp) && (!ql || e.n.toLowerCase().includes(ql) || e.tg.includes(ql) || e.eq.includes(ql) || (e.desc || '').toLowerCase().includes(ql)))
   const eqOpts = equipmentOf(base)
   // Drop the equipment filter if the search narrowed it away, so you never hit a dead end.
   const eqOn = eqOpts.includes(eq) ? eq : ''
@@ -27,7 +30,8 @@ export default function Library() {
     <div className="search" style={{ marginBottom: 10 }}><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
       <input className="input" placeholder={t('Search…')} value={q} onChange={e => { setQ(e.target.value); setShown(40) }} /></div>
     <div className="chips" style={{ marginBottom: eqOpts.length > 1 ? 8 : 12 }}>
-      <button className={'chip nocap' + (!bp ? ' on' : '')} onClick={() => { setBp(''); setEq(''); setShown(40) }}>{t('All')}</button>
+      <button className={'chip nocap' + (!bp && !favoritesOnly ? ' on' : '')} onClick={() => { setBp(''); setFavoritesOnly(false); setEq(''); setShown(40) }}>{t('All')}</button>
+      <button className={'chip' + (favoritesOnly ? ' on' : '')} onClick={() => { setFavoritesOnly(v => !v); setEq(''); setShown(40) }}>{t('Favorites')}</button>
       {BODYPARTS.map(b => <button key={b} className={'chip' + (bp === b ? ' on' : '')} onClick={() => { setBp(b); setEq(''); setShown(40) }}>{t(b)}</button>)}
     </div>
     {eqOpts.length > 1 && <div className="chips" style={{ marginBottom: 12 }}>
@@ -41,10 +45,15 @@ export default function Library() {
       </div>
       {f.slice(0, shown).map(e => {
         const best = bestWeightFor(S, e.id)
+        const favorite = favorites.has(e.id)
         return <div key={e.id} className="item" onClick={() => exerciseDetailSheet(e)}>
           <Thumb ex={e} />
           <div className="grow"><div className="tt capitalize">{e.n}</div><div className="ss capitalize">{t(e.tg || e.bp)} · {t(e.eq)}</div></div>
           {best > 0 && <span className="tag acc">{fmtNum(best)}</span>}
+          <Button size="sm" variant={favorite ? 'tinted' : 'plain'} icon={favorite ? 'starFill' : 'star'} aria-label={t(favorite ? 'Remove from favorites' : 'Add to favorites')} title={t(favorite ? 'Remove from favorites' : 'Add to favorites')} onClick={ev => {
+            ev.stopPropagation()
+            update(s => { s.favoriteEx = (s.favoriteEx || []).includes(e.id) ? s.favoriteEx.filter(id => id !== e.id) : [...(s.favoriteEx || []), e.id] })
+          }} />
           <Button size="sm" variant="tinted" icon="plus" onClick={ev => { ev.stopPropagation(); addToRoutineSheet(e) }}>{t('Plan')}</Button>
         </div>
       })}

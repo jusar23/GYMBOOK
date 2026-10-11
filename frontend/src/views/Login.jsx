@@ -153,6 +153,7 @@ export default function Login() {
   return (
     <div className="narrow login-screen" style={{ ...wrap, padding: '24px 0' }}>
       {head}
+      <div className="login-price-notice">{t('30 days free, then $1/month')}</div>
 
       {authReady ? recoveryMode ? <>
         <div className="muted small" style={{ margin: '12px 0' }}>{t('Choose a new password for your GYMBOOK account.')}</div>

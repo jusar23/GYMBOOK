@@ -413,6 +413,10 @@ h4.sec{
 }
 .login-screen .input{border:1px solid var(--acc)}
 .login-screen .muted,.login-screen .dim{color:var(--label-2)}
+.login-price-notice{
+  align-self:center;margin:4px 0 12px;padding:7px 12px;border-radius:999px;
+  color:var(--acc);background:var(--acc-soft);font-size:14px;font-weight:600;
+}
 .password-field{position:relative}
 .password-field .input{padding-right:48px}
 .password-visibility-toggle{
@@ -699,6 +703,16 @@ h4.sec{
 @keyframes sheetup{from{transform:translateY(100%)}to{transform:none}}
 .sheet .grab{width:36px;height:5px;border-radius:99px;background:var(--label-4);margin:6px auto 14px}
 .sheet h3{font-size:20px;font-weight:600;letter-spacing:-.021em;margin-bottom:14px}
+.sheet-full{
+  position:absolute;inset:0;height:100vh;height:100dvh;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  background:var(--bg);color:var(--label);
+  padding:calc(10px + var(--sat)) 18px calc(20px + var(--sab));
+}
+.sheet-full-head{
+  display:flex;align-items:center;gap:12px;margin-bottom:8px;
+}
+.sheet-full-head h3{font-size:20px;font-weight:600;letter-spacing:-.021em;margin:0}
 .center{
   position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
   width:min(84vw,300px);background:var(--bg-el);border-radius:var(--r-lg);padding:20px;

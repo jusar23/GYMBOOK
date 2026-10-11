@@ -45,6 +45,9 @@ function Sheet({ sheet }) {
   }, [])
 
   const close = () => closeSheet(sheet.id)
+  if (sheet.kind === 'full') {
+    return <div className="sheet-full">{sheet.render(close)}</div>
+  }
   if (sheet.kind === 'center') {
     return (
       <div>
