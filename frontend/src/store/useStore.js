@@ -211,6 +211,14 @@ export const useStore = create((set, get) => {
         return
       }
 
+      // A fresh visitor has no app session to restore. Show the login screen without
+      // waiting for a round trip to the API (or Supabase) just to confirm that fact.
+      // Existing signed-in users and OAuth callbacks still take the full restore path.
+      if (!authSession && !localStorage.getItem('gym_user')) {
+        set({ ready: true, signingIn: false })
+        return
+      }
+
       let appUser = null
       let initialState
       let initialStateFetched = false

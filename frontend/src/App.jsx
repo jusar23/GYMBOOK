@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useStore } from './store/useStore.js'
 import { useUI } from './store/useUI.js'
@@ -15,15 +15,15 @@ import Modals from './components/Modals.jsx'
 import Toast from './components/Toast.jsx'
 import RestTimer from './components/RestTimer.jsx'
 import Login from './views/Login.jsx'
-import Home from './views/Home.jsx'
-import Plan from './views/Plan.jsx'
-import RoutineEdit from './views/RoutineEdit.jsx'
-import Workout from './views/Workout.jsx'
-import Stats from './views/Stats.jsx'
-import History from './views/History.jsx'
-import Library from './views/Library.jsx'
-import Settings from './views/Settings.jsx'
-import Admin from './views/Admin.jsx'
+const Home = lazy(() => import('./views/Home.jsx'))
+const Plan = lazy(() => import('./views/Plan.jsx'))
+const RoutineEdit = lazy(() => import('./views/RoutineEdit.jsx'))
+const Workout = lazy(() => import('./views/Workout.jsx'))
+const Stats = lazy(() => import('./views/Stats.jsx'))
+const History = lazy(() => import('./views/History.jsx'))
+const Library = lazy(() => import('./views/Library.jsx'))
+const Settings = lazy(() => import('./views/Settings.jsx'))
+const Admin = lazy(() => import('./views/Admin.jsx'))
 
 bindUI(useUI)   // lets the shared controls open sheets without importing the store at module scope
 
@@ -82,18 +82,20 @@ function Shell() {
         {authed && <div className="app-brand">GYMBOOK</div>}
         <ErrorBoundary>
           {!authed ? <Login /> : (
-            <Routes>
-              <Route path="/home" element={<Home />} />
-              <Route path="/plan" element={<Plan />} />
-              <Route path="/plan/r/:id" element={<RoutineEdit />} />
-              <Route path="/workout" element={<Workout />} />
-              <Route path="/stats" element={<Stats />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/admin" element={user?.admin ? <Admin /> : <Navigate to="/home" replace />} />
-              <Route path="*" element={<Navigate to="/home" replace />} />
-            </Routes>
+            <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading GYMBOOK"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
+              <Routes>
+                <Route path="/home" element={<Home />} />
+                <Route path="/plan" element={<Plan />} />
+                <Route path="/plan/r/:id" element={<RoutineEdit />} />
+                <Route path="/workout" element={<Workout />} />
+                <Route path="/stats" element={<Stats />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/library" element={<Library />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/admin" element={user?.admin ? <Admin /> : <Navigate to="/home" replace />} />
+                <Route path="*" element={<Navigate to="/home" replace />} />
+              </Routes>
+            </Suspense>
           )}
         </ErrorBoundary>
       </div>
