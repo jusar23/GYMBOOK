@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore, DEF, hasData } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
-import { ACCENTS, todayISO, localTZ } from '../lib/format.js'
+import { ACCENTS, ACCENTS_LIGHT, todayISO, localTZ } from '../lib/format.js'
 import { effortOf } from '../lib/history.js'
 import { api, createAppSessionWithSupabase, webauthnOK, passkeyLogin, passkeyRegister, IS_ANDROID } from '../lib/api.js'
 import { getAuthSession } from '../lib/supabaseAuth.js'
@@ -172,7 +172,7 @@ export default function Settings() {
         <div className="swatches">
           {Object.entries(ACCENTS).map(([k, c]) => (
             <button key={k} className={'swatch' + ((S.accent || 'lime') === k ? ' on' : '')}
-              style={{ background: c }} onClick={() => update(s => { s.accent = k })} aria-label={k} />
+              style={{ '--swatch-dark': c, '--swatch-light': ACCENTS_LIGHT[k] || c }} onClick={() => update(s => { s.accent = k })} aria-label={t(k)} />
           ))}
         </div>
       </div>
