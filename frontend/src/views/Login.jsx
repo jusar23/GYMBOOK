@@ -1,7 +1,7 @@
 import { useStore, hasData } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { passkeyRegister, api, BIO, createAppSessionWithSupabase } from '../lib/api.js'
-import { clearPendingRecoveryCode, createEmailAccount, getPendingRecoveryCode, signInWithEmail, signInWithGoogle, supabaseAuthConfigured } from '../lib/supabaseAuth.js'
+import { cancelPasswordRecovery, clearPendingRecoveryCode, createEmailAccount, getPendingRecoveryCode, isPasswordRecovery, requestPasswordReset, signInWithEmail, signInWithGoogle, supabaseAuthConfigured, updateRecoveredPassword } from '../lib/supabaseAuth.js'
 import { t } from '../lib/i18n.js'
 import { DEMO, REPO } from '../lib/demo.js'
 import { useState, useRef, useEffect } from 'react'
@@ -68,9 +68,11 @@ function RegisterSheet({ close }) {
 export default function Login() {
   const { setUser, pullState, setGuest, setSigningIn } = useStore()
   const [mode, setMode] = useState('signin')
+  const [recoveryMode, setRecoveryMode] = useState(isPasswordRecovery)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -99,9 +101,19 @@ export default function Login() {
 
   const submit = async e => {
     e.preventDefault()
-    setError(''); setNotice(''); setBusy(true); setSigningIn(true)
+    const loadingApp = mode !== 'forgot' && !recoveryMode
+    setError(''); setNotice(''); setBusy(true)
+    if (loadingApp) setSigningIn(true)
     try {
-      if (mode === 'signup') {
+      if (recoveryMode) {
+        if (password !== confirmPassword) throw new Error(t('Passwords do not match.'))
+        await updateRecoveredPassword(password)
+        setRecoveryMode(false); setMode('signin'); setPassword(''); setConfirmPassword('')
+        setNotice(t('Your password has been changed. Sign in with your new password.'))
+      } else if (mode === 'forgot') {
+        await requestPasswordReset(email)
+        setNotice(t('If an account exists for that email, we sent a password reset link. Check your inbox.'))
+      } else if (mode === 'signup') {
         if (!name.trim()) throw new Error(t('Enter a name'))
         const result = await createEmailAccount({ name, email, password })
         if (result.confirmationRequired) setNotice(t('Account created. Check your email for a confirmation link before signing in.'))
@@ -110,7 +122,7 @@ export default function Login() {
         await finishLogin(await signInWithEmail({ email, password }))
       }
     } catch (e) { setError(authErrorText(e)) }
-    finally { setBusy(false); setSigningIn(false) }
+    finally { setBusy(false); if (loadingApp) setSigningIn(false) }
   }
 
   const google = async () => {
@@ -142,26 +154,45 @@ export default function Login() {
     <div className="narrow login-screen" style={{ ...wrap, padding: '24px 0' }}>
       {head}
 
-      {authReady ? <>
+      {authReady ? recoveryMode ? <>
+        <div className="muted small" style={{ margin: '12px 0' }}>{t('Choose a new password for your GYMBOOK account.')}</div>
+        <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
+          <div className="password-field">
+            <input className="input" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder={t('New password')} minLength={6} value={password} onChange={e => setPassword(e.target.value)} required />
+            <button className="password-visibility-toggle" type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? t('Hide password') : t('Show password')} aria-pressed={showPassword} title={showPassword ? t('Hide password') : t('Show password')}><Icon name={showPassword ? 'eyeOff' : 'eye'} size={20} /></button>
+          </div>
+          <div className="password-field">
+            <input className="input" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder={t('Confirm new password')} minLength={6} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+            <button className="password-visibility-toggle" type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? t('Hide password') : t('Show password')} aria-pressed={showPassword} title={showPassword ? t('Hide password') : t('Show password')}><Icon name={showPassword ? 'eyeOff' : 'eye'} size={20} /></button>
+          </div>
+          <Button variant="primary" type="submit" disabled={busy}>{busy ? t('Please wait…') : t('Save new password')}</Button>
+        </form>
+        {error && <div role="alert" className="small" style={{ color: 'var(--red)', textAlign: 'left', marginTop: 12 }}>{error}</div>}
+        <Button variant="ghost" className="dim" onClick={() => { cancelPasswordRecovery(); setRecoveryMode(false); setPassword(''); setConfirmPassword(''); setError('') }}>{t('Back to sign in')}</Button>
+      </> : <>
+        {mode !== 'forgot' && <>
         <Button className="google-btn" onClick={google} disabled={busy}>Continue with Google</Button>
         <div className="dim small" style={{ margin: '16px 0' }}>{t('or use email')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
           <Button className={mode === 'signin' ? 'tinted' : 'plain'} onClick={() => { setMode('signin'); setError(''); setNotice('') }}>{t('Sign in')}</Button>
           <Button className={mode === 'signup' ? 'tinted' : 'plain'} onClick={() => { setMode('signup'); setError(''); setNotice('') }}>{t('Create account')}</Button>
         </div>
+        </>}
         <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
           {mode === 'signup' && <input className="input" autoComplete="name" placeholder={t('Your name')} maxLength={40} value={name} onChange={e => setName(e.target.value)} required />}
           <input className="input" type="email" autoComplete="email" placeholder={t('Email')} value={email} onChange={e => setEmail(e.target.value)} required />
-          <div className="password-field">
+          {mode !== 'forgot' && <div className="password-field">
             <input className="input" type={showPassword ? 'text' : 'password'} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} placeholder={t('Password')} minLength={6} value={password} onChange={e => setPassword(e.target.value)} required />
             <button className="password-visibility-toggle" type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? t('Hide password') : t('Show password')} aria-pressed={showPassword} title={showPassword ? t('Hide password') : t('Show password')}>
               <Icon name={showPassword ? 'eyeOff' : 'eye'} size={20} />
             </button>
-          </div>
-          <Button variant="primary" type="submit" disabled={busy}>{busy ? t('Please wait…') : mode === 'signup' ? t('Create account') : t('Sign in')}</Button>
+          </div>}
+          <Button variant="primary" type="submit" disabled={busy}>{busy ? t('Please wait…') : mode === 'forgot' ? t('Send reset link') : mode === 'signup' ? t('Create account') : t('Sign in')}</Button>
         </form>
         {error && <div role="alert" className="small" style={{ color: 'var(--red)', textAlign: 'left', marginTop: 12 }}>{error}</div>}
         {notice && <div role="status" className="card small muted" style={{ textAlign: 'left', marginTop: 12 }}>{notice}</div>}
+        {mode === 'signin' && <Button variant="ghost" className="dim" onClick={() => { setMode('forgot'); setError(''); setNotice('') }}>{t('Forgot password?')}</Button>}
+        {mode === 'forgot' && <Button variant="ghost" className="dim" onClick={() => { setMode('signin'); setError(''); setNotice('') }}>{t('Back to sign in')}</Button>}
       </> : <div className="card small muted" style={{ textAlign: 'left' }}>{t('Online sign-in is not configured yet. Add the Supabase Auth settings to the app and server environment.')}</div>}
 
       <Button variant="ghost" className="dim" onClick={() => useUI.getState().openSheet(close => <GuestWarning close={close} />)}>{t('Continue as a guest')}</Button>

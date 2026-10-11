@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { api, createAppSessionWithSupabase } from '../lib/api.js'
-import { clearPendingRecoveryCode, getAuthSession, getPendingRecoveryCode, processOAuthCallback, signOutSupabase } from '../lib/supabaseAuth.js'
+import { clearPendingRecoveryCode, getAuthSession, getPendingRecoveryCode, isPasswordRecovery, processOAuthCallback, signOutSupabase } from '../lib/supabaseAuth.js'
 import { localTZ } from '../lib/format.js'
 import { registerCustom } from '../lib/exercises.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
@@ -202,6 +202,13 @@ export const useStore = create((set, get) => {
       let authSession = null
       try { authSession = await processOAuthCallback() }
       catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Google sign-in failed. Please try again.') }
+
+      // A recovery link grants a temporary Supabase session only for setting a new
+      // password. Do not create a GYMBOOK app session until the user signs in again.
+      if (authSession && isPasswordRecovery()) {
+        set({ ready: true, signingIn: false })
+        return
+      }
 
       // An explicit sign-out takes precedence over existing cookies/tokens, but a fresh OAuth
       // callback must be allowed to finish after the user starts a new Google sign-in.

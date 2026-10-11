@@ -5,6 +5,9 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 const SESSION_KEY = 'gym_supabase_session_v1'
 const OAUTH_KEY = 'gym_supabase_oauth_v1'
 const RECOVERY_KEY = 'gym_pending_recovery_code'
+const PASSWORD_RECOVERY_FLOW_KEY = 'gym_password_recovery_flow_v1'
+const PASSWORD_RECOVERY_VERIFIER_KEY = 'gym_password_recovery_verifier_v1'
+const PASSWORD_RECOVERY_KEY = 'gym_password_recovery_v1'
 
 export const supabaseAuthConfigured = () => !!(SUPABASE_URL && SUPABASE_KEY)
 export const savePendingRecoveryCode = code => {
@@ -13,6 +16,51 @@ export const savePendingRecoveryCode = code => {
 }
 export const getPendingRecoveryCode = () => sessionStorage.getItem(RECOVERY_KEY) || ''
 export const clearPendingRecoveryCode = () => sessionStorage.removeItem(RECOVERY_KEY)
+export const isPasswordRecovery = () => sessionStorage.getItem(PASSWORD_RECOVERY_KEY) === '1'
+
+export async function requestPasswordReset(email) {
+  requireConfig()
+  const verifier = randomVerifier()
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
+  const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  const redirectTo = `${window.location.origin}${window.location.pathname}`
+  // localStorage lets the email link finish in a new tab in the same browser.
+  localStorage.setItem(PASSWORD_RECOVERY_VERIFIER_KEY, verifier)
+  localStorage.setItem(PASSWORD_RECOVERY_FLOW_KEY, '1')
+  try {
+    await authRequest(`recover?redirect_to=${encodeURIComponent(redirectTo)}`, {
+      email: email.trim(), code_challenge: challenge, code_challenge_method: 's256'
+    })
+  } catch (error) {
+    localStorage.removeItem(PASSWORD_RECOVERY_VERIFIER_KEY)
+    localStorage.removeItem(PASSWORD_RECOVERY_FLOW_KEY)
+    throw error
+  }
+}
+
+export async function updateRecoveredPassword(password) {
+  const session = readSession()
+  if (!session?.access_token || !isPasswordRecovery()) throw new Error('This password reset link is invalid or has expired. Request a new one.')
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: 'PUT',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password })
+  })
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(data.msg || data.message || data.error_description || data.error || 'Could not update the password.')
+  localStorage.removeItem(SESSION_KEY)
+  sessionStorage.removeItem(PASSWORD_RECOVERY_KEY)
+  localStorage.removeItem(PASSWORD_RECOVERY_FLOW_KEY)
+  localStorage.removeItem(PASSWORD_RECOVERY_VERIFIER_KEY)
+  return data
+}
+
+export function cancelPasswordRecovery() {
+  localStorage.removeItem(SESSION_KEY)
+  sessionStorage.removeItem(PASSWORD_RECOVERY_KEY)
+  localStorage.removeItem(PASSWORD_RECOVERY_FLOW_KEY)
+  localStorage.removeItem(PASSWORD_RECOVERY_VERIFIER_KEY)
+}
 
 function requireConfig() {
   if (!supabaseAuthConfigured()) throw new Error('Supabase Auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
@@ -55,17 +103,27 @@ export async function processOAuthCallback() {
   const params = new URLSearchParams(window.location.search)
   const code = params.get('code')
   const oauthError = params.get('error_description') || params.get('error')
-  if (oauthError) { cleanOAuthUrl(); sessionStorage.removeItem(OAUTH_KEY); sessionStorage.removeItem(RECOVERY_KEY); throw new Error(oauthError) }
+  if (oauthError) { cleanOAuthUrl(); sessionStorage.removeItem(OAUTH_KEY); sessionStorage.removeItem(RECOVERY_KEY); sessionStorage.removeItem(PASSWORD_RECOVERY_KEY); localStorage.removeItem(PASSWORD_RECOVERY_FLOW_KEY); localStorage.removeItem(PASSWORD_RECOVERY_VERIFIER_KEY); throw new Error(oauthError) }
   if (!code) return null
+  const passwordRecovery = localStorage.getItem(PASSWORD_RECOVERY_FLOW_KEY) === '1'
   let pending = null
-  try { pending = JSON.parse(sessionStorage.getItem(OAUTH_KEY)) } catch { /* expired or malformed */ }
+  if (passwordRecovery) pending = { verifier: localStorage.getItem(PASSWORD_RECOVERY_VERIFIER_KEY) }
+  else try { pending = JSON.parse(sessionStorage.getItem(OAUTH_KEY)) } catch { /* expired or malformed */ }
   cleanOAuthUrl()
-  sessionStorage.removeItem(OAUTH_KEY)
+  if (passwordRecovery) {
+    localStorage.removeItem(PASSWORD_RECOVERY_FLOW_KEY)
+    localStorage.removeItem(PASSWORD_RECOVERY_VERIFIER_KEY)
+  } else sessionStorage.removeItem(OAUTH_KEY)
   if (!pending?.verifier) {
     sessionStorage.removeItem(RECOVERY_KEY)
+    localStorage.removeItem(PASSWORD_RECOVERY_FLOW_KEY)
+    localStorage.removeItem(PASSWORD_RECOVERY_VERIFIER_KEY)
     throw new Error('The Google sign-in expired. Please try again.')
   }
   const session = await authRequest('token?grant_type=pkce', { auth_code: code, code_verifier: pending.verifier })
+  if (passwordRecovery) {
+    sessionStorage.setItem(PASSWORD_RECOVERY_KEY, '1')
+  }
   return saveSession(session)
 }
 
