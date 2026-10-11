@@ -147,11 +147,11 @@ export default function Login() {
         <input className="input" type="password" autoComplete="off" placeholder={t('One-time recovery code (optional)')} maxLength={40} value={recoveryCode}
           onChange={e => setRecoveryCode(e.target.value.toUpperCase())} aria-label={t('One-time recovery code (optional)')} />
         <div className="dim small" style={{ textAlign: 'left', margin: '-4px 2px 8px', lineHeight: 1.4 }}>{t('Enter this only if you are connecting a profile imported from your previous GYMBOOK installation.')}</div>
-        <Button className="auth-outline" onClick={google} disabled={busy}>{t('Continue with Google')}</Button>
+        <Button onClick={google} disabled={busy}>{t('Continue with Google')}</Button>
         <div className="dim small" style={{ margin: '16px 0' }}>{t('or use email')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-          <Button className={`auth-outline ${mode === 'signin' ? 'tinted' : 'plain'}`} onClick={() => { setMode('signin'); setError(''); setNotice('') }}>{t('Sign in')}</Button>
-          <Button className={`auth-outline ${mode === 'signup' ? 'tinted' : 'plain'}`} onClick={() => { setMode('signup'); setError(''); setNotice('') }}>{t('Create account')}</Button>
+          <Button className={mode === 'signin' ? 'tinted' : 'plain'} onClick={() => { setMode('signin'); setError(''); setNotice('') }}>{t('Sign in')}</Button>
+          <Button className={mode === 'signup' ? 'tinted' : 'plain'} onClick={() => { setMode('signup'); setError(''); setNotice('') }}>{t('Create account')}</Button>
         </div>
         <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
           {mode === 'signup' && <input className="input" autoComplete="name" placeholder={t('Your name')} maxLength={40} value={name} onChange={e => setName(e.target.value)} required />}
