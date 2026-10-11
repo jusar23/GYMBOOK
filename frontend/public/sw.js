@@ -1,6 +1,6 @@
 /* GYMBOOK service worker — runtime caching (works with Vite's hashed asset names).
    Media (img/gif) cache-first; everything else network-first with offline fallback. */
-const CACHE = 'opengym-rt-v1'
+const CACHE = 'gymbook-rt-v2'
 
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', e => {
@@ -38,7 +38,12 @@ self.addEventListener('fetch', e => {
     )))
   } else {
     e.respondWith(fetch(e.request).then(res => {
-      if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()))
+      if (res.ok) {
+        // Clone before opening the cache: the page may consume the response while
+        // caches.open() is pending, making a later clone fail with "body is used".
+        const copy = res.clone()
+        e.waitUntil(caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {}))
+      }
       return res
     }).catch(() => caches.match(e.request).then(hit => hit || caches.match('index.html'))))
   }
