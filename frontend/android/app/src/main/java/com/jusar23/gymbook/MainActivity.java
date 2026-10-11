@@ -1,4 +1,4 @@
-package ch.duartesantos.opengym;
+package com.jusar23.gymbook;
 
 import com.getcapacitor.BridgeActivity;
 
