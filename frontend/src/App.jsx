@@ -24,6 +24,7 @@ const History = lazy(() => import('./views/History.jsx'))
 const Library = lazy(() => import('./views/Library.jsx'))
 const Settings = lazy(() => import('./views/Settings.jsx'))
 const Admin = lazy(() => import('./views/Admin.jsx'))
+const Legal = lazy(() => import('./views/Legal.jsx'))
 
 bindUI(useUI)   // lets the shared controls open sheets without importing the store at module scope
 const MAIN_TABS = new Set(['/home', '/plan', '/workout', '/stats', '/library'])
@@ -71,6 +72,15 @@ function Shell() {
         <Icon name="dumbbell" />
         <div className="loading-label">{signingIn ? 'Signing in…' : 'Loading…'}</div>
       </div>
+    </div>
+  )
+
+  // Legal documents must remain reachable from the sign-in screen, before an account exists.
+  if (loc.pathname === '/legal' || loc.pathname.startsWith('/legal/')) return (
+    <div id="app" className="vfade">
+      <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading legal information"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
+        <Legal />
+      </Suspense>
     </div>
   )
 

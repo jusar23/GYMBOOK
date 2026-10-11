@@ -5,6 +5,7 @@ import { cancelPasswordRecovery, clearPendingRecoveryCode, createEmailAccount, g
 import { t } from '../lib/i18n.js'
 import { DEMO } from '../lib/demo.js'
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
 import { Button } from '../components/ui.jsx'
 
@@ -66,6 +67,7 @@ function RegisterSheet({ close }) {
 }
 
 export default function Login() {
+  const navigate = useNavigate()
   const { setUser, pullState, setGuest, setSigningIn } = useStore()
   const [mode, setMode] = useState('signin')
   const [recoveryMode, setRecoveryMode] = useState(isPasswordRecovery)
@@ -201,6 +203,7 @@ export default function Login() {
       <Button variant="ghost" className="dim" onClick={() => useUI.getState().openSheet(close => <GuestWarning close={close} />)}>{t('Continue as a guest')}</Button>
       <div className="dim small" style={{ marginTop: 12, lineHeight: 1.5 }}>{t('Guest progress stays on this device and is not synced.')}</div>
       {authReady && <div className="dim small" style={{ marginTop: 16, lineHeight: 1.5 }}>{t('Your account keeps your profile and workout progress synced across devices.')}</div>}
+      <button className="login-legal-link" onClick={() => navigate('/legal', { state: { from: '/' } })}>{t('Legal & privacy')}</button>
       </div>
     </div>
   )
