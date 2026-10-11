@@ -114,6 +114,14 @@ export default function Settings() {
           subtitle: INSTR_LANGS.includes(k) ? null : t("Exercise instructions aren't available in this language yet — they stay in English."),
         }))}
       />
+      <Row icon="moon" iconTint="var(--indigo)" title={t('Theme')}>
+        <Segmented
+          className="seg-inline"
+          options={[{ value: 'dark', icon: 'moon', label: t('Dark') }, { value: 'light', icon: 'sun', label: t('Light') }]}
+          value={S.theme === 'light' ? 'light' : 'dark'}
+          onChange={v => update(s => { s.theme = v })}
+        />
+      </Row>
       <Row icon="scale" iconTint="var(--teal)" title={t('Weight unit')}>
         <Segmented className="seg-inline"
           options={[{ value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' }]}
@@ -150,14 +158,6 @@ export default function Settings() {
 
     {/* ---------- appearance ---------- */}
     <Section title={t('Appearance')} footer={DEMO || MOBILE ? undefined : t('synced with your profile')}>
-      <Row icon="moon" iconTint="var(--indigo)" title={t('Theme')}>
-        <Segmented
-          className="seg-inline"
-          options={[{ value: 'dark', icon: 'moon', label: t('Dark') }, { value: 'light', icon: 'sun', label: t('Light') }]}
-          value={S.theme === 'light' ? 'light' : 'dark'}
-          onChange={v => update(s => { s.theme = v })}
-        />
-      </Row>
       {/* Purely how the muscle map is drawn — nothing else in the app reads this. */}
       <Row icon="figureStrength" iconTint="var(--teal)" title={t('Body diagram')}>
         <Segmented
