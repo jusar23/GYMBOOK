@@ -1,6 +1,6 @@
 import { useStore, hasData } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
-import { webauthnOK, passkeyLogin, passkeyRegister, api, BIO, createAppSessionWithSupabase } from '../lib/api.js'
+import { passkeyRegister, api, BIO, createAppSessionWithSupabase } from '../lib/api.js'
 import { clearPendingRecoveryCode, createEmailAccount, getPendingRecoveryCode, signInWithEmail, signInWithGoogle, supabaseAuthConfigured } from '../lib/supabaseAuth.js'
 import { t } from '../lib/i18n.js'
 import { DEMO, REPO } from '../lib/demo.js'
@@ -29,6 +29,15 @@ function GuestWarning({ close }) {
     <Button variant="primary" onClick={() => { close(); setGuest(true) }}>{t('Continue as guest')}</Button>
     <Button variant="ghost" onClick={close}>{t('Go back')}</Button>
   </>
+}
+
+function GoogleMark() {
+  return <svg aria-hidden="true" width="20" height="20" viewBox="0 0 48 48" style={{ flex: 'none' }}>
+    <path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5h6.7c3.9-3.6 6-8.8 6-14.9Z" />
+    <path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.8l-6.7-5c-1.8 1.2-4 1.9-6.8 1.9-5.2 0-9.6-3.5-11.2-8.2H5.9v5.2A20 20 0 0 0 24 44Z" />
+    <path fill="#FBBC05" d="M12.8 27.9a12 12 0 0 1 0-7.7V15H5.9a20 20 0 0 0 0 17.9l6.9-5Z" />
+    <path fill="#EA4335" d="M24 12c3 0 5.7 1 7.8 3.1l5.9-5.9A19.8 19.8 0 0 0 24 4 20 20 0 0 0 5.9 15l6.9 5C14.4 15.5 18.8 12 24 12Z" />
+  </svg>
 }
 
 function RegisterSheet({ close }) {
@@ -112,11 +121,6 @@ export default function Login() {
     catch (e) { setError(authErrorText(e)); setBusy(false) }
   }
 
-  const signInPasskey = async () => {
-    try { const u = await passkeyLogin(); setUser(u); await pullState(); useUI.getState().toast(t('Welcome back, {0}', u.name)) }
-    catch (e) { if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') useUI.getState().toast(e.message || t('Sign-in failed')) }
-  }
-
   const head = <>
     <div style={{ fontSize: 54, display: 'flex', justifyContent: 'center', color: 'var(--acc)' }}><Icon name="dumbbell" /></div>
     <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-.028em', margin: '10px 0 4px' }}>GYMBOOK</h1>
@@ -139,10 +143,9 @@ export default function Login() {
   return (
     <div className="narrow login-screen" style={{ ...wrap, padding: '24px 0' }}>
       {head}
-      <div className="muted" style={{ marginBottom: 20 }}>{t('Your workouts. Your weights. Your profile.')}</div>
 
       {authReady ? <>
-        <Button onClick={google} disabled={busy}>{t('Continue with Google')}</Button>
+        <Button className="google-btn" onClick={google} disabled={busy}><GoogleMark />Continue with Google</Button>
         <div className="dim small" style={{ margin: '16px 0' }}>{t('or use email')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
           <Button className={mode === 'signin' ? 'tinted' : 'plain'} onClick={() => { setMode('signin'); setError(''); setNotice('') }}>{t('Sign in')}</Button>
@@ -158,10 +161,6 @@ export default function Login() {
         {notice && <div role="status" className="card small muted" style={{ textAlign: 'left', marginTop: 12 }}>{notice}</div>}
       </> : <div className="card small muted" style={{ textAlign: 'left' }}>{t('Online sign-in is not configured yet. Add the Supabase Auth settings to the app and server environment.')}</div>}
 
-      {webauthnOK() && <>
-        <div className="dim small" style={{ margin: '18px 0 8px' }}>{t('Already have a passkey profile?')}</div>
-        <Button variant="ghost" onClick={signInPasskey}>{t('Sign in with passkey')}</Button>
-      </>}
       <Button variant="ghost" className="dim" onClick={() => useUI.getState().openSheet(close => <GuestWarning close={close} />)}>{t('Continue as a guest')}</Button>
       <div className="dim small" style={{ marginTop: 12, lineHeight: 1.5 }}>{t('Guest progress stays on this device and is not synced.')}</div>
       {authReady && <div className="dim small" style={{ marginTop: 16, lineHeight: 1.5 }}>{t('Your account keeps your profile and workout progress synced across devices.')}</div>}
