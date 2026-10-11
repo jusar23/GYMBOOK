@@ -95,6 +95,7 @@ export async function signInWithGoogle(recoveryCode = '') {
   sessionStorage.setItem(OAUTH_KEY, JSON.stringify({ verifier }))
   savePendingRecoveryCode(recoveryCode)
   const params = new URLSearchParams({
+    apikey: SUPABASE_KEY,
     provider: 'google',
     redirect_to: `${window.location.origin}${window.location.pathname}`,
     code_challenge: challenge,
