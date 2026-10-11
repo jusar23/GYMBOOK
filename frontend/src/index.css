@@ -83,27 +83,34 @@
   --on-acc:#ffffff;
 }
 
-/* accents — Apple's system colours, so a recolour never looks off-system */
-:root[data-accent="lime"]  { --acc:var(--green);  --acc-2:#248a3d; --on-acc:#000 }
-:root[data-accent="sky"]   { --acc:var(--blue);   --acc-2:#0060df; --on-acc:#fff }
-:root[data-accent="orange"]{ --acc:var(--orange); --acc-2:#c76b00; --on-acc:#000 }
-:root[data-accent="violet"]{ --acc:var(--purple); --acc-2:#8944ab; --on-acc:#fff }
-:root[data-accent="pink"]  { --acc:var(--pink);   --acc-2:#d70036; --on-acc:#fff }
-:root[data-accent="red"]   { --acc:var(--red);    --acc-2:#d70015; --on-acc:#fff }
-:root[data-accent="teal"]  { --acc:var(--teal);   --acc-2:#0071a4; --on-acc:#000 }
-:root[data-accent="gold"]  { --acc:var(--yellow); --acc-2:#b25000; --on-acc:#000 }
-/* Label colour on a filled accent button is picked per accent by measured contrast,
-   not by taste. Button text is 17px/600, so the AA bar is 3:1 (large text). White on
-   the light-theme green is 2.22:1 and on teal 2.57:1 — both fail, and green is the
-   DEFAULT accent, so every primary button in light mode was failing. Black scores
-   9.46 / 8.16 there. Blue, purple, pink and red keep white (3.5–4.1:1), which both
-   passes and matches the platform convention. */
-:root[data-theme="light"][data-accent="lime"],
-:root[data-theme="light"][data-accent="teal"]  { --on-acc:#000 }
-:root[data-theme="light"][data-accent="sky"],
-:root[data-theme="light"][data-accent="violet"],
-:root[data-theme="light"][data-accent="pink"],
-:root[data-theme="light"][data-accent="red"]   { --on-acc:#fff }
+/* Dark-theme hues stay vivid; light-theme counterparts deepen for pale surfaces.
+   Checked against the darkest dark surface and light canvas: all normal accent text
+   and filled-button label pairs reach at least 4.5:1. */
+:root[data-accent="lime"]     { --acc:#30d158; --acc-2:#30d158; --on-acc:#000 }
+:root[data-accent="sky"]      { --acc:#62aaff; --acc-2:#62aaff; --on-acc:#000 }
+:root[data-accent="orange"]   { --acc:#ff9f0a; --acc-2:#ff9f0a; --on-acc:#000 }
+:root[data-accent="violet"]   { --acc:#d18cff; --acc-2:#d18cff; --on-acc:#000 }
+:root[data-accent="pink"]     { --acc:#ff8298; --acc-2:#ff8298; --on-acc:#000 }
+:root[data-accent="rose"]     { --acc:#ff9ec7; --acc-2:#ff9ec7; --on-acc:#000 }
+:root[data-accent="red"]      { --acc:#ff8078; --acc-2:#ff8078; --on-acc:#000 }
+:root[data-accent="teal"]     { --acc:#40c8e0; --acc-2:#40c8e0; --on-acc:#000 }
+:root[data-accent="gold"]     { --acc:#ffd60a; --acc-2:#ffd60a; --on-acc:#000 }
+:root[data-accent="lavender"] { --acc:#c9a0ff; --acc-2:#c9a0ff; --on-acc:#000 }
+:root[data-accent="mint"]     { --acc:#70e1c2; --acc-2:#70e1c2; --on-acc:#000 }
+:root[data-accent="coral"]    { --acc:#ff8a65; --acc-2:#ff8a65; --on-acc:#000 }
+
+:root[data-theme="light"][data-accent="lime"]     { --acc:#167a34; --acc-2:#167a34; --on-acc:#fff }
+:root[data-theme="light"][data-accent="sky"]      { --acc:#0057b8; --acc-2:#0057b8; --on-acc:#fff }
+:root[data-theme="light"][data-accent="orange"]   { --acc:#a84b00; --acc-2:#a84b00; --on-acc:#fff }
+:root[data-theme="light"][data-accent="violet"]   { --acc:#7733a8; --acc-2:#7733a8; --on-acc:#fff }
+:root[data-theme="light"][data-accent="pink"]     { --acc:#c2185b; --acc-2:#c2185b; --on-acc:#fff }
+:root[data-theme="light"][data-accent="rose"]     { --acc:#a61b58; --acc-2:#a61b58; --on-acc:#fff }
+:root[data-theme="light"][data-accent="red"]      { --acc:#c62828; --acc-2:#c62828; --on-acc:#fff }
+:root[data-theme="light"][data-accent="teal"]     { --acc:#006f82; --acc-2:#006f82; --on-acc:#fff }
+:root[data-theme="light"][data-accent="gold"]     { --acc:#8a6500; --acc-2:#8a6500; --on-acc:#fff }
+:root[data-theme="light"][data-accent="lavender"] { --acc:#6633a8; --acc-2:#6633a8; --on-acc:#fff }
+:root[data-theme="light"][data-accent="mint"]     { --acc:#00785e; --acc-2:#00785e; --on-acc:#fff }
+:root[data-theme="light"][data-accent="coral"]    { --acc:#a63f25; --acc-2:#a63f25; --on-acc:#fff }
 
 /* ---------------------------------------------------------------- reset -- */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -917,7 +924,8 @@ h4.sec{
 
 /* --- accent swatches --- */
 .swatches{display:flex;gap:12px;flex-wrap:wrap}
-.swatch{width:32px;height:32px;border-radius:50%;flex:none;position:relative;transition:transform var(--fast)}
+.swatch{width:32px;height:32px;border-radius:50%;flex:none;position:relative;transition:transform var(--fast);background:var(--swatch-dark)}
+:root[data-theme="light"] .swatch{background:var(--swatch-light,var(--swatch-dark))}
 .swatch:active{transform:scale(.9)}
 .swatch.on::after{content:'';position:absolute;inset:-4px;border-radius:50%;box-shadow:0 0 0 2px var(--label)}
 
