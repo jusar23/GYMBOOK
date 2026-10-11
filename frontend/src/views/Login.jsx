@@ -71,6 +71,7 @@ export default function Login() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -151,7 +152,12 @@ export default function Login() {
         <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
           {mode === 'signup' && <input className="input" autoComplete="name" placeholder={t('Your name')} maxLength={40} value={name} onChange={e => setName(e.target.value)} required />}
           <input className="input" type="email" autoComplete="email" placeholder={t('Email')} value={email} onChange={e => setEmail(e.target.value)} required />
-          <input className="input" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} placeholder={t('Password')} minLength={6} value={password} onChange={e => setPassword(e.target.value)} required />
+          <div className="password-field">
+            <input className="input" type={showPassword ? 'text' : 'password'} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} placeholder={t('Password')} minLength={6} value={password} onChange={e => setPassword(e.target.value)} required />
+            <button className="password-visibility-toggle" type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? t('Hide password') : t('Show password')} aria-pressed={showPassword} title={showPassword ? t('Hide password') : t('Show password')}>
+              <Icon name={showPassword ? 'eyeOff' : 'eye'} size={20} />
+            </button>
+          </div>
           <Button variant="primary" type="submit" disabled={busy}>{busy ? t('Please wait…') : mode === 'signup' ? t('Create account') : t('Sign in')}</Button>
         </form>
         {error && <div role="alert" className="small" style={{ color: 'var(--red)', textAlign: 'left', marginTop: 12 }}>{error}</div>}

@@ -413,6 +413,15 @@ h4.sec{
 }
 .login-screen .input{border:1px solid var(--acc)}
 .login-screen .muted,.login-screen .dim{color:var(--label-2)}
+.password-field{position:relative}
+.password-field .input{padding-right:48px}
+.password-visibility-toggle{
+  position:absolute;right:7px;top:50%;transform:translateY(-50%);
+  display:grid;place-items:center;width:36px;height:36px;padding:0;
+  color:var(--label-2);background:transparent;border:0;border-radius:8px;cursor:pointer;
+}
+.password-visibility-toggle:hover{color:var(--label-1);background:var(--surface-2)}
+.password-visibility-toggle:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 .field::placeholder,.input::placeholder{color:var(--label-3)}
 .field:focus,.input:focus{box-shadow:inset 0 0 0 2px var(--acc)}
 .field.area,textarea.input{min-height:92px;resize:vertical;line-height:1.42}
