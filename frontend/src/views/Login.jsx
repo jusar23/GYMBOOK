@@ -66,7 +66,7 @@ function RegisterSheet({ close }) {
 }
 
 export default function Login() {
-  const { setUser, pullState, setGuest } = useStore()
+  const { setUser, pullState, setGuest, setSigningIn } = useStore()
   const [mode, setMode] = useState('signin')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -83,16 +83,22 @@ export default function Login() {
 
   const finishLogin = async session => {
     if (!session?.access_token) throw new Error(t('Check your email to confirm your account, then sign in.'))
-    const user = await createAppSessionWithSupabase(session.access_token, getPendingRecoveryCode())
+    const result = await createAppSessionWithSupabase(session.access_token, getPendingRecoveryCode())
     clearPendingRecoveryCode()
+    const { user, state } = result
     setUser(user)
-    await pullState()
+    try { await pullState(state, Object.hasOwn(result, 'state'), true) }
+    catch (e) {
+      setUser(null)
+      localStorage.setItem('gym_auth_error', e.message || t('Could not load your profile data.'))
+      throw e
+    }
     useUI.getState().toast(t('Welcome, {0}', user.name))
   }
 
   const submit = async e => {
     e.preventDefault()
-    setError(''); setNotice(''); setBusy(true)
+    setError(''); setNotice(''); setBusy(true); setSigningIn(true)
     try {
       if (mode === 'signup') {
         if (!name.trim()) throw new Error(t('Enter a name'))
@@ -103,13 +109,13 @@ export default function Login() {
         await finishLogin(await signInWithEmail({ email, password }))
       }
     } catch (e) { setError(authErrorText(e)) }
-    finally { setBusy(false) }
+    finally { setBusy(false); setSigningIn(false) }
   }
 
   const google = async () => {
-    setError(''); setNotice(''); setBusy(true)
+    setError(''); setNotice(''); setBusy(true); setSigningIn(true)
     try { await signInWithGoogle() }
-    catch (e) { setError(authErrorText(e)); setBusy(false) }
+    catch (e) { setError(authErrorText(e)); setBusy(false); setSigningIn(false) }
   }
 
   const head = <>

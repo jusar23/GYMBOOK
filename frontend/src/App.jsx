@@ -38,7 +38,7 @@ function applyPrefs(theme, accent) {
 function Shell() {
   const navigate = useNavigate()
   const loc = useLocation()
-  const { S, user, ready, signingOut } = useStore()
+  const { S, user, ready, signingOut, signingIn } = useStore()
   const isGuest = useStore(s => s.isGuest())
   const langV = useLang()   // re-renders the whole shell when the language (pack) changes
   useEffect(() => { setNav(navigate) }, [navigate])
@@ -59,17 +59,23 @@ function Shell() {
       </div>
     </div>
   )
-  if (!ready && !authed) return (
+  if (!ready) return (
     <div id="app">
       <div className="loading-mark" role="status" aria-label="Signing in to GYMBOOK">
         <Icon name="dumbbell" />
-        <div className="loading-label">Signing in…</div>
+        <div className="loading-label">{signingIn ? 'Signing in…' : 'Loading…'}</div>
       </div>
     </div>
   )
 
   return (
     <>
+      {signingIn && <div className="app-loading-overlay">
+        <div className="loading-mark" role="status" aria-label="Signing in to GYMBOOK">
+          <Icon name="dumbbell" />
+          <div className="loading-label">Signing in…</div>
+        </div>
+      </div>}
       {/* keyed on the route: a view that throws is contained, and switching tabs
           re-mounts the boundary, so the tab bar is always a way out */}
       <div id="app" className="vfade" key={loc.pathname}>

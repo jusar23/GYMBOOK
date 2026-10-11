@@ -91,6 +91,7 @@ export const useStore = create((set, get) => {
     })(),
     ready: false,
     signingOut: false,
+    signingIn: !!localStorage.getItem('gym_user') || new URLSearchParams(window.location.search).has('code'),
 
     // Mutate a draft of S via producer fn, then persist + schedule sync.
     update(mut, push = true) {
@@ -108,6 +109,7 @@ export const useStore = create((set, get) => {
       else localStorage.removeItem('gym_user')
       set({ user: u })
     },
+    setSigningIn(value) { set({ signingIn: !!value }) },
 
     async pushState() {
       if (!get().user) return
@@ -115,9 +117,9 @@ export const useStore = create((set, get) => {
       try { await api('/api/data', { method: 'PUT', body: JSON.stringify({ state: get().S }) }); localStorage.removeItem('gym_dirty') }
       catch (e) { localStorage.setItem('gym_dirty', '1') }
     },
-    async pullState() {
+    async pullState(remoteState, alreadyFetched = false, required = false) {
       try {
-        const { state } = await api('/api/data')
+        const { state } = alreadyFetched ? { state: remoteState } : await api('/api/data')
         const S = get().S
         const dirty = localStorage.getItem('gym_dirty') === '1'
         if (state && (!hasData(S) || ((state._ts || 0) >= (S._ts || 0) && !dirty))) {
@@ -126,7 +128,10 @@ export const useStore = create((set, get) => {
           if (active) next.active = active
           persist(next, false)
         } else if (hasData(S)) { await get().pushState() }
-      } catch (e) { /* offline — keep local */ }
+      } catch (e) {
+        if (required) throw e
+        /* offline — keep local */
+      }
     },
 
     async signOut() {
@@ -141,10 +146,10 @@ export const useStore = create((set, get) => {
     },
 
     // "Sign out everywhere": the server bumps this profile's session version, which kills every
-    // session it has on any device — this browser included, so the app has to end up exactly
-    // where a normal signOut leaves it. Unlike signOut the request is NOT swallowed: if it fails
-    // the sessions elsewhere are all still valid, and wiping this device's copy of the data
-    // would sign the user out of the one place the bump didn't reach. Caller reports the error.
+    // session it has on any device — this browser included.
+    // The local session ends either way; the caller reports if remote invalidation fails.
+
+
     async signOutAll() {
       set({ signingOut: true })
       await get().pushState()   // never throws — stores gym_dirty and moves on when offline
@@ -167,7 +172,7 @@ export const useStore = create((set, get) => {
       persist(Object.assign(clone(DEF), buildDemoState()), false)
     },
 
-    // Boot: ask the server who we are, then pull.
+    // Boot: ask the server for the current profile and its state together.
     async boot() {
       // Mobile build: no backend either — restore from the file mirror (the durable copy;
       // localStorage may have been evicted since the last run) and go straight in.
@@ -181,7 +186,7 @@ export const useStore = create((set, get) => {
         }
         get().setGuest(true)
         syncReminder(get().S)
-        set({ ready: true })
+        set({ ready: true, signingIn: false })
         return
       }
       // Demo build (GitHub Pages): no backend at all — seed once, stay in guest mode.
@@ -191,7 +196,7 @@ export const useStore = create((set, get) => {
           await get().resetDemo()
         }
         get().setGuest(true)
-        set({ ready: true })
+        set({ ready: true, signingIn: false })
         return
       }
       let authSession = null
@@ -202,26 +207,39 @@ export const useStore = create((set, get) => {
       // callback must be allowed to finish after the user starts a new Google sign-in.
       if (!authSession && localStorage.getItem(SIGNED_OUT_KEY) === '1') {
         get().setUser(null)
-        set({ ready: true })
+        set({ ready: true, signingIn: false })
         return
       }
 
       let appUser = null
+      let initialState
+      let initialStateFetched = false
       if (authSession?.access_token) {
         try {
-          appUser = await createAppSessionWithSupabase(authSession.access_token, getPendingRecoveryCode())
+          const result = await createAppSessionWithSupabase(authSession.access_token, getPendingRecoveryCode())
+          appUser = result.user
+          initialState = result.state
+          initialStateFetched = Object.hasOwn(result, 'state')
           clearPendingRecoveryCode()
         }
         catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not connect your account to GYMBOOK.') }
       }
       if (!authSession) {
-        try { appUser = (await api('/api/me')).user }
+        try {
+          const result = await api('/api/me')
+          appUser = result.user
+          initialState = result.state
+          initialStateFetched = Object.hasOwn(result, 'state')
+        }
         catch {
           get().setUser(null)
           try {
             authSession = await getAuthSession()
             if (authSession?.access_token) {
-              appUser = await createAppSessionWithSupabase(authSession.access_token, getPendingRecoveryCode())
+              const result = await createAppSessionWithSupabase(authSession.access_token, getPendingRecoveryCode())
+              appUser = result.user
+              initialState = result.state
+              initialStateFetched = Object.hasOwn(result, 'state')
               clearPendingRecoveryCode()
             }
           } catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not connect your account to GYMBOOK.') }
@@ -229,7 +247,11 @@ export const useStore = create((set, get) => {
       }
       if (appUser) {
         get().setUser(appUser)
-        await get().pullState()
+        try { await get().pullState(initialState, initialStateFetched, true) }
+        catch (e) {
+          get().setUser(null)
+          localStorage.setItem('gym_auth_error', e.message || 'Could not load your profile data.')
+        }
         // Re-stamp the reminder's timezone on every load — keeps it correct if you're travelling,
         // without needing to revisit Settings.
         const tz = localTZ()
@@ -237,7 +259,7 @@ export const useStore = create((set, get) => {
           get().update(s => { s.reminder = { ...s.reminder, tz } })
         }
       }
-      set({ ready: true })
+      set({ ready: true, signingIn: false })
     }
   }
 })
