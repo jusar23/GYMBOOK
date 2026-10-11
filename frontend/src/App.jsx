@@ -38,7 +38,7 @@ function applyPrefs(theme, accent) {
 function Shell() {
   const navigate = useNavigate()
   const loc = useLocation()
-  const { S, user, ready } = useStore()
+  const { S, user, ready, signingOut } = useStore()
   const isGuest = useStore(s => s.isGuest())
   const langV = useLang()   // re-renders the whole shell when the language (pack) changes
   useEffect(() => { setNav(navigate) }, [navigate])
@@ -51,6 +51,14 @@ function Shell() {
   useWakeLock(!!S.active && S.keepAwake !== false)
 
   const authed = user || isGuest
+  if (signingOut) return (
+    <div id="app">
+      <div className="loading-mark" role="status" aria-label="Signing out of GYMBOOK">
+        <Icon name="dumbbell" />
+        <div className="loading-label">Signing out…</div>
+      </div>
+    </div>
+  )
   if (!ready && !authed) return (
     <div id="app">
       <div className="loading-mark" role="status" aria-label="Loading GYMBOOK">

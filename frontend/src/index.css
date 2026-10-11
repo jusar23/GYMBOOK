@@ -177,7 +177,10 @@ body.resting #app{padding-bottom:calc(250px + var(--sab))}
   color:var(--acc);
   font-size:34px;
   perspective:500px;
+  flex-direction:column;
+  align-items:center;
 }
+.loading-label{margin-top:16px;color:var(--label-2);font-size:15px;font-weight:500}
 .loading-mark svg{
   transform-origin:center;
   animation:gymbook-load-turn 1.6s cubic-bezier(.55,.05,.45,.95) infinite;

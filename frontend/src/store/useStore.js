@@ -80,6 +80,7 @@ export const useStore = create((set, get) => {
     localStorage.removeItem('gym_dirty')
     localStorage.removeItem(KEY)
     persist(clone(DEF), false)
+    set({ signingOut: false })
   }
 
   return {
@@ -89,6 +90,7 @@ export const useStore = create((set, get) => {
       try { return JSON.parse(localStorage.getItem('gym_user')) || null } catch { return null }
     })(),
     ready: false,
+    signingOut: false,
 
     // Mutate a draft of S via producer fn, then persist + schedule sync.
     update(mut, push = true) {
@@ -128,6 +130,7 @@ export const useStore = create((set, get) => {
     },
 
     async signOut() {
+      set({ signingOut: true })
       await get().pushState()
       // Keep boot from silently recreating the app session from a cookie or an old Supabase
       // token if this browser reloads immediately after sign-out.
@@ -143,6 +146,7 @@ export const useStore = create((set, get) => {
     // the sessions elsewhere are all still valid, and wiping this device's copy of the data
     // would sign the user out of the one place the bump didn't reach. Caller reports the error.
     async signOutAll() {
+      set({ signingOut: true })
       await get().pushState()   // never throws — stores gym_dirty and moves on when offline
       localStorage.setItem(SIGNED_OUT_KEY, '1')
       let serverError = null
