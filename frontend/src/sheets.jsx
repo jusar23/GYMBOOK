@@ -316,7 +316,10 @@ function AddToRoutine({ ex, close }) {
       update(s => {
         let r = isNew ? { id: uid(), name: t('New routine'), emoji: DEFAULT_GLYPH, ex: [] } : s.routines.find(x => x.id === rid)
         if (isNew) s.routines.push(r)
-        if (r) r.ex.push({ id: ex.id, ...cfg })
+        if (r) {
+          r.ex.push({ id: ex.id, ...cfg })
+          s.favoriteEx = [...new Set([...(s.favoriteEx || []), ex.id])]
+        }
       })
       const r = isNew ? S().routines[S().routines.length - 1] : st.routines.find(x => x.id === rid)
       toast(t('“{0}” added to {1}', ex.n, r ? r.name : t('routine')))
@@ -401,13 +404,6 @@ export function deleteCustomEx(ex, afterDelete) {
 }
 
 /* ============================ exercise picker ============================ */
-// Exercises already used in your routines or past workouts (for the "Chosen" filter + a marker).
-function usageMap(st) {
-  const u = {}
-  st.routines.forEach(r => r.ex.forEach(e => { u[e.id] = (u[e.id] || 0) + 1 }))
-  st.workouts.forEach(w => w.entries.forEach(e => { u[e.id] = (u[e.id] || 0) + 1 }))
-  return u
-}
 const MUSCLE_FILTERS = {
   'upper arms': [
     { label: 'biceps', targets: ['biceps'] },
@@ -428,23 +424,23 @@ const QUICK_FILTERS = BODYPARTS.flatMap(part =>
 )
 function ExercisePicker({ onPick, close }) {
   const st = useStore(s => s.S)
-  const usage = usageMap(st)
+  const favorites = new Set(st.favoriteEx || [])
   const [q, setQ] = useState('')
-  const [bp, setBp] = useState('')          // '' = all, '★' = chosen, otherwise a body part or target muscle
+  const [bp, setBp] = useState('')          // '' = all, '★' = favorites, otherwise a body part or target muscle
   const [eq, setEq] = useState('')          // '' = any equipment
   const [shown, setShown] = useState(50)
   const ql = q.toLowerCase().trim()
   const all = allExercises(st)
   const muscleTargets = QUICK_FILTERS.find(f => f.key === bp)?.targets
   let base = all.filter(e =>
-    (bp === '★' ? usage[e.id] : muscleTargets ? muscleTargets.includes(e.tg) : (!bp || e.bp === bp)) &&
+    (bp === '★' ? favorites.has(e.id) : muscleTargets ? muscleTargets.includes(e.tg) : (!bp || e.bp === bp)) &&
     (!ql || e.n.toLowerCase().includes(ql) || e.tg.includes(ql) || e.eq.includes(ql) || (e.desc || '').toLowerCase().includes(ql)))
-  if (bp === '★') base = [...base].sort((a, b) => (usage[b.id] - usage[a.id]) || (a.n < b.n ? -1 : 1))
+  if (bp === '★') base = [...base].sort((a, b) => (a.n < b.n ? -1 : a.n > b.n ? 1 : 0))
   const eqOpts = equipmentOf(base)
   // Drop the equipment filter if the search narrowed it away, so you never hit a dead end.
   const eqOn = eqOpts.includes(eq) ? eq : ''
   const f = eqOn ? base.filter(e => e.eq === eqOn) : base
-  const chosenCount = Object.keys(usage).length
+  const favoriteCount = favorites.size
   return <>
     <div className="sheet-full-head">
       <button className="iconbtn" onClick={close} aria-label={t('Cancel')}><Icon name="chevronLeft" /></button>
@@ -453,7 +449,7 @@ function ExercisePicker({ onPick, close }) {
     <div className="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
       <input className="input" placeholder={t('Search {0} exercises…', all.length)} value={q} onChange={e => { setQ(e.target.value); setShown(50) }} /></div>
     <div className="chips" style={{ margin: eqOpts.length > 1 ? '10px 0 6px' : '10px 0' }}>
-      {chosenCount > 0 && <button className={'chip' + (bp === '★' ? ' on' : '')} onClick={() => { setBp('★'); setEq(''); setShown(50) }}><Icon name="starFill" style={{ fontSize: 12, display: 'inline-block', marginRight: 4, verticalAlign: '-1px' }} />{t('Chosen')} ({chosenCount})</button>}
+      <button className={'chip' + (bp === '★' ? ' on' : '')} onClick={() => { setBp('★'); setEq(''); setShown(50) }}><Icon name="starFill" style={{ fontSize: 12, display: 'inline-block', marginRight: 4, verticalAlign: '-1px' }} />{t('Favorites')} ({favoriteCount})</button>
       <button className={'chip nocap' + (!bp ? ' on' : '')} onClick={() => { setBp(''); setEq(''); setShown(50) }}>{t('All')}</button>
       {QUICK_FILTERS.map(({ key, label }) => <button key={key} className={'chip' + (bp === key ? ' on' : '')} onClick={() => { setBp(key); setEq(''); setShown(50) }}>{t(label)}</button>)}
     </div>
@@ -468,9 +464,9 @@ function ExercisePicker({ onPick, close }) {
       </div>}
       {f.slice(0, shown).map(e => <div key={e.id} className="item" onClick={() => onPick(e)}>
         <Thumb ex={e} /><div className="grow"><div className="tt capitalize">{e.n}</div><div className="ss capitalize">{t(e.tg || e.bp)} · {t(e.eq)}</div></div>
-        {usage[e.id] && <span className="tag acc"><Icon name="starFill" /></span>}<Icon name="plus" className="chev" />
+        {favorites.has(e.id) && <span className="tag acc"><Icon name="starFill" /></span>}<Icon name="plus" className="chev" />
       </div>)}
-      {f.length === 0 && bp === '★' && <div className="empty">{t('Nothing chosen yet — add exercises and they’ll show up here.')}</div>}
+      {f.length === 0 && bp === '★' && <div className="empty">{t('No favorite exercises yet — star exercises in the Exercises tab.')}</div>}
     </div>
     {f.length > shown && <><div style={{ height: 8 }} /><Button onClick={() => setShown(s => s + 50)}>{t('Show more')}</Button></>}
   </>

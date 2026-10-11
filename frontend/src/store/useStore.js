@@ -12,7 +12,7 @@ export const DEF = {
   unit: 'kg', restSec: 90, sound: true, keepAwake: true, lang: 'en',
   theme: 'dark', accent: 'lime', body: 'male', targetW: null,
   bodyweight: [], routines: [], week: {}, dayPlan: {},
-  exWeights: {}, workouts: [], active: null, customEx: [], favoriteEx: [], gifSize: 'full',
+  exWeights: {}, workouts: [], active: null, customEx: [], favoriteEx: [], favoritesMigrated: false, gifSize: 'full',
   // effort: which per-set effort scale is logged — 'none' | 'rir' | 'rpe'. null, not 'none', so
   // that a profile which never chose (loaded state is overlaid on DEF, on every path: local,
   // server pull, backup import) still falls back to the `showRir` boolean this replaced and
@@ -24,9 +24,21 @@ const clone = o => JSON.parse(JSON.stringify(o))
 function loadState() {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return Object.assign(clone(DEF), JSON.parse(raw))
+    if (raw) return migrateChosenExercises(Object.assign(clone(DEF), JSON.parse(raw)))
   } catch (e) { /* ignore */ }
-  return clone(DEF)
+  return migrateChosenExercises(clone(DEF))
+}
+
+// Preserve exercises already selected in routines or workouts when unifying "Chosen" with favorites.
+function migrateChosenExercises(state) {
+  if (state.favoritesMigrated) return state
+  const favorites = new Set(Array.isArray(state.favoriteEx) ? state.favoriteEx : [])
+  ;(state.routines || []).forEach(r => (r.ex || []).forEach(e => e.id && favorites.add(e.id)))
+  ;(state.workouts || []).forEach(w => (w.entries || []).forEach(e => e.id && favorites.add(e.id)))
+  ;(state.active?.entries || []).forEach(e => e.id && favorites.add(e.id))
+  state.favoriteEx = [...favorites]
+  state.favoritesMigrated = true
+  return state
 }
 
 const hasData = st => !!((st.workouts || []).length || (st.routines || []).length || (st.bodyweight || []).length)
@@ -43,6 +55,7 @@ export const useStore = create((set, get) => {
   }
 
   const persist = (S, push = true) => {
+    migrateChosenExercises(S)
     S._ts = Date.now()
     registerCustom(S.customEx)
     localStorage.setItem(KEY, JSON.stringify(S))
