@@ -172,11 +172,13 @@ export default function Login() {
         <Button variant="ghost" className="dim" onClick={() => { cancelPasswordRecovery(); setRecoveryMode(false); setPassword(''); setConfirmPassword(''); setError('') }}>{t('Back to sign in')}</Button>
       </> : <>
         {mode !== 'forgot' && <>
-        <Button className="google-btn" onClick={google} disabled={busy}>Continue with Google</Button>
+        <Button className="google-btn" onClick={google} disabled={busy} aria-label="Continue with Google">
+          <span>Continue with</span><span className="google-word" aria-hidden="true"><b className="google-blue">G</b><b className="google-red">o</b><b className="google-yellow">o</b><b className="google-blue">g</b><b className="google-green">l</b><b className="google-red">e</b></span>
+        </Button>
         <div className="dim small" style={{ margin: '16px 0' }}>{t('or use email')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-          <Button className={mode === 'signin' ? 'tinted' : 'plain'} onClick={() => { setMode('signin'); setError(''); setNotice('') }}>{t('Sign in')}</Button>
-          <Button className={mode === 'signup' ? 'tinted' : 'plain'} onClick={() => { setMode('signup'); setError(''); setNotice('') }}>{t('Create account')}</Button>
+          <Button className={'login-choice ' + (mode === 'signin' ? 'tinted' : 'plain')} onClick={() => { setMode('signin'); setError(''); setNotice('') }}>{t('Sign in')}</Button>
+          <Button className={'login-choice ' + (mode === 'signup' ? 'tinted' : 'plain')} onClick={() => { setMode('signup'); setError(''); setNotice('') }}>{t('Create account')}</Button>
         </div>
         </>}
         <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
