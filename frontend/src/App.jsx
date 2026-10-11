@@ -59,7 +59,7 @@ function Shell() {
   const authed = user || isGuest
   if (signingOut) return (
     <div id="app">
-      <div className="loading-mark" role="status" aria-label="Signing out of GYMBOOK">
+      <div className="loading-mark" role="status" aria-label="Signing out of gymbook">
         <Icon name="dumbbell" />
         <div className="loading-label">Signing out…</div>
       </div>
@@ -67,7 +67,7 @@ function Shell() {
   )
   if (!ready) return (
     <div id="app">
-      <div className="loading-mark" role="status" aria-label="Signing in to GYMBOOK">
+      <div className="loading-mark" role="status" aria-label="Signing in to gymbook">
         <Icon name="dumbbell" />
         <div className="loading-label">{signingIn ? 'Signing in…' : 'Loading…'}</div>
       </div>
@@ -77,7 +77,7 @@ function Shell() {
   return (
     <>
       {signingIn && <div className="app-loading-overlay">
-        <div className="loading-mark" role="status" aria-label="Signing in to GYMBOOK">
+        <div className="loading-mark" role="status" aria-label="Signing in to gymbook">
           <Icon name="dumbbell" />
           <div className="loading-label">Signing in…</div>
         </div>
@@ -86,12 +86,12 @@ function Shell() {
           re-mounts the boundary, so the tab bar is always a way out */}
       <div id="app" className="vfade" key={loc.pathname}>
         {authed && <div className="app-topbar">
-          <div className="app-brand">GYMBOOK</div>
+          <div className="app-brand">gymbook</div>
           {MAIN_TABS.has(loc.pathname) && <button className="iconbtn" onClick={() => navigate('/settings')} aria-label={t('Settings')} title={t('Settings')}><Icon name="gear" /></button>}
         </div>}
         <ErrorBoundary>
           {!authed ? <Login /> : (
-            <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading GYMBOOK"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
+            <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading gymbook"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
               <Routes>
                 <Route path="/home" element={<Home />} />
                 <Route path="/plan" element={<Plan />} />

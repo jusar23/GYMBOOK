@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">GYMBOOK</string>
-    <string name="title_activity_main">GYMBOOK</string>
+    <string name="app_name">gymbook</string>
+    <string name="title_activity_main">gymbook</string>
     <string name="package_name">com.jusar23.gymbook</string>
     <string name="custom_url_scheme">com.jusar23.gymbook</string>
 </resources>

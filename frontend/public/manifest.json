@@ -1,6 +1,6 @@
 {
-  "name": "GYMBOOK",
-  "short_name": "GYMBOOK",
+  "name": "gymbook",
+  "short_name": "gymbook",
   "description": "Personal gym & body weight tracker",
   "start_url": "./",
   "scope": "./",

@@ -3,7 +3,7 @@ import { useUI } from '../store/useUI.js'
 import { passkeyRegister, api, BIO, createAppSessionWithSupabase } from '../lib/api.js'
 import { cancelPasswordRecovery, clearPendingRecoveryCode, createEmailAccount, getPendingRecoveryCode, isPasswordRecovery, requestPasswordReset, signInWithEmail, signInWithGoogle, supabaseAuthConfigured, updateRecoveredPassword } from '../lib/supabaseAuth.js'
 import { t } from '../lib/i18n.js'
-import { DEMO, REPO } from '../lib/demo.js'
+import { DEMO } from '../lib/demo.js'
 import { useState, useRef, useEffect } from 'react'
 import Icon from '../components/Icon.jsx'
 import { Button } from '../components/ui.jsx'
@@ -24,7 +24,7 @@ function GuestWarning({ close }) {
   return <>
     <h3>{t('Continue as a guest?')}</h3>
     <div className="card small muted" style={{ lineHeight: 1.55, margin: '12px 0 16px' }}>
-      {t('Your progress will stay only on this device and will not sync. You may lose it if you clear app data, uninstall GYMBOOK or change devices.')}
+      {t('Your progress will stay only on this device and will not sync. You may lose it if you clear app data, uninstall gymbook or change devices.')}
     </div>
     <Button variant="primary" onClick={() => { close(); setGuest(true) }}>{t('Continue as guest')}</Button>
     <Button variant="ghost" onClick={close}>{t('Go back')}</Button>
@@ -46,7 +46,7 @@ function RegisterSheet({ close }) {
     try {
       const u = await passkeyRegister(n, code.trim())
       setUser(u); close()
-      if (hasData(useStore.getState().S)) { await pushState(); useUI.getState().toast(t('Profile created — data from this device moved into it')) }
+      if (hasData(useStore.getState().S)) { await pushState(true); useUI.getState().toast(t('Profile created — data from this device moved into it')) }
       else { await pullState(); useUI.getState().toast(t('Welcome, {0}', u.name)) }
     } catch (e) { if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') useUI.getState().toast(e.message || t('Registration failed')) }
   }
@@ -133,7 +133,7 @@ export default function Login() {
 
   const head = <>
     <div style={{ fontSize: 54, display: 'flex', justifyContent: 'center', color: 'var(--acc)' }}><Icon name="dumbbell" /></div>
-    <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-.028em', margin: '10px 0 4px' }}>GYMBOOK</h1>
+    <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-.028em', margin: '10px 0 4px' }}>gymbook</h1>
     <div style={{ color: 'var(--acc)', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>your personal trainer</div>
   </>
   const wrap = { display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '78vh', textAlign: 'center' }
@@ -144,19 +144,19 @@ export default function Login() {
       <div className="muted" style={{ marginBottom: 30 }}>{t('Live demo — everything stays in this browser.')}</div>
       <Button variant="primary" icon="sparkles" onClick={() => setGuest(true)}>{t('Start the demo')}</Button>
       <div className="card small muted" style={{ textAlign: 'left', marginTop: 16 }}>
-        {t('This demo runs entirely in your browser on example data — nothing is sent anywhere. Passkey sign-in and sync across your devices come with the GYMBOOK server, which you get by self-hosting it.')}
+        {t('This demo runs entirely in your browser on example data — nothing is sent anywhere. Your own profile and workout data are available after you create an account or sign in.')}
       </div>
-      <div className="dim small" style={{ marginTop: 22, lineHeight: 1.6 }}><a href={REPO} target="_blank" rel="noopener">{t('Self-host it in a minute →')}</a></div>
     </div>
   )
 
   return (
     <div className="narrow login-screen" style={{ ...wrap, padding: '24px 0' }}>
       {head}
+      <div className="login-panel">
       <div className="login-price-notice">{t('30 days free, then $1/month')}</div>
 
       {authReady ? recoveryMode ? <>
-        <div className="muted small" style={{ margin: '12px 0' }}>{t('Choose a new password for your GYMBOOK account.')}</div>
+        <div className="muted small" style={{ margin: '12px 0' }}>{t('Choose a new password for your gymbook account.')}</div>
         <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
           <div className="password-field">
             <input className="input" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder={t('New password')} minLength={6} value={password} onChange={e => setPassword(e.target.value)} required />
@@ -201,6 +201,7 @@ export default function Login() {
       <Button variant="ghost" className="dim" onClick={() => useUI.getState().openSheet(close => <GuestWarning close={close} />)}>{t('Continue as a guest')}</Button>
       <div className="dim small" style={{ marginTop: 12, lineHeight: 1.5 }}>{t('Guest progress stays on this device and is not synced.')}</div>
       {authReady && <div className="dim small" style={{ marginTop: 16, lineHeight: 1.5 }}>{t('Your account keeps your profile and workout progress synced across devices.')}</div>}
+      </div>
     </div>
   )
 }

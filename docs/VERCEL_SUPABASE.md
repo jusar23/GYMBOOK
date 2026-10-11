@@ -36,7 +36,7 @@ This deployment serves the Vite frontend from Vercel and routes `/api/*` to a Ve
    - `VITE_SUPABASE_ANON_KEY`: the same publishable/anon key (available during frontend build).
    - `RP_ID`: the exact hostname Vercel assigns, without `https://` (for example `gymbook-example.vercel.app`).
    - `ORIGIN`: the matching origin, with scheme and no trailing slash (for example `https://gymbook-example.vercel.app`).
-   - `RP_NAME`: `GYMBOOK`.
+   - `RP_NAME`: `gymbook`.
    - `INVITE_ONLY`: optional; when `1`, it restricts passkey profile creation. Email/Google accounts remain available.
    - `VITE_IMG_BASE`: `https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/images/`
    - `VITE_GIF_BASE`: `https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/videos/`

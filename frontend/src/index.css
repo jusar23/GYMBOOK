@@ -1,5 +1,5 @@
 /* ============================================================================
-   GYMBOOK — design system
+   gymbook — design system
    ----------------------------------------------------------------------------
    Rebuilt around four rules, each aimed at a specific "generated" tell in the
    previous sheet:
@@ -400,6 +400,35 @@ h4.sec{
 }
 .login-screen .input{border:1px solid #cbd5e1}
 .login-screen .muted,.login-screen .dim{color:var(--label-2)}
+.login-screen{
+  width:min(100%,520px);max-width:520px;margin:0 auto;gap:0;
+  padding:28px 20px!important;min-height:100svh;
+}
+:root:not([data-theme="light"]) body:has(.login-screen){background:#111512}
+.login-screen .login-panel{
+  width:100%;margin-top:14px;padding:22px;border-radius:22px;
+  background:linear-gradient(155deg,#1d231f 0%,#191d1b 56%,#171b19 100%);
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 22px 65px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.035);
+}
+.login-screen .login-price-notice{margin:0 auto 18px}
+.login-screen .google-btn{margin-top:0;margin-bottom:2px}
+.login-screen .input{
+  min-height:54px;background:#252a27;border:1px solid #414a44;color:#f4f7f4;
+  border-radius:13px;padding:14px 16px;
+}
+.login-screen .input::placeholder{color:#a5ada7}
+.login-screen .input:focus{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 17%,transparent)}
+.login-screen .login-choice{min-height:48px;border-radius:13px}
+.login-screen form>.btn.primary{min-height:54px;border-radius:13px;font-weight:600}
+.login-screen .login-panel>.btn.ghost{margin-top:8px}
+.login-screen .login-panel>.small{color:#b2bbb4}
+:root[data-theme="light"] .login-screen .login-panel{
+  background:linear-gradient(155deg,#fff 0%,#f8faf8 100%);
+  border-color:rgba(20,50,30,.09);box-shadow:0 18px 54px rgba(26,54,35,.11);
+}
+:root[data-theme="light"] .login-screen .input{background:#fff;border-color:#d4ddd6;color:#202823}
+:root[data-theme="light"] .login-screen .input::placeholder{color:#77817a}
 .login-price-notice{
   align-self:center;margin:4px 0 12px;padding:7px 12px;border-radius:999px;
   color:var(--acc);background:var(--acc-soft);font-size:14px;font-weight:600;
