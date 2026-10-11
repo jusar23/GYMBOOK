@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore, DEF, hasData } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
-import { ACCENTS, ACCENTS_LIGHT, todayISO, localTZ } from '../lib/format.js'
+import { ACCENTS, todayISO, localTZ } from '../lib/format.js'
 import { effortOf } from '../lib/history.js'
 import { api, createAppSessionWithSupabase, webauthnOK, passkeyLogin, passkeyRegister, IS_ANDROID } from '../lib/api.js'
 import { getAuthSession } from '../lib/supabaseAuth.js'
@@ -37,6 +37,18 @@ export default function Settings() {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); URL.revokeObjectURL(a.href)
     toast(t('Backup exported'))
   }
+  const confirmExport = () => confirmSheet({
+    title: t('Export backup?'),
+    message: t('This creates a JSON copy of your GYMBOOK data on this device.'),
+    confirmText: t('Export backup'),
+    onConfirm: doExport,
+  })
+  const confirmStarterPlan = () => confirmSheet({
+    title: t('Load starter plan?'),
+    message: t('This adds three starter routines and assigns them to Monday, Wednesday and Friday. Existing assignments on those days will be replaced.'),
+    confirmText: t('Load plan'),
+    onConfirm: loadStarterPlan,
+  })
   const doImport = ev => {
     const f = ev.target.files[0]; if (!f) return
     const rd = new FileReader()
@@ -76,33 +88,6 @@ export default function Settings() {
       <button className="iconbtn" onClick={() => nav('/home')} aria-label={t('Home')}><Icon name="chevronLeft" /></button>
       <div style={{ flex: 1, marginLeft: 10 }}><h1>{t('Settings')}</h1></div>
     </div>
-
-    {/* ---------- account (demo and mobile builds have nothing to sign in to) ---------- */}
-    <Section title={MOBILE ? t('Your data') : DEMO ? t('Demo') : t('Account')}>
-      {MOBILE ? <>
-        <Row icon="lock" iconTint="var(--acc)" title={t('All data stays on this phone')} subtitle={t('No account, no cloud — back it up anytime with Export below.')} />
-        <Row icon="rocket" iconTint="var(--indigo)" title={t('Self-host GYMBOOK')} subtitle={t('Passkey sign-in, sync across your devices, your own data.')} accessory="chevron"
-          onClick={() => window.open(REPO, '_blank', 'noopener')} />
-      </> : DEMO ? <>
-        <Row icon="sparkles" iconTint="var(--acc)" title={t('You’re in the demo')} subtitle={t('Example data, stored only in this browser — change anything you like.')} />
-        <Row icon="reset" iconTint="var(--blue)" title={t('Reset demo data')} accessory="chevron"
-          onClick={() => confirmSheet({ title: t('Reset demo data?'), message: t('Puts the example plan, workouts and weigh-ins back the way they started.'), confirmText: t('Reset'), onConfirm: () => { resetDemo(); nav('/home'); toast(t('Demo data reset')) } })} />
-        <Row icon="rocket" iconTint="var(--indigo)" title={t('Self-host GYMBOOK')} subtitle={t('Passkey sign-in, sync across your devices, your own data.')} accessory="chevron"
-          onClick={() => window.open(REPO, '_blank', 'noopener')} />
-      </> : user ? <>
-        <Row icon="personCircle" iconTint="var(--grey)" title={user.name} subtitle={t('Your profile and workout progress sync across devices.')} />
-        <Row icon="reset" iconTint="var(--blue)" title={t('Restore an imported profile')} subtitle={t('Use a one-time code from your previous GYMBOOK installation.')} accessory="chevron" onClick={restoreProfile} />
-        {user.admin && <Row icon="wrench" iconTint="var(--indigo)" title={t('Admin dashboard')} accessory="chevron" onClick={() => nav('/admin')} />}
-        <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your data is synced to your profile first, then cleared from this device.'), confirmText: t('Sign out'), danger: true, onConfirm: async () => { await signOut(); nav('/home') } })} />
-        <Row icon="shield" iconTint="var(--red)" title={t('Sign out everywhere')} subtitle={t('Ends this profile’s sessions on all your devices.')} danger onClick={signOutEverywhere} />
-      </> : webauthnOK() ? <>
-        <Row icon="sparkles" iconTint="var(--acc)" title={t('Create passkey profile')} subtitle={t('Keeps your data safe and separate per person.')} accessory="chevron" onClick={registerHere} />
-        <Row icon="person" iconTint="var(--blue)" title={t('Sign in with passkey')} accessory="chevron" onClick={signInHere} />
-      </> : (
-        <Row icon="lock" iconTint="var(--grey)" title={t('Passkeys not supported in this browser.')} />
-      )}
-    </Section>
-    {!user && !DEMO && !MOBILE && <p className="sect-f" style={{ marginTop: -18, marginBottom: 22 }}>{t('Guest mode — data lives only in this browser.')}</p>}
 
     {/* ---------- general ---------- */}
     <Section title={t('General')} footer={t('Note: switching units only changes the label — logged numbers are not converted.')}>
@@ -169,23 +154,54 @@ export default function Settings() {
       </Row>
       <div className="lrow" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12, paddingTop: 13, paddingBottom: 14 }}>
         <span className="lrow-t">{t('Accent color')}</span>
-        <div className="swatches">
-          {Object.entries(ACCENTS).map(([k, c]) => (
-            <button key={k} className={'swatch' + ((S.accent || 'lime') === k ? ' on' : '')}
-              style={{ '--swatch-dark': c, '--swatch-light': ACCENTS_LIGHT[k] || c }} onClick={() => update(s => { s.accent = k })} aria-label={t(k)} />
-          ))}
-        </div>
+        {['dark', 'light'].map(tone => <div key={tone} style={{ marginBottom: 10 }}>
+          <div className="small dim" style={{ marginBottom: 8 }}>{t(tone === 'dark' ? 'Dark-theme tones (also available in Light)' : 'Light-theme tones (also available in Dark)')}</div>
+          <div className="swatches">
+            {Object.entries(ACCENTS).filter(([k]) => k.endsWith('-light') === (tone === 'light')).map(([k, colors]) => {
+              const hue = k.replace(/-light$/, '')
+              return <button key={k} className={'swatch' + ((S.accent || 'lime') === k ? ' on' : '')}
+                style={{ background: colors.swatch }} onClick={() => update(s => { s.accent = k })} aria-label={`${t(hue)} · ${t(tone === 'dark' ? 'Dark' : 'Light')}`} title={`${t(hue)} · ${t(tone === 'dark' ? 'Dark' : 'Light')}`} />
+            })}
+          </div>
+        </div>)}
       </div>
     </Section>
 
+    {/* ---------- account (demo and mobile builds have nothing to sign in to) ---------- */}
+    <Section title={MOBILE ? t('Your data') : DEMO ? t('Demo') : t('Account')}>
+      {MOBILE ? <>
+        <Row icon="lock" iconTint="var(--acc)" title={t('All data stays on this phone')} subtitle={t('No account, no cloud — back it up anytime with Export below.')} />
+        <Row icon="rocket" iconTint="var(--indigo)" title={t('Self-host GYMBOOK')} subtitle={t('Passkey sign-in, sync across your devices, your own data.')} accessory="chevron"
+          onClick={() => window.open(REPO, '_blank', 'noopener')} />
+      </> : DEMO ? <>
+        <Row icon="sparkles" iconTint="var(--acc)" title={t('You’re in the demo')} subtitle={t('Example data, stored only in this browser — change anything you like.')} />
+        <Row icon="reset" iconTint="var(--blue)" title={t('Reset demo data')} accessory="chevron"
+          onClick={() => confirmSheet({ title: t('Reset demo data?'), message: t('Puts the example plan, workouts and weigh-ins back the way they started.'), confirmText: t('Reset'), onConfirm: () => { resetDemo(); nav('/home'); toast(t('Demo data reset')) } })} />
+        <Row icon="rocket" iconTint="var(--indigo)" title={t('Self-host GYMBOOK')} subtitle={t('Passkey sign-in, sync across your devices, your own data.')} accessory="chevron"
+          onClick={() => window.open(REPO, '_blank', 'noopener')} />
+      </> : user ? <>
+        <Row icon="personCircle" iconTint="var(--grey)" title={user.name} subtitle={t('Your profile and workout progress sync across devices.')} />
+        {user.admin && <Row icon="wrench" iconTint="var(--indigo)" title={t('Admin dashboard')} accessory="chevron" onClick={() => nav('/admin')} />}
+        <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your data is synced to your profile first, then cleared from this device.'), confirmText: t('Sign out'), danger: true, onConfirm: async () => { await signOut(); nav('/home') } })} />
+        <Row icon="shield" iconTint="var(--red)" title={t('Sign out everywhere')} subtitle={t('Ends this profile’s sessions on all your devices.')} danger onClick={signOutEverywhere} />
+      </> : webauthnOK() ? <>
+        <Row icon="sparkles" iconTint="var(--acc)" title={t('Create passkey profile')} subtitle={t('Keeps your data safe and separate per person.')} accessory="chevron" onClick={registerHere} />
+        <Row icon="person" iconTint="var(--blue)" title={t('Sign in with passkey')} accessory="chevron" onClick={signInHere} />
+      </> : (
+        <Row icon="lock" iconTint="var(--grey)" title={t('Passkeys not supported in this browser.')} />
+      )}
+    </Section>
+    {!user && !DEMO && !MOBILE && <p className="sect-f" style={{ marginTop: -18, marginBottom: 22 }}>{t('Guest mode — data lives only in this browser.')}</p>}
+
     {/* ---------- data: fill it, bring things over, back it up, wipe it ---------- */}
     <Section title={t('Data')}>
-      <Row icon="sparkles" iconTint="var(--acc)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={loadStarterPlan} />
+      {user && <Row icon="reset" iconTint="var(--blue)" title={t('Restore an imported profile')} subtitle={t('Use a one-time code from your previous GYMBOOK installation.')} accessory="chevron" onClick={restoreProfile} />}
+      <Row icon="sparkles" iconTint="var(--acc)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={confirmStarterPlan} />
       <Row icon="shuffle" iconTint="var(--teal)" title={t('Import from another app')}
         subtitle={t('FitNotes, Strong, Hevy — or body weight from Apple Health')}
         accessory="chevron" onClick={() => importRef.current.click()} />
       <Row icon="upload" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />
-      <Row icon="download" iconTint="var(--blue)" title={t('Export backup (JSON)')} accessory="chevron" onClick={doExport} />
+      <Row icon="download" iconTint="var(--blue)" title={t('Export backup (JSON)')} accessory="chevron" onClick={confirmExport} />
       <Row icon="trash" iconTint="var(--red)" title={t('Reset everything')} danger onClick={() => confirmSheet({ title: t('Reset everything?'), message: t('Deletes your plan, workouts and body weight on this device. This cannot be undone.'), confirmText: t('Delete everything'), danger: true, onConfirm: () => { replaceState(JSON.parse(JSON.stringify(DEF)), true); nav('/home'); toast(t('All data reset')) } })} />
     </Section>
     <input ref={fileRef} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={doImport} />
@@ -336,6 +352,7 @@ function PushCard({ S, update, toast }) {
 function RestoreProfileInline({ close, user, setUser, replaceState, pullState, toast }) {
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const restore = async () => {
     const recoveryCode = code.trim().toUpperCase()
     if (!recoveryCode) { toast(t('Enter your one-time recovery code')); return }
@@ -366,8 +383,13 @@ function RestoreProfileInline({ close, user, setUser, replaceState, pullState, t
     <TextField type="password" autoComplete="off" placeholder={t('One-time recovery code')} maxLength={40} value={code}
       onChange={e => setCode(e.target.value.toUpperCase())} aria-label={t('One-time recovery code')} />
     <div style={{ height: 12 }} />
-    <Button variant="primary" disabled={busy} onClick={restore}>{busy ? t('Please wait…') : t('Restore profile')}</Button>
-    <Button variant="ghost" disabled={busy} onClick={close}>{t('Cancel')}</Button>
+    {confirming && <div className="muted small" style={{ lineHeight: 1.5, margin: '0 0 12px' }}>
+      {t('Your current profile is saved before switching to the imported profile.')}
+    </div>}
+    <Button variant="primary" disabled={busy} onClick={confirming ? restore : () => setConfirming(true)}>
+      {busy ? t('Please wait…') : confirming ? t('Confirm restore') : t('Restore profile')}
+    </Button>
+    <Button variant="ghost" disabled={busy} onClick={confirming ? () => setConfirming(false) : close}>{confirming ? t('Back') : t('Cancel')}</Button>
   </>
 }
 
