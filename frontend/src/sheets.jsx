@@ -20,6 +20,7 @@ import { buildPlanBundle, parsePlan, mergePlan, printPlan } from './lib/plan-sha
 import { estimate1RM, best1RM, is1RMRecord, REP_CAP } from './lib/onerm.js'
 import { nextPrescription, applyPrescription, policyFor, defaultIncrement, POLICIES_FOR, POLICY_NAME, POLICY_DESC, MAX_BW_SETS } from './lib/progression.js'
 import { MOBILE, shareExport } from './lib/mobile.js'
+import { convertWeight } from './lib/units.js'
 
 const S = () => useStore.getState().S
 const update = (...a) => useStore.getState().update(...a)
@@ -254,9 +255,6 @@ export const goalSheet = () => ui().openSheet(close => <GoalSheet close={close} 
 /* ============================ exercise detail ============================ */
 // Estimated 1RM for one exercise (issue #18): what the log already implies, plus a calculator
 // for a set you have not done — so the number is reachable before there is any history.
-const LB_PER_KG = 2.2046226218
-const convertWeight = (value, from, to) => from === to ? value : value * (from === 'kg' ? LB_PER_KG : 1 / LB_PER_KG)
-
 function detailSetLabel(id, set, cfg, fromUnit, toUnit) {
   if (fromUnit === toUnit) return setLabel(id, set, cfg)
   const mode = modeOf(cfg || { id })
@@ -295,9 +293,9 @@ function OneRM({ ex, unit }) {
   </>
 }
 
-function ExerciseDetail({ ex, close }) {
+function ExerciseDetail({ ex, close, initialUnit, onUnitChange }) {
   const st = useStore(s => s.S)
-  const [unit, setUnit] = useState(st.unit)
+  const [unit, setUnit] = useState(initialUnit || st.unit)
   const last = lastEntryFor(st, ex.id)
   const best = bestWeightFor(st, ex.id)
   return <>
@@ -312,7 +310,7 @@ function ExerciseDetail({ ex, close }) {
     {ex.desc && <div className="exnote">{ex.desc}</div>}
     {!isCardio(ex) && <div className="row between" style={{ margin: '12px 0 8px' }}>
       <span className="muted small">{t('Weight unit')}</span>
-      <div style={{ width: 124 }}><Segmented options={[{ value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' }]} value={unit} onChange={setUnit} /></div>
+      <div style={{ width: 124 }}><Segmented options={[{ value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' }]} value={unit} onChange={v => { setUnit(v); onUnitChange?.(v) }} /></div>
     </div>}
     {best > 0 && <div className="small row" style={{ marginBottom: 6, gap: 5 }}><Icon name="trophy" style={{ fontSize: 14, color: 'var(--yellow)' }} />{t('Best:')} <b className="accent">{fmtNum(convertWeight(best, st.unit, unit))} {unit}</b>{last ? ` · ${t('last')} ${fmtDate(last.d)}: ${last.sets.map(s => detailSetLabel(ex.id, s, last.target, st.unit, unit)).join(', ')}` : ''}</div>}
     <Button variant="primary" icon="plus" style={{ margin: '10px 0 4px' }} onClick={() => addToRoutineSheet(ex)}>{t('Add to my plan')}</Button>
@@ -324,7 +322,7 @@ function ExerciseDetail({ ex, close }) {
     {instrFor(ex).length > 0 &&<><h4 className="sec">{t('How to')}{!INSTR_LANGS.includes(getLang()) && <span className="dim" style={{ textTransform: 'none', letterSpacing: 0 }}> · {t('instructions in English')}</span>}</h4><ol className="steps-list">{instrFor(ex).map((s, i) => <li key={i}>{s}</li>)}</ol></>}
   </>
 }
-export const exerciseDetailSheet = ex => ui().openSheet(close => <ExerciseDetail ex={ex} close={close} />)
+export const exerciseDetailSheet = (ex, options = {}) => ui().openSheet(close => <ExerciseDetail ex={ex} close={close} {...options} />)
 
 /* ============================ add to routine ============================ */
 function AddToRoutine({ ex, close }) {
@@ -886,6 +884,7 @@ function TopWeight({ entryIdx, close }) {
   // the whole app down with it. Hooks still run unconditionally, so the bail-out has
   // to sit after every one of them.
   const entry = A ? A.entries[entryIdx] : null
+  const weightUnit = entry ? (entry.weightUnit || st.unit) : st.unit
   const ex = entry && EXIDX[entry.id]
   const maxSet = entry ? Math.max(0, ...entry.sets.filter(s => s.done).map(s => s.w || 0)) : 0
   const prevBest = entry ? Math.max((st.exWeights[entry.id] || {}).w || 0, bestWeightFor(st, entry.id)) : 0
@@ -916,9 +915,9 @@ function TopWeight({ entryIdx, close }) {
   return <>
     <h3 className="capitalize row" style={{ gap: 8 }}><Icon name="checkCircle" style={{ color: 'var(--acc)' }} />{t('{0} done', ex.n)}</h3>
     <div className="muted small">{t('Confirm the weight you worked with — your highest becomes the default next time.')}{!unitDone && unit.length > 1 ? ' ' + t('Then finish the superset partner.') : ''}</div>
-    <WeightInput value={v} setValue={setV} unit={st.unit} />
+    <WeightInput value={convertWeight(v, st.unit, weightUnit)} setValue={n => setV(convertWeight(n, weightUnit, st.unit))} unit={weightUnit} />
     <div style={{ height: 10 }} />
-    {prevBest > 0 ? <div className="small dim" style={{ textAlign: 'center', marginBottom: 12 }}>{t('Previous best:')} {fmtNum(prevBest)} {st.unit}{maxSet > prevBest && <span style={{ color: 'var(--yellow)' }}> — {t('new record!')}</span>}</div> : <div style={{ height: 4 }} />}
+    {prevBest > 0 ? <div className="small dim" style={{ textAlign: 'center', marginBottom: 12 }}>{t('Previous best:')} {fmtNum(convertWeight(prevBest, st.unit, weightUnit))} {weightUnit}{maxSet > prevBest && <span style={{ color: 'var(--yellow)' }}> — {t('new record!')}</span>}</div> : <div style={{ height: 4 }} />}
     {unitDone ? <>
       <Button variant="primary" trailingIcon={isLastUnit ? null : 'chevronRight'} onClick={() => commit(true)}>{isLastUnit ? t('Save') : t('Save & next exercise')}</Button>
       <div style={{ height: 8 }} /><Button variant="ghost" className="dim" onClick={() => commit(false)}>{t('Just close')}</Button>
