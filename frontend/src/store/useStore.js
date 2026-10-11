@@ -190,16 +190,17 @@ export const useStore = create((set, get) => {
         set({ ready: true })
         return
       }
-      // An explicit sign-out takes precedence over server cookies and any Supabase token left
-      // in browser storage. A later successful sign-in clears this marker in setUser().
-      if (localStorage.getItem(SIGNED_OUT_KEY) === '1') {
+      let authSession = null
+      try { authSession = await processOAuthCallback() }
+      catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Google sign-in failed. Please try again.') }
+
+      // An explicit sign-out takes precedence over existing cookies/tokens, but a fresh OAuth
+      // callback must be allowed to finish after the user starts a new Google sign-in.
+      if (!authSession && localStorage.getItem(SIGNED_OUT_KEY) === '1') {
         get().setUser(null)
         set({ ready: true })
         return
       }
-      let authSession = null
-      try { authSession = await processOAuthCallback() }
-      catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Google sign-in failed. Please try again.') }
 
       let appUser = null
       if (authSession?.access_token) {
