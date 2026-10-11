@@ -7,6 +7,7 @@ import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
 import { MOBILE, nativeLoad, nativeSave, syncReminder } from '../lib/mobile.js'
 
 const KEY = 'gym_state_v1'
+const SIGNED_OUT_KEY = 'gym_signed_out_v1'
 export const DEF = {
   unit: 'kg', restSec: 90, sound: true, keepAwake: true, lang: 'en',
   theme: 'dark', accent: 'lime', body: 'male', targetW: null,
@@ -73,6 +74,7 @@ export const useStore = create((set, get) => {
 
   // Everything a sign-out leaves behind on this device, whichever way it was triggered.
   const clearLocalSession = () => {
+    localStorage.setItem(SIGNED_OUT_KEY, '1')
     get().setUser(null)
     localStorage.removeItem('gym_guest')
     localStorage.removeItem('gym_dirty')
@@ -82,7 +84,10 @@ export const useStore = create((set, get) => {
 
   return {
     S: (() => { const s = loadState(); registerCustom(s.customEx); return s })(),
-    user: (() => { try { return JSON.parse(localStorage.getItem('gym_user')) || null } catch { return null } })(),
+    user: (() => {
+      if (localStorage.getItem(SIGNED_OUT_KEY) === '1') return null
+      try { return JSON.parse(localStorage.getItem('gym_user')) || null } catch { return null }
+    })(),
     ready: false,
 
     // Mutate a draft of S via producer fn, then persist + schedule sync.
@@ -97,7 +102,7 @@ export const useStore = create((set, get) => {
     setGuest(v) { if (v) localStorage.setItem('gym_guest', '1'); else localStorage.removeItem('gym_guest'); set({}) },
 
     setUser(u) {
-      if (u) { localStorage.setItem('gym_user', JSON.stringify(u)); localStorage.removeItem('gym_guest') }
+      if (u) { localStorage.setItem('gym_user', JSON.stringify(u)); localStorage.removeItem('gym_guest'); localStorage.removeItem(SIGNED_OUT_KEY) }
       else localStorage.removeItem('gym_user')
       set({ user: u })
     },
@@ -123,8 +128,12 @@ export const useStore = create((set, get) => {
     },
 
     async signOut() {
-      try { await get().pushState(); await api('/api/logout', { method: 'POST', body: '{}' }) } catch (e) { /* */ }
-      await signOutSupabase(false)
+      await get().pushState()
+      // Keep boot from silently recreating the app session from a cookie or an old Supabase
+      // token if this browser reloads immediately after sign-out.
+      localStorage.setItem(SIGNED_OUT_KEY, '1')
+      try { await api('/api/logout', { method: 'POST', body: '{}' }) } catch (e) { /* local sign-out still proceeds */ }
+      try { await signOutSupabase(false) } catch (e) { /* remove local credentials below regardless */ }
       clearLocalSession()
     },
 
@@ -135,9 +144,15 @@ export const useStore = create((set, get) => {
     // would sign the user out of the one place the bump didn't reach. Caller reports the error.
     async signOutAll() {
       await get().pushState()   // never throws — stores gym_dirty and moves on when offline
-      await api('/api/logout/all', { method: 'POST', body: '{}' })
-      await signOutSupabase(true)
-      clearLocalSession()
+      localStorage.setItem(SIGNED_OUT_KEY, '1')
+      let serverError = null
+      try { await api('/api/logout/all', { method: 'POST', body: '{}' }) }
+      catch (e) { serverError = e }
+      finally {
+        try { await signOutSupabase(true) } catch (e) { /* local sign-out still proceeds */ }
+        clearLocalSession()
+      }
+      if (serverError) throw serverError
     },
 
     // Demo build only: drop the seeded example profile back in (Settings → "Reset demo data").
@@ -172,6 +187,13 @@ export const useStore = create((set, get) => {
           await get().resetDemo()
         }
         get().setGuest(true)
+        set({ ready: true })
+        return
+      }
+      // An explicit sign-out takes precedence over server cookies and any Supabase token left
+      // in browser storage. A later successful sign-in clears this marker in setUser().
+      if (localStorage.getItem(SIGNED_OUT_KEY) === '1') {
+        get().setUser(null)
         set({ ready: true })
         return
       }
