@@ -290,9 +290,9 @@ h4.sec{
 .btn:active{transform:scale(.975)}
 .btn.primary{background:var(--acc);color:var(--on-acc)}
 .btn.primary:active{background:var(--acc-2)}
-.btn.google-btn{margin-top:12px;background:#fff;color:#3c4043;border:1px solid #dadce0}
-.btn.google-btn:active{background:#f1f3f4}
-.btn.google-btn .google-word{display:inline-flex;letter-spacing:-.04em;font-weight:700}
+.btn.plain.google-btn{margin-top:12px;background:#fff;color:#3c4043;border:1px solid #8c8c8c;box-shadow:0 1px 2px rgba(0,0,0,.28)}
+.btn.plain.google-btn:active{background:#f1f3f4}
+.btn.google-btn .google-word{display:inline-flex;margin-left:5px;letter-spacing:-.04em;font-weight:700}
 .btn.google-btn .google-blue{color:#4285f4}
 .btn.google-btn .google-red{color:#ea4335}
 .btn.google-btn .google-yellow{color:#fbbc05}
@@ -418,7 +418,7 @@ h4.sec{
   padding:13px 15px;font-size:17px;letter-spacing:-.012em;outline:none;
   transition:box-shadow var(--fast);
 }
-.login-screen .input{border:1px solid var(--acc)}
+.login-screen .input{border:1px solid #cbd5e1}
 .login-screen .muted,.login-screen .dim{color:var(--label-2)}
 .login-price-notice{
   align-self:center;margin:4px 0 12px;padding:7px 12px;border-radius:999px;
