@@ -194,10 +194,11 @@ body.resting #app{padding-bottom:calc(250px + var(--sab))}
 }
 @media(prefers-reduced-motion:reduce){.loading-mark svg{animation:none}}
 
-/* large title, the way a nav bar does it */
+/* App name and shared top-right settings shortcut */
+.app-topbar{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px}
 .app-brand{
   color:var(--label);font-size:16px;font-weight:700;letter-spacing:.035em;
-  margin:0 4px 12px;
+  margin:0 4px;
 }
 .hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:8px 0 18px}
 .hdr h1{font-size:34px;line-height:1.06;font-weight:700;letter-spacing:-.028em}

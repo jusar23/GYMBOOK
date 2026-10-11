@@ -4,7 +4,7 @@ import { useStore } from './store/useStore.js'
 import { useUI } from './store/useUI.js'
 import { bindUI } from './components/ui.jsx'
 import { ACCENTS } from './lib/format.js'
-import { setLang, useLang } from './lib/i18n.js'
+import { setLang, useLang, t } from './lib/i18n.js'
 import { setNav } from './lib/nav.js'
 import { useWakeLock } from './lib/wakelock.js'
 import { startFlow } from './sheets.jsx'
@@ -26,6 +26,7 @@ const Settings = lazy(() => import('./views/Settings.jsx'))
 const Admin = lazy(() => import('./views/Admin.jsx'))
 
 bindUI(useUI)   // lets the shared controls open sheets without importing the store at module scope
+const MAIN_TABS = new Set(['/home', '/plan', '/workout', '/stats', '/library'])
 
 function applyPrefs(theme, accent) {
   const de = document.documentElement
@@ -79,7 +80,10 @@ function Shell() {
       {/* keyed on the route: a view that throws is contained, and switching tabs
           re-mounts the boundary, so the tab bar is always a way out */}
       <div id="app" className="vfade" key={loc.pathname}>
-        {authed && <div className="app-brand">GYMBOOK</div>}
+        {authed && <div className="app-topbar">
+          <div className="app-brand">GYMBOOK</div>
+          {MAIN_TABS.has(loc.pathname) && <button className="iconbtn" onClick={() => navigate('/settings')} aria-label={t('Settings')} title={t('Settings')}><Icon name="gear" /></button>}
+        </div>}
         <ErrorBoundary>
           {!authed ? <Login /> : (
             <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading GYMBOOK"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
