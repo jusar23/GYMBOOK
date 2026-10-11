@@ -8,6 +8,8 @@ const RECOVERY_KEY = 'gym_pending_recovery_code'
 const PASSWORD_RECOVERY_FLOW_KEY = 'gym_password_recovery_flow_v1'
 const PASSWORD_RECOVERY_VERIFIER_KEY = 'gym_password_recovery_verifier_v1'
 const PASSWORD_RECOVERY_KEY = 'gym_password_recovery_v1'
+const timeoutSignal = ms => typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+  ? AbortSignal.timeout(ms) : undefined
 
 export const supabaseAuthConfigured = () => !!(SUPABASE_URL && SUPABASE_KEY)
 export const savePendingRecoveryCode = code => {
@@ -176,13 +178,16 @@ export async function getAuthSession() {
 }
 
 export async function signOutSupabase(global = false) {
-  const session = await getAuthSession()
+  // Use the token already on this device: refreshing a near-expired session would add another
+  // request to sign-out. The app's own session is revoked separately by its logout endpoint.
+  const session = readSession()
+  localStorage.removeItem(SESSION_KEY)
   if (session?.access_token) {
     try {
       await fetch(`${SUPABASE_URL}/auth/v1/logout${global ? '?scope=global' : ''}`, {
-        method: 'POST', headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${session.access_token}` }
+        method: 'POST', headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${session.access_token}` },
+        signal: timeoutSignal(3000),
       })
     } catch { /* Local sign-out still proceeds while offline. */ }
   }
-  localStorage.removeItem(SESSION_KEY)
 }

@@ -8,6 +8,8 @@ import { MOBILE, nativeLoad, nativeSave, syncReminder } from '../lib/mobile.js'
 
 const KEY = 'gym_state_v1'
 const SIGNED_OUT_KEY = 'gym_signed_out_v1'
+const timeoutSignal = ms => typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+  ? AbortSignal.timeout(ms) : undefined
 export const DEF = {
   unit: 'kg', restSec: 90, sound: true, keepAwake: true, lang: 'en',
   theme: 'dark', accent: 'lime', body: 'male', targetW: null,
@@ -46,6 +48,7 @@ const hasData = st => !!((st.workouts || []).length || (st.routines || []).lengt
 export const useStore = create((set, get) => {
   let pushTm = null
   let saveTm = null
+  let stateRevision = 0
 
   // Mobile build: mirror the state into a file in the app's data directory (survives WebView
   // storage eviction) and keep the native reminder schedule in step with the weekly plan.
@@ -62,6 +65,8 @@ export const useStore = create((set, get) => {
     set({ S })
     if (MOBILE) nativePersist()
     if (push && get().user) {
+      stateRevision++
+      localStorage.setItem('gym_dirty', '1')
       clearTimeout(pushTm)
       pushTm = setTimeout(() => get().pushState(), 1500)
     }
@@ -124,10 +129,17 @@ export const useStore = create((set, get) => {
     },
     setSigningIn(value) { set({ signingIn: !!value }) },
 
-    async pushState() {
+    async pushState(force = false) {
       if (!get().user) return
       clearTimeout(pushTm)
-      try { await api('/api/data', { method: 'PUT', body: JSON.stringify({ state: get().S }) }); localStorage.removeItem('gym_dirty') }
+      if (!force && localStorage.getItem('gym_dirty') !== '1') return
+      const revision = stateRevision
+      const body = JSON.stringify({ state: get().S })
+      try {
+        await api('/api/data', { method: 'PUT', body })
+        if (revision === stateRevision) localStorage.removeItem('gym_dirty')
+        else localStorage.setItem('gym_dirty', '1')
+      }
       catch (e) { localStorage.setItem('gym_dirty', '1') }
     },
     async pullState(remoteState, alreadyFetched = false, required = false) {
@@ -140,7 +152,7 @@ export const useStore = create((set, get) => {
           const next = Object.assign(clone(DEF), state)
           if (active) next.active = active
           persist(next, false)
-        } else if (hasData(S)) { await get().pushState() }
+        } else if (hasData(S)) { await get().pushState(true) }
       } catch (e) {
         if (required) throw e
         /* offline — keep local */
@@ -153,8 +165,12 @@ export const useStore = create((set, get) => {
       // Keep boot from silently recreating the app session from a cookie or an old Supabase
       // token if this browser reloads immediately after sign-out.
       localStorage.setItem(SIGNED_OUT_KEY, '1')
-      try { await api('/api/logout', { method: 'POST', body: '{}' }) } catch (e) { /* local sign-out still proceeds */ }
-      try { await signOutSupabase(false) } catch (e) { /* remove local credentials below regardless */ }
+      // The app cookie and Supabase token are independent, so revoke both at once after the
+      // profile save completes instead of paying for two sequential network round trips.
+      await Promise.allSettled([
+        api('/api/logout', { method: 'POST', body: '{}', signal: timeoutSignal(4000) }),
+        signOutSupabase(false),
+      ])
       clearLocalSession()
     },
 
@@ -167,13 +183,12 @@ export const useStore = create((set, get) => {
       set({ signingOut: true })
       await get().pushState()   // never throws — stores gym_dirty and moves on when offline
       localStorage.setItem(SIGNED_OUT_KEY, '1')
-      let serverError = null
-      try { await api('/api/logout/all', { method: 'POST', body: '{}' }) }
-      catch (e) { serverError = e }
-      finally {
-        try { await signOutSupabase(true) } catch (e) { /* local sign-out still proceeds */ }
-        clearLocalSession()
-      }
+      const [serverResult] = await Promise.allSettled([
+        api('/api/logout/all', { method: 'POST', body: '{}', signal: timeoutSignal(4000) }),
+        signOutSupabase(true),
+      ])
+      clearLocalSession()
+      const serverError = serverResult.status === 'rejected' ? serverResult.reason : null
       if (serverError) throw serverError
     },
 
@@ -217,7 +232,7 @@ export const useStore = create((set, get) => {
       catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Google sign-in failed. Please try again.') }
 
       // A recovery link grants a temporary Supabase session only for setting a new
-      // password. Do not create a GYMBOOK app session until the user signs in again.
+      // password. Do not create a gymbook app session until the user signs in again.
       if (authSession && isPasswordRecovery()) {
         set({ ready: true, signingIn: false })
         return
@@ -250,7 +265,7 @@ export const useStore = create((set, get) => {
           initialStateFetched = Object.hasOwn(result, 'state')
           clearPendingRecoveryCode()
         }
-        catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not connect your account to GYMBOOK.') }
+        catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not connect your account to gymbook.') }
       }
       if (!authSession) {
         try {
@@ -270,7 +285,7 @@ export const useStore = create((set, get) => {
               initialStateFetched = Object.hasOwn(result, 'state')
               clearPendingRecoveryCode()
             }
-          } catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not connect your account to GYMBOOK.') }
+          } catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not connect your account to gymbook.') }
         }
       }
       if (appUser) {

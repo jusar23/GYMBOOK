@@ -1,4 +1,4 @@
-/* GYMBOOK service worker — runtime caching (works with Vite's hashed asset names).
+/* gymbook service worker — runtime caching (works with Vite's hashed asset names).
    Media (img/gif) cache-first; everything else network-first with offline fallback. */
 const CACHE = 'gymbook-rt-v2'
 
@@ -10,11 +10,11 @@ self.addEventListener('activate', e => {
 })
 self.addEventListener('push', e => {
   const data = e.data ? e.data.json() : {}
-  e.waitUntil(self.registration.showNotification(data.title || 'GYMBOOK', {
+  e.waitUntil(self.registration.showNotification(data.title || 'gymbook', {
     body: data.body || '',
     icon: 'icon-512.png',
     badge: 'icon-180.png',
-    tag: data.tag || 'opengym',
+    tag: data.tag || 'gymbook',
     renotify: true
   }))
 })

@@ -55,7 +55,7 @@ try {
     const current = rows[0].payload;
     if ((current.users || []).length || (current.creds || []).length || (current.subs || []).length ||
         (current.invites || []).length || Object.keys(current.states || {}).length)
-      throw new Error('Supabase already contains openGym data. Import stopped without overwriting it.');
+      throw new Error('Supabase already contains gymbook data. Import stopped without overwriting it.');
     await tx`update public.opengym_snapshot set payload = ${JSON.stringify(snapshot)}::jsonb, updated_at = now() where id = 1`;
   });
 } finally {

@@ -1,4 +1,4 @@
-/* GYMBOOK API — Supabase Auth, passkeys and per-user state.
+/* gymbook API — Supabase Auth, passkeys and per-user state.
    Local Docker uses JSON files; Vercel uses a Supabase JSONB snapshot. */
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -16,7 +16,7 @@ const IS_VERCEL = process.env.VERCEL === '1';
 const DATA = process.env.DATA_DIR || '/data';
 const RP_ID = process.env.RP_ID || 'localhost';
 const ORIGIN = process.env.ORIGIN || 'http://localhost:8080';
-const RP_NAME = process.env.RP_NAME || 'GYMBOOK';
+const RP_NAME = process.env.RP_NAME || 'gymbook';
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 // Admin dashboard (issue): admins are matched by uid; INVITE_ONLY gates new signups behind a
@@ -315,7 +315,7 @@ const routes = {
     const authId = String(authUser.id);
     const metadata = authUser.user_metadata || {};
     const emailName = String(authUser.email || '').split('@')[0];
-    const name = String(metadata.full_name || metadata.name || emailName || 'GYMBOOK user').trim().slice(0, 40);
+    const name = String(metadata.full_name || metadata.name || emailName || 'gymbook user').trim().slice(0, 40);
     let profileId = db.authUsers[authId] || authId;
     let user = db.users.find(u => u.id === profileId);
     const recoveryCode = String(body.recovery_code || '').trim().toUpperCase();
@@ -514,7 +514,7 @@ const routes = {
   'POST /api/push/test': async (req, res) => {
     const user = readSession(req);
     if (!user) return json(res, 401, { error: 'not signed in' });
-    await sendPush(user.id, { title: 'GYMBOOK', body: 'Test notification ✅ — this is what alerts look like.', tag: 'test' });
+    await sendPush(user.id, { title: 'gymbook', body: 'Test notification ✅ — this is what alerts look like.', tag: 'test' });
     json(res, 200, { ok: true });
   },
 
