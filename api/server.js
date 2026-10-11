@@ -319,21 +319,25 @@ const routes = {
     let profileId = db.authUsers[authId] || authId;
     let user = db.users.find(u => u.id === profileId);
     const recoveryCode = String(body.recovery_code || '').trim().toUpperCase();
-    if (!user && recoveryCode) {
+    // Recovery codes are entered from Settings after a person has signed in. That account may
+    // already have a freshly-created profile, so a valid code must be able to relink it to the
+    // imported profile at this point too.
+    if (recoveryCode) {
       const invite = db.invites.find(i => i.code === recoveryCode && !i.usedBy && !i.revoked && i.restoreUserId);
       if (!invite) return json(res, 403, { error: 'invalid or already used recovery code' });
-      user = db.users.find(u => u.id === invite.restoreUserId);
-      if (!user) return json(res, 403, { error: 'the recovery code does not match an existing profile' });
-      if (user.disabled) return json(res, 403, { error: 'this account has been disabled' });
+      const restoredUser = db.users.find(u => u.id === invite.restoreUserId);
+      if (!restoredUser) return json(res, 403, { error: 'the recovery code does not match an existing profile' });
+      if (restoredUser.disabled) return json(res, 403, { error: 'this account has been disabled' });
       const linkedElsewhere = Object.entries(db.authUsers).some(([otherAuthId, otherProfileId]) =>
-        otherAuthId !== authId && otherProfileId === user.id
+        otherAuthId !== authId && otherProfileId === restoredUser.id
       );
       if (linkedElsewhere) return json(res, 409, { error: 'this profile is already linked to another account' });
-      invite.usedBy = user.id;
+      invite.usedBy = restoredUser.id;
       invite.usedAt = new Date().toISOString();
-      user.linkedAuthUserId = authId;
-      profileId = user.id;
+      restoredUser.linkedAuthUserId = authId;
+      profileId = restoredUser.id;
       db.authUsers[authId] = profileId;
+      user = restoredUser;
     }
     if (user?.disabled) return json(res, 403, { error: 'this account has been disabled' });
     if (!user) {

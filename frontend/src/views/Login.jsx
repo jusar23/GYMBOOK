@@ -1,7 +1,7 @@
 import { useStore, hasData } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { webauthnOK, passkeyLogin, passkeyRegister, api, BIO, createAppSessionWithSupabase } from '../lib/api.js'
-import { clearPendingRecoveryCode, createEmailAccount, getPendingRecoveryCode, savePendingRecoveryCode, signInWithEmail, signInWithGoogle, supabaseAuthConfigured } from '../lib/supabaseAuth.js'
+import { clearPendingRecoveryCode, createEmailAccount, getPendingRecoveryCode, signInWithEmail, signInWithGoogle, supabaseAuthConfigured } from '../lib/supabaseAuth.js'
 import { t } from '../lib/i18n.js'
 import { DEMO, REPO } from '../lib/demo.js'
 import { useState, useRef, useEffect } from 'react'
@@ -71,7 +71,6 @@ export default function Login() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [recoveryCode, setRecoveryCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -82,9 +81,9 @@ export default function Login() {
     if (message) { setError(message); localStorage.removeItem('gym_auth_error') }
   }, [])
 
-  const finishLogin = async (session, code = '') => {
+  const finishLogin = async session => {
     if (!session?.access_token) throw new Error(t('Check your email to confirm your account, then sign in.'))
-    const user = await createAppSessionWithSupabase(session.access_token, code || getPendingRecoveryCode())
+    const user = await createAppSessionWithSupabase(session.access_token, getPendingRecoveryCode())
     clearPendingRecoveryCode()
     setUser(user)
     await pullState()
@@ -94,15 +93,14 @@ export default function Login() {
   const submit = async e => {
     e.preventDefault()
     setError(''); setNotice(''); setBusy(true)
-    savePendingRecoveryCode(recoveryCode)
     try {
       if (mode === 'signup') {
         if (!name.trim()) throw new Error(t('Enter a name'))
         const result = await createEmailAccount({ name, email, password })
         if (result.confirmationRequired) setNotice(t('Account created. Check your email for a confirmation link before signing in.'))
-        else await finishLogin(result, recoveryCode)
+        else await finishLogin(result)
       } else {
-        await finishLogin(await signInWithEmail({ email, password }), recoveryCode)
+        await finishLogin(await signInWithEmail({ email, password }))
       }
     } catch (e) { setError(authErrorText(e)) }
     finally { setBusy(false) }
@@ -110,7 +108,7 @@ export default function Login() {
 
   const google = async () => {
     setError(''); setNotice(''); setBusy(true)
-    try { await signInWithGoogle(recoveryCode) }
+    try { await signInWithGoogle() }
     catch (e) { setError(authErrorText(e)); setBusy(false) }
   }
 
@@ -144,9 +142,6 @@ export default function Login() {
       <div className="muted" style={{ marginBottom: 20 }}>{t('Your workouts. Your weights. Your profile.')}</div>
 
       {authReady ? <>
-        <input className="input" type="password" autoComplete="off" placeholder={t('One-time recovery code (optional)')} maxLength={40} value={recoveryCode}
-          onChange={e => setRecoveryCode(e.target.value.toUpperCase())} aria-label={t('One-time recovery code (optional)')} />
-        <div className="dim small" style={{ textAlign: 'left', margin: '-4px 2px 8px', lineHeight: 1.4 }}>{t('Enter this only if you are connecting a profile imported from your previous GYMBOOK installation.')}</div>
         <Button onClick={google} disabled={busy}>{t('Continue with Google')}</Button>
         <div className="dim small" style={{ margin: '16px 0' }}>{t('or use email')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>

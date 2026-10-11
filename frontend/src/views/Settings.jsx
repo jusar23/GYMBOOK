@@ -4,7 +4,8 @@ import { useStore, DEF, hasData } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { ACCENTS, todayISO, localTZ } from '../lib/format.js'
 import { effortOf } from '../lib/history.js'
-import { api, webauthnOK, passkeyLogin, passkeyRegister, IS_ANDROID } from '../lib/api.js'
+import { api, createAppSessionWithSupabase, webauthnOK, passkeyLogin, passkeyRegister, IS_ANDROID } from '../lib/api.js'
+import { getAuthSession } from '../lib/supabaseAuth.js'
 import { pushSupported, enablePush, disablePush, sendTestPush } from '../lib/push.js'
 import { wakeLockSupported } from '../lib/wakelock.js'
 import { t, LANGS, INSTR_LANGS } from '../lib/i18n.js'
@@ -53,6 +54,7 @@ export default function Settings() {
     catch (e) { if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') toast(e.message || t('Sign-in failed')) }
   }
   const registerHere = () => useUI.getState().openSheet(close => <RegisterInline close={close} setUser={setUser} pushState={pushState} pullState={pullState} toast={toast} />)
+  const restoreProfile = () => useUI.getState().openSheet(close => <RestoreProfileInline close={close} user={user} setUser={setUser} replaceState={replaceState} pullState={pullState} toast={toast} />)
   // Ends the profile's sessions on every device — this one included, so on success it lands in
   // the same place as the plain sign-out above (home, local data cleared). On failure nothing
   // local is touched: still signed in here, and say so rather than leaving a half-signed-out app.
@@ -85,7 +87,8 @@ export default function Settings() {
         <Row icon="rocket" iconTint="var(--indigo)" title={t('Self-host GYMBOOK')} subtitle={t('Passkey sign-in, sync across your devices, your own data.')} accessory="chevron"
           onClick={() => window.open(REPO, '_blank', 'noopener')} />
       </> : user ? <>
-        <Row icon="personCircle" iconTint="var(--grey)" title={user.name} subtitle={t('Signed in with passkey — data syncs to this profile.')} />
+        <Row icon="personCircle" iconTint="var(--grey)" title={user.name} subtitle={t('Your profile and workout progress sync across devices.')} />
+        <Row icon="reset" iconTint="var(--blue)" title={t('Restore an imported profile')} subtitle={t('Use a one-time code from your previous GYMBOOK installation.')} accessory="chevron" onClick={restoreProfile} />
         {user.admin && <Row icon="wrench" iconTint="var(--indigo)" title={t('Admin dashboard')} accessory="chevron" onClick={() => nav('/admin')} />}
         <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your data is synced to your profile first, then cleared from this device.'), confirmText: t('Sign out'), danger: true, onConfirm: () => { signOut(); nav('/home') } })} />
         <Row icon="shield" iconTint="var(--red)" title={t('Sign out everywhere')} subtitle={t('Ends this profile’s sessions on all your devices.')} danger onClick={signOutEverywhere} />
@@ -324,6 +327,43 @@ function PushCard({ S, update, toast }) {
       )}
     </Section>
     {on && <div style={{ marginTop: -12, marginBottom: 22 }}><Button size="sm" icon="bell" onClick={test}>{t('Send test notification')}</Button></div>}
+  </>
+}
+
+function RestoreProfileInline({ close, user, setUser, replaceState, pullState, toast }) {
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const restore = async () => {
+    const recoveryCode = code.trim().toUpperCase()
+    if (!recoveryCode) { toast(t('Enter your one-time recovery code')); return }
+    setBusy(true)
+    try {
+      const session = await getAuthSession()
+      if (!session?.access_token) throw new Error(t('Please sign in again, then retry profile recovery.'))
+      // Preserve the currently signed-in profile on the server before switching its mapping.
+      await api('/api/data', { method: 'PUT', body: JSON.stringify({ state: useStore.getState().S }) })
+      localStorage.removeItem('gym_dirty')
+      const recoveredUser = await createAppSessionWithSupabase(session.access_token, recoveryCode)
+      localStorage.removeItem('gym_dirty')
+      setUser(recoveredUser)
+      replaceState(JSON.parse(JSON.stringify(DEF)), false)
+      await pullState()
+      close()
+      toast(t('Previous profile restored'))
+    } catch (e) {
+      toast(e.message || t('Could not restore this profile. Check the code and try again.'))
+    } finally { setBusy(false) }
+  }
+  return <>
+    <h3>{t('Restore an imported profile')}</h3>
+    <div className="muted small" style={{ lineHeight: 1.55, margin: '12px 0 16px' }}>
+      {t('Enter the one-time code created when your previous GYMBOOK data was imported. This switches {0} to that profile. Your current profile and its data remain saved.', user?.name || t('this account'))}
+    </div>
+    <TextField type="password" autoComplete="off" placeholder={t('One-time recovery code')} maxLength={40} value={code}
+      onChange={e => setCode(e.target.value.toUpperCase())} aria-label={t('One-time recovery code')} />
+    <div style={{ height: 12 }} />
+    <Button variant="primary" disabled={busy} onClick={restore}>{busy ? t('Please wait…') : t('Restore profile')}</Button>
+    <Button variant="ghost" disabled={busy} onClick={close}>{t('Cancel')}</Button>
   </>
 }
 
