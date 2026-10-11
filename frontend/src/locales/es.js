@@ -26,6 +26,7 @@ export default {
   'Favorites': 'Favoritos',
   'Add to favorites': 'Añadir a favoritos',
   'Remove from favorites': 'Quitar de favoritos',
+  'No favorite exercises yet — star exercises in the Exercises tab.': 'Aún no tienes favoritos. Marca ejercicios con la estrella en la pestaña Ejercicios.',
   'History': 'Historial',
   'Settings': 'Ajustes',
   'Freestyle': 'Libre',
