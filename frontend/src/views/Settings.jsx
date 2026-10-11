@@ -19,7 +19,7 @@ export default function Settings() {
   const nav = useNavigate()
   const S = useStore(s => s.S)
   const user = useStore(s => s.user)
-  const { update, replaceState, setUser, pullState, pushState, signOut, signOutAll, resetDemo } = useStore()
+  const { update, replaceState, setUser, setSigningIn, pullState, pushState, signOut, signOutAll, resetDemo } = useStore()
   const toast = useUI(s => s.toast)
   const fileRef = useRef(null)
   const importRef = useRef(null)
@@ -50,10 +50,12 @@ export default function Settings() {
     rd.readAsText(f)
   }
   const signInHere = async () => {
+    setSigningIn(true)
     try { const u = await passkeyLogin(); setUser(u); await pullState(); toast(t('Welcome back, {0}', u.name)) }
     catch (e) { if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') toast(e.message || t('Sign-in failed')) }
+    finally { setSigningIn(false) }
   }
-  const registerHere = () => useUI.getState().openSheet(close => <RegisterInline close={close} setUser={setUser} pushState={pushState} pullState={pullState} toast={toast} />)
+  const registerHere = () => useUI.getState().openSheet(close => <RegisterInline close={close} setUser={setUser} setSigningIn={setSigningIn} pushState={pushState} pullState={pullState} toast={toast} />)
   const restoreProfile = () => useUI.getState().openSheet(close => <RestoreProfileInline close={close} user={user} setUser={setUser} replaceState={replaceState} pullState={pullState} toast={toast} />)
   // Ends the profile's sessions on every device — this one included, so on success it lands in
   // the same place as the plain sign-out above (home, local data cleared). On failure nothing
@@ -344,11 +346,12 @@ function RestoreProfileInline({ close, user, setUser, replaceState, pullState, t
       // Preserve the currently signed-in profile on the server before switching its mapping.
       await api('/api/data', { method: 'PUT', body: JSON.stringify({ state: useStore.getState().S }) })
       localStorage.removeItem('gym_dirty')
-      const recoveredUser = await createAppSessionWithSupabase(session.access_token, recoveryCode)
+      const result = await createAppSessionWithSupabase(session.access_token, recoveryCode)
+      const { user: recoveredUser, state } = result
       localStorage.removeItem('gym_dirty')
       setUser(recoveredUser)
       replaceState(JSON.parse(JSON.stringify(DEF)), false)
-      await pullState()
+      await pullState(state, Object.hasOwn(result, 'state'), true)
       close()
       toast(t('Previous profile restored'))
     } catch (e) {
@@ -371,7 +374,7 @@ function RestoreProfileInline({ close, user, setUser, replaceState, pullState, t
 // The same registration as the sign-in screen's, reached from Settings instead. It asks for
 // the invite code on the same terms: an invite-only instance rejects a registration without
 // one, so a form that cannot collect it is a form that cannot succeed.
-function RegisterInline({ close, setUser, pushState, pullState, toast }) {
+function RegisterInline({ close, setUser, setSigningIn, pushState, pullState, toast }) {
   const nameRef = useRef(null)
   const [code, setCode] = useState('')
   const [inviteOnly, setInviteOnly] = useState(false)
@@ -380,11 +383,13 @@ function RegisterInline({ close, setUser, pushState, pullState, toast }) {
     const n = (nameRef.current.value || '').trim()
     if (!n) { toast(t('Enter a name')); return }
     if (inviteOnly && !code.trim()) { toast(t('An invite code is required')); return }
+    setSigningIn(true)
     try {
       const u = await passkeyRegister(n, code.trim()); setUser(u); close()
       if (hasData(useStore.getState().S)) { await pushState(); toast(t('Profile created — data moved into it')) }
       else { await pullState(); toast(t('Welcome, {0}', u.name)) }
     } catch (e) { if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') toast(e.message || t('Registration failed')) }
+    finally { setSigningIn(false) }
   }
   return <>
     <h3>{t('Create your profile')}</h3>

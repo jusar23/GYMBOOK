@@ -290,7 +290,7 @@ const routes = {
   'GET /api/me': async (req, res) => {
     const user = readSession(req);
     if (!user) return json(res, 401, { error: 'not signed in' });
-    json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) } });
+    json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) }, state: readState(user.id) });
   },
 
   // Exchange a Supabase Auth access token for the app's existing HttpOnly session cookie.
@@ -346,7 +346,7 @@ const routes = {
       db.authUsers[authId] = authId;
     }
     saveDb();
-    json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) } }, { 'Set-Cookie': sessionCookie(user) });
+    json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) }, state: readState(user.id) }, { 'Set-Cookie': sessionCookie(user) });
   },
 
   'POST /api/register/options': async (req, res) => {

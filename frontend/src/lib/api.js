@@ -59,8 +59,7 @@ export async function passkeyLogin() {
 }
 
 export async function createAppSessionWithSupabase(accessToken, recoveryCode = '') {
-  const { user } = await api('/api/auth/supabase', {
+  return api('/api/auth/supabase', {
     method: 'POST', body: JSON.stringify({ access_token: accessToken, recovery_code: recoveryCode })
   })
-  return user
 }
