@@ -668,7 +668,14 @@ async function dispatchVercel(req, res) {
     await sql.begin(async tx => {
       const rows = await tx`select payload from public.opengym_snapshot where id = 1 for update`;
       if (!rows.length) throw new Error('Supabase schema is missing; run supabase/001_opengym_snapshot.sql first');
-      db = { ...emptyDb(), ...rows[0].payload };
+      // Older migration runs may have stored the JSON snapshot as a JSON string.
+      // Decode that representation before merging it into the in-memory database.
+      let snapshot = rows[0].payload;
+      if (typeof snapshot === 'string') snapshot = JSON.parse(snapshot);
+      if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
+        throw new Error('Supabase snapshot payload must be a JSON object');
+      }
+      db = { ...emptyDb(), ...snapshot };
       SECRET = db.sessionSecret || crypto.randomBytes(32).toString('hex');
       db.sessionSecret = SECRET;
       vapid = db.vapid || webpush.generateVAPIDKeys();
