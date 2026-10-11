@@ -61,8 +61,9 @@ function Shell() {
   )
   if (!ready && !authed) return (
     <div id="app">
-      <div className="loading-mark" role="status" aria-label="Loading GYMBOOK">
+      <div className="loading-mark" role="status" aria-label="Signing in to GYMBOOK">
         <Icon name="dumbbell" />
+        <div className="loading-label">Signing in…</div>
       </div>
     </div>
   )

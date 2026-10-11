@@ -288,7 +288,7 @@ h4.sec{
 .btn:active{transform:scale(.975)}
 .btn.primary{background:var(--acc);color:var(--on-acc)}
 .btn.primary:active{background:var(--acc-2)}
-.btn.google-btn{background:#fff;color:#202124;border:1px solid #dadce0}
+.btn.google-btn{margin-top:12px;background:#fff;color:#202124;border:1px solid #dadce0}
 .btn.google-btn:active{background:#f1f3f4}
 .btn.tinted{background:var(--acc-soft);color:var(--acc)}
 .btn.danger{background:color-mix(in srgb,var(--red) 15%,transparent);color:var(--red)}
