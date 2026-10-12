@@ -15,6 +15,7 @@ import Modals from './components/Modals.jsx'
 import Toast from './components/Toast.jsx'
 import RestTimer from './components/RestTimer.jsx'
 import Login from './views/Login.jsx'
+
 const Home = lazy(() => import('./views/Home.jsx'))
 const Plan = lazy(() => import('./views/Plan.jsx'))
 const RoutineEdit = lazy(() => import('./views/RoutineEdit.jsx'))
@@ -26,7 +27,7 @@ const Settings = lazy(() => import('./views/Settings.jsx'))
 const Admin = lazy(() => import('./views/Admin.jsx'))
 const Legal = lazy(() => import('./views/Legal.jsx'))
 
-bindUI(useUI)   // lets the shared controls open sheets without importing the store at module scope
+bindUI(useUI)
 const MAIN_TABS = new Set(['/home', '/plan', '/workout', '/stats', '/library'])
 
 function applyPrefs(theme, accent) {
@@ -47,17 +48,17 @@ function Shell() {
   const loc = useLocation()
   const { S, user, ready, signingOut, signingIn } = useStore()
   const isGuest = useStore(s => s.isGuest())
-  const langV = useLang()   // re-renders the whole shell when the language (pack) changes
+  const langV = useLang()
+  const authed = !!user || isGuest
+  const loginRoute = loc.pathname === '/login'
+
   useEffect(() => { setNav(navigate) }, [navigate])
   useEffect(() => { applyPrefs(S.theme, S.accent) }, [S.theme, S.accent])
   useEffect(() => { setLang(S.lang || 'en') }, [S.lang])
   useEffect(() => { document.documentElement.lang = S.lang || 'en' }, [langV, S.lang])
-  // every tab/route change starts at the top of the page
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
-  // bound to the workout, not to the route — checking Stats mid-session keeps the screen on
   useWakeLock(!!S.active && S.keepAwake !== false)
 
-  const authed = user || isGuest
   if (signingOut) return (
     <div id="app">
       <div className="loading-mark" role="status" aria-label="Signing out of gymbook">
@@ -66,6 +67,7 @@ function Shell() {
       </div>
     </div>
   )
+
   if (!ready) return (
     <div id="app">
       <div className="loading-mark" role="status" aria-label="Signing in to gymbook">
@@ -75,7 +77,6 @@ function Shell() {
     </div>
   )
 
-  // Legal documents must remain reachable from the sign-in screen, before an account exists.
   if (loc.pathname === '/legal' || loc.pathname.startsWith('/legal/')) return (
     <div id="app" className="vfade">
       <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading legal information"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
@@ -92,34 +93,39 @@ function Shell() {
           <div className="loading-label">Signing in…</div>
         </div>
       </div>}
-      {/* keyed on the route: a view that throws is contained, and switching tabs
-          re-mounts the boundary, so the tab bar is always a way out */}
+
       <div id="app" className="vfade" key={loc.pathname}>
-        {authed && <div className="app-topbar">
+        {authed && !loginRoute && <div className="app-topbar">
           <div className="app-brand">gymbook</div>
           {MAIN_TABS.has(loc.pathname) && <button className="iconbtn" onClick={() => navigate('/settings')} aria-label={t('Settings')} title={t('Settings')}><Icon name="gear" /></button>}
         </div>}
+
         <ErrorBoundary>
-          {!authed ? <Login /> : (
-            <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading gymbook"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
-              <Routes>
-                <Route path="/home" element={<Home />} />
-                <Route path="/plan" element={<Plan />} />
-                <Route path="/plan/r/:id" element={<RoutineEdit />} />
-                <Route path="/workout" element={<Workout />} />
-                <Route path="/stats" element={<Stats />} />
-                <Route path="/history" element={<History />} />
-                <Route path="/library" element={<Library />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/admin" element={user?.admin ? <Admin /> : <Navigate to="/home" replace />} />
-                <Route path="*" element={<Navigate to="/home" replace />} />
-              </Routes>
-            </Suspense>
-          )}
+          {loginRoute
+            ? (user ? <Navigate to="/home" replace /> : <Login />)
+            : !authed
+              ? <Login />
+              : (
+                <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading gymbook"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
+                  <Routes>
+                    <Route path="/home" element={<Home />} />
+                    <Route path="/plan" element={<Plan />} />
+                    <Route path="/plan/r/:id" element={<RoutineEdit />} />
+                    <Route path="/workout" element={<Workout />} />
+                    <Route path="/stats" element={<Stats />} />
+                    <Route path="/history" element={<History />} />
+                    <Route path="/library" element={<Library />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/admin" element={user?.admin ? <Admin /> : <Navigate to="/home" replace />} />
+                    <Route path="*" element={<Navigate to="/home" replace />} />
+                  </Routes>
+                </Suspense>
+              )}
         </ErrorBoundary>
       </div>
-      <TabBar onStart={startFlow} />
-      <RestTimer />
+
+      {authed && !loginRoute && <TabBar onStart={startFlow} />}
+      {authed && !loginRoute && <RestTimer />}
       <Modals />
       <Toast />
     </>
