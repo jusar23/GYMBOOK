@@ -8,32 +8,106 @@ import { Row } from '../components/ui.jsx'
 
 
 
-// ─────────────────────────────────────────────────────────────
-// CONFIGURACIÓN (revisa estos valores antes de cada publicación)
-// ─────────────────────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════
+// CHECKLIST INTERNO (no se muestra a los usuarios)
+// Este texto afirma que lo siguiente YA existe. No publiques hasta que sea verdad:
+//  [ ] Registro con casilla de aceptación de Términos y Política (fecha y versión guardadas).
+//  [ ] Casilla SEPARADA y sin marcar para datos sensibles (peso corporal), con evidencia:
+//      texto mostrado, fecha/hora, versión y cuenta. Opción para retirarla dentro de la app.
+//  [ ] Autorización expresa para transferencias internacionales (puede ir en el registro).
+//  [ ] Ajustes: "Eliminar mis datos de entrenamiento" y "Eliminar mi cuenta" (borran de verdad,
+//      incluidas copias en BACKUP_DAYS y registros en LOG_DAYS).
+//  [ ] Ajustes: cambio de correo con confirmación en el correo nuevo.
+//  [ ] Periodo gratuito de TRIAL_DAYS días, contado desde la creación de la cuenta.
+//  [ ] Pago: mostrar precio total, moneda, impuestos, periodo y renovación ANTES de confirmar;
+//      cancelación desde la app; reembolsos y retracto atendidos según la ley.
+//  [ ] Contraseñas guardadas solo como hash (bcrypt/argon2).
+//  [ ] El APK solo pide los permisos que declara el texto (internet y notificaciones) y se
+//      distribuye desde los canales oficiales indicados en el texto.
+//  [ ] Correos de confirmación/recuperación sin enlaces a terceros ni rastreadores.
+//  [ ] Pantalla de consentimiento de Google con el nombre correcto de la app.
+//  [ ] Revisión de seguridad completa cerrada (accesos, secretos, copias, dependencias).
+//  [ ] HOSTING_*, EMAIL_PROVIDER, PAYMENT_PROCESSOR y PLAN_PRICE completados con datos reales.
+//  [ ] URL pública de esta política (sin iniciar sesión) para tiendas y consentimiento de Google.
+//  [ ] Data Safety (Google Play) coincide con este texto, si publicas en Play.
+//  [ ] Revisión final por un abogado colombiano.
+// ═════════════════════════════════════════════════════════════
+
+
+
 const OWNER = 'Juan Sebastián Arias Quintero'
 
 const CONTACT = 'xsebas23@gmail.com'
 
 const ADDRESS = 'El Carmen de Viboral, Antioquia, Colombia'
 
-// Teléfono de contacto (recomendado por la normativa colombiana). Si lo dejas vacío no se muestra.
-const PHONE = '' // Completa este dato antes de publicar si corresponde a tu canal de contacto
+// Teléfono de contacto (recomendado). Si lo dejas vacío no se muestra.
+const PHONE = ''
 
-const VERSION = '1.2'
+// Proveedor y país donde corre el servidor. Si lo dejas vacío se usa un texto genérico.
+const HOSTING_NAME = ''
+
+const HOSTING_COUNTRY = ''
+
+// Proveedor que envía los correos de confirmación y recuperación (ej. Resend, SendGrid). Vacío = texto genérico.
+const EMAIL_PROVIDER = ''
+
+// Procesador de pagos (ej. Wompi, Mercado Pago, Stripe, Google Play). Vacío = texto genérico.
+const PAYMENT_PROCESSOR = ''
+
+// Precio actual del plan (ej. 'COP 19.900 por mes'). Vacío = el precio se muestra solo en la pantalla de compra.
+const PLAN_PRICE = ''
+
+// Duración del periodo gratuito, en días.
+const TRIAL_DAYS = 30
+
+// true si el plan se renueva solo hasta que lo canceles; false si cada periodo se paga manualmente.
+const AUTO_RENEWAL = true
+
+// Plazos reales de conservación tras eliminar datos o cuenta. Ajusta y cumple lo que publiques.
+const BACKUP_DAYS = 30
+
+const LOG_DAYS = 90
+
+const VERSION = '1.4'
 
 const UPDATED_EN = '12 October 2026'
 
 const UPDATED_ES = '12 de octubre de 2026'
-
-// Pon en true SOLO cuando exista el botón "Eliminar cuenta" dentro de la app (exigido por Google Play y Apple).
-const ACCOUNT_DELETION_IN_APP = false
 
 
 
 const phoneEn = PHONE ? ` Phone: ${PHONE}.` : ''
 
 const phoneEs = PHONE ? ` Teléfono: ${PHONE}.` : ''
+
+const hostLabel = HOSTING_NAME ? `${HOSTING_NAME}${HOSTING_COUNTRY ? ` (${HOSTING_COUNTRY})` : ''}` : ''
+
+const hostedAbroad = !!HOSTING_COUNTRY && HOSTING_COUNTRY.trim().toLowerCase() !== 'colombia'
+
+const mailEn = EMAIL_PROVIDER || 'our transactional email provider'
+
+const mailEs = EMAIL_PROVIDER || 'nuestro proveedor de envío de correo'
+
+const procEn = PAYMENT_PROCESSOR || 'our payment processor'
+
+const procEs = PAYMENT_PROCESSOR || 'nuestro procesador de pagos'
+
+const priceEn = PLAN_PRICE ? ` The current price is ${PLAN_PRICE}.` : ''
+
+const priceEs = PLAN_PRICE ? ` El precio actual es ${PLAN_PRICE}.` : ''
+
+const renewEn = AUTO_RENEWAL
+
+  ? 'The plan renews automatically at the end of each billing period until you cancel. You can cancel at any time from the app; cancellation takes effect at the end of the period you already paid.'
+
+  : 'The plan does not renew automatically: when the paid period ends, you decide whether to pay again.'
+
+const renewEs = AUTO_RENEWAL
+
+  ? 'El plan se renueva automáticamente al final de cada periodo de facturación hasta que lo canceles. Puedes cancelar en cualquier momento desde la app; la cancelación surte efecto al terminar el periodo que ya pagaste.'
+
+  : 'El plan no se renueva automáticamente: al terminar el periodo pagado, tú decides si pagas de nuevo.'
 
 
 
@@ -62,7 +136,9 @@ const COPY = {
 
     en: [
 
-      ['Who is responsible', `${OWNER}, a natural person operating the gymbook brand, is responsible for the processing of your personal data (Law 1581 of 2012, Colombia). Address: ${ADDRESS}. Email: ${CONTACT}.${phoneEn} This email is also the contact point for queries, complaints and data-protection requests.`],
+      ['Who is responsible', `${OWNER}, a natural person operating the gymbook service, is responsible for the processing of your personal data (Law 1581 of 2012, Colombia). Address: ${ADDRESS}. Email: ${CONTACT}.${phoneEn} This email is also the contact point for queries, complaints and data-protection requests.`],
+
+      ['Scope', 'This policy applies to the gymbook service operated by the responsible person above, including its web app and its Android app (APK). If someone installs the gymbook software on their own server, that person is responsible for their own processing and must publish their own policy.'],
 
       ['Information we process', [
 
@@ -70,7 +146,11 @@ const COPY = {
 
         'Training data: routines, exercises, dates, sets, repetitions, logged weights, effort ratings, favorites, custom exercises, preferences and backup/import content.',
 
-        'Body-weight entries (optional).',
+        'Body-weight entries (optional). We treat them as sensitive data.',
+
+        'Plan data: the start and end dates of your free period, your plan status and billing period, and payment confirmations. We do not receive or store your card number.',
+
+        'Records of your acceptances and authorizations: the policy version, date and time.',
 
         'Optional notes and any other text you choose to enter. Please do not enter medical records or information about other people.',
 
@@ -86,6 +166,10 @@ const COPY = {
 
         'Sync your profile and training data across your devices and restore imported profiles.',
 
+        'Send service emails: account confirmation, password recovery, email-change confirmation and notices about your plan. We do not send advertising emails.',
+
+        'Manage your free period and your plan, and confirm payments.',
+
         'Send notifications you request.',
 
         'Answer support requests and handle your rights requests.',
@@ -98,53 +182,65 @@ const COPY = {
 
       ['Sensitive data and your consent', [
 
-        'Workout history and body-weight records may reveal information about your physical condition or health and may therefore constitute sensitive personal data depending on their content and context.',
+        'Body-weight records can reveal information about your health or physical condition, so we treat them as sensitive data.',
 
-        'Where the law treats these records as sensitive data, we will request prior, express, informed and separate authorization through an unticked control before processing them. Silence or inaction is not consent. Do not enable collection of such data until this control and its evidence are implemented in the app.',
+        'We process them only with your prior, express, informed and separate authorization, given through a box that is not pre-ticked. Silence or inaction is never consent, and accepting the Terms does not replace this authorization.',
 
-        'Providing sensitive data is optional. Declining does not prevent you from using features that do not need it, and you will be told which features depend on it.',
+        'Providing sensitive data is optional. If you decline, you can still use every feature that does not need it, and the app tells you which features depend on it.',
 
-        'Where authorization is required, we retain evidence of the specific consent given, including its wording, date/time, policy version and the account or session associated with it. A general acceptance of the terms is not a substitute for separate sensitive-data consent.',
+        'We keep evidence of your authorization: the text shown, date and time, policy version and the account associated with it.',
 
-        'You can withdraw consent or request deletion through the contact details in this policy. We will stop the relevant processing and delete data where legally required, subject to applicable exceptions. Withdrawal does not make prior lawful processing retroactively unlawful.',
+        'You can withdraw your authorization at any time from Settings, or through the contact details in this policy. We will stop the related processing and delete the data where the law allows. Withdrawal does not affect processing carried out lawfully before it.',
 
       ]],
 
       ['Who receives your data', [
 
-        'The backend/API and database actually configured for the deployed version of gymbook. In the self-hosted version, the Node.js API and the storage volume configured by the operator process and store account/workout data; the server operator and hosting provider may be able to access technical data.',
+        hostLabel
 
-        'The web/server hosting provider actually used for the published instance. If gymbook is self-hosted, this is the person or organization operating the server and its infrastructure provider, if any.',
+          ? `${hostLabel}: hosting of gymbook’s server, API and database.`
 
-        'Google: Google sign-in, and Google Play for purchases if billing is enabled.',
+          : 'gymbook server: the API and database run on infrastructure that we administer.',
 
-        'Apple: App Store distribution and purchases if billing is enabled.',
+        `${mailEn[0].toUpperCase()}${mailEn.slice(1)}: sending of confirmation, recovery and service emails, which requires your email address and the content of the message.`,
 
-        'jsDelivr (and its CDN partners Cloudflare, Fastly, Bunny and Gcore): delivery of exercise images and GIFs.',
+        `${procEn[0].toUpperCase()}${procEn.slice(1)}: processing of payments for plans. It handles your payment data under its own terms and tells us whether a payment was completed.`,
+
+        'Google: Google sign-in, if you choose it. Google acts as an independent controller for that service.',
+
+        'jsDelivr (and its CDN partners Cloudflare, Fastly, Bunny and Gcore): delivery of exercise images and GIFs. Your device requests them directly, so these providers can see your IP address and basic request data.',
 
         'Your browser or device push service, only if you enable web push notifications.',
 
-        "Each provider's role depends on the service and applicable arrangements: some may act as processors and others as independent controllers. The published list must identify only providers actually used by the version you are using. See Third-party services.",
+        'Each provider processes data under its own terms and privacy notice. See Third-party services.',
 
       ]],
 
-      ['International transfers and transmissions', 'If the deployed version uses providers or servers outside Colombia, some account or technical data may be processed in those countries. Before publication, we will identify the actual providers, countries and purposes and apply the mechanism required by Colombian law for each transfer or transmission; general acceptance of this policy does not replace any consent or safeguards required by law. If the service is hosted exclusively in Colombia, this clause must be adjusted to reflect that fact.'],
+      ['International transfers and transmissions', `Some providers process data outside Colombia, including the United States: Google (sign-in), jsDelivr and its CDN partners (exercise images)${hostedAbroad ? `, ${hostLabel} (hosting)` : ''} and, depending on where they operate, our email and payment providers. When you accept the sign-up authorization, you expressly authorize these transfers and transmissions, which are necessary to provide the service. We do not use your data for purposes other than those in this policy.`],
 
-      ['Local storage and guest use', 'We only use storage on your browser or device that is strictly necessary to run the app (settings, workout state and sign-in session). We do not use advertising cookies or third-party analytics. Guest progress stays on your device and is not synced to our account database; clearing app data or uninstalling may erase it. Signed-in profiles are synced to the service.'],
+      ['Local storage, Android app and guest use', [
+
+        'We only use storage on your browser or device that is strictly necessary to run the app (settings, workout state and sign-in session). We do not use advertising cookies or third-party analytics.',
+
+        'The Android app (APK) requests only the permissions it needs to work, such as internet access and notifications. Install it only from the official channels we indicate, so you receive authentic updates.',
+
+        'Guest progress stays on your device and is not synced to our account database; clearing app data or uninstalling may erase it. Signed-in profiles are synced to the service.',
+
+      ]],
 
       ['Minors', 'gymbook is intended for people aged 18 or over and is not directed at children or teenagers. We do not knowingly collect data from minors. If we learn that a minor has created an account, we will delete the account and its data. If you believe a minor is using the app, write to us at the email above.'],
 
-      ['Retention and account deletion', [
+      ['Managing, deleting and correcting your data', [
 
-        'We retain account and workout data while needed to provide the service and for a defined period after account deletion only where necessary for security, dispute handling or legal obligations. Before publication, the operator must set and follow actual retention periods for backups, logs and deleted accounts; data will not be kept indefinitely merely because it remains in a backup.',
+        'Correct your data: you can edit your profile and change your email address from Settings. To change your email, we confirm the new address before applying the change.',
 
-        ACCOUNT_DELETION_IN_APP
+        'Delete your training data: from Settings you can delete all your training data while keeping your account.',
 
-          ? 'You can delete your account and its data at any time from Settings. Some records may be kept where the law requires it.'
+        'Delete your account: from Settings you can delete your account and all associated data. You can also request it by writing to the contact email.',
 
-          : `Account deletion is currently handled by request: write to ${CONTACT} from your account email. We will verify the request proportionately and process it within the applicable legal deadlines, deleting data that no longer needs to be retained and explaining any lawful retention exceptions.`,
+        `When you delete data or your account, we remove it from active systems immediately and from backups within ${BACKUP_DAYS} days. Technical and security logs are kept for up to ${LOG_DAYS} days. We keep records longer only where the law requires it (for example, payment records) or to handle a dispute, and we will tell you which.`,
 
-        'Resetting workout data in Settings clears your training data but does not delete your account.',
+        'Deleting your account does not by itself cancel a plan paid through a third party; cancel the plan first if it is active.',
 
       ]],
 
@@ -166,19 +262,21 @@ const COPY = {
 
       ['How to submit queries and complaints', [
 
-        `Send your request to ${CONTACT}, preferably from the email associated with your account. Describe your request and provide a reply channel. We may ask for only the additional information reasonably necessary to verify your identity or clarify the request; do not send unnecessary sensitive documents.`,
+        `Send your request to ${CONTACT}, preferably from the email associated with your account. Describe your request and provide a reply channel. We may ask only for the additional information reasonably necessary to verify your identity or clarify the request; please do not send unnecessary sensitive documents.`,
 
         'Queries are answered within 10 business days; if we cannot, we will tell you the reason and a new date, which will not exceed 5 additional business days.',
 
-        'Complaints are answered within 15 business days; if we cannot, we will tell you the reason and a new date, which will not exceed 8 additional business days. If your complaint is incomplete, we will ask you to complete it within 5 days.',
+        'Complaints are answered within 15 business days; if we cannot, we will tell you the reason and a new date, which will not exceed 8 additional business days.',
+
+        'If your complaint is incomplete, we will ask you to complete it within 5 days of receiving it. If you do not respond within 2 months, we will consider the complaint withdrawn.',
 
         'You may complain to the SIC (sic.gov.co) only after having used this process with us.',
 
       ]],
 
-      ['Security and incidents', 'We use security measures appropriate to the actual deployment, which may include encrypted connections, access controls, authentication protections, backups and software updates. These measures must be configured and maintained in practice; no system is completely secure. We will manage and report personal-data incidents to the competent authority and affected people as required by applicable law.'],
+      ['Security and incidents', 'We protect your data with encrypted connections, access controls, passwords stored only as hashes, backups and regular software updates, and we review the security of the service periodically. No system is completely secure. If a security incident affects personal data, we will report it to the competent authority and notify affected people as required by applicable law.'],
 
-      ['Changes and validity', `This policy is effective from ${UPDATED_EN} (version ${VERSION}). If a change materially affects purposes or processing, we will notify you in the app and ask for renewed authorization where the law requires it. Previous versions are available on request.`],
+      ['Changes and validity', `This policy is effective from ${UPDATED_EN} (version ${VERSION}) and applies for as long as the service is operated. If a change materially affects purposes or processing, we will notify you in the app and ask you to accept the new version, and ask for renewed authorization where the law requires it. Previous versions are available on request.`],
 
       ['Language', 'This policy is provided in English and Spanish. If they differ, the Spanish version prevails.'],
 
@@ -186,7 +284,9 @@ const COPY = {
 
     es: [
 
-      ['Responsable', `${OWNER}, persona natural que opera la marca gymbook, es responsable del tratamiento de tus datos personales (Ley 1581 de 2012, Colombia). Domicilio: ${ADDRESS}. Correo: ${CONTACT}.${phoneEs} Este correo también es el canal para consultas, reclamos y solicitudes sobre protección de datos.`],
+      ['Responsable', `${OWNER}, persona natural que opera el servicio gymbook, es responsable del tratamiento de tus datos personales (Ley 1581 de 2012, Colombia). Domicilio: ${ADDRESS}. Correo: ${CONTACT}.${phoneEs} Este correo también es el canal para consultas, reclamos y solicitudes sobre protección de datos.`],
+
+      ['Alcance', 'Esta política aplica al servicio gymbook operado por el responsable indicado, incluida su app web y su app Android (APK). Si alguien instala el software de gymbook en su propio servidor, esa persona es responsable de su propio tratamiento y debe publicar su propia política.'],
 
       ['Información que tratamos', [
 
@@ -194,7 +294,11 @@ const COPY = {
 
         'Datos de entrenamiento: rutinas, ejercicios, fechas, series, repeticiones, pesos registrados, esfuerzo percibido, favoritos, ejercicios personalizados, preferencias y contenido importado o de respaldo.',
 
-        'Registros de peso corporal (opcionales).',
+        'Registros de peso corporal (opcionales). Los tratamos como datos sensibles.',
+
+        'Datos del plan: fechas de inicio y fin de tu periodo gratuito, estado del plan y periodo de facturación, y confirmaciones de pago. No recibimos ni guardamos el número de tu tarjeta.',
+
+        'Constancias de tus aceptaciones y autorizaciones: versión de la política, fecha y hora.',
 
         'Notas opcionales y cualquier otro texto que decidas escribir. No incluyas historias clínicas ni datos de otras personas.',
 
@@ -210,6 +314,10 @@ const COPY = {
 
         'Sincronizar tu perfil y entrenamiento entre tus dispositivos y restaurar perfiles importados.',
 
+        'Enviar correos del servicio: confirmación de cuenta, recuperación de contraseña, confirmación de cambio de correo y avisos sobre tu plan. No enviamos correos publicitarios.',
+
+        'Gestionar tu periodo gratuito y tu plan, y confirmar pagos.',
+
         'Enviar las notificaciones que solicites.',
 
         'Responder solicitudes de soporte y atender el ejercicio de tus derechos.',
@@ -222,53 +330,65 @@ const COPY = {
 
       ['Datos sensibles y tu autorización', [
 
-        'Tu historial de entrenamiento y los registros de peso corporal pueden revelar información sobre tu condición física o salud y, según su contenido y contexto, pueden constituir datos personales sensibles.',
+        'Los registros de peso corporal pueden revelar información sobre tu salud o condición física, por eso los tratamos como datos sensibles.',
 
-        'Cuando la ley considere estos registros datos sensibles, solicitaremos autorización previa, expresa, informada y separada mediante un control sin marcar por defecto antes de tratarlos. El silencio o la inacción no son autorización. No habilites la recopilación de esos datos hasta implementar este control y guardar evidencia en la app.',
+        'Solo los tratamos con tu autorización previa, expresa, informada y separada, otorgada mediante una casilla que no viene marcada por defecto. El silencio o la inacción nunca son autorización, y aceptar los Términos no sustituye esta autorización.',
 
-        'Entregar datos sensibles es opcional. Si te niegas, puedes seguir usando las funciones que no los necesitan, y te indicaremos cuáles dependen de ellos.',
+        'Entregar datos sensibles es opcional. Si te niegas, puedes usar todas las funciones que no los necesitan, y la app te indica cuáles dependen de ellos.',
 
-        'Cuando se requiera autorización, conservaremos evidencia del consentimiento específico, incluido el texto mostrado, fecha y hora, versión de la política y cuenta o sesión asociada. La aceptación general de los términos no sustituye la autorización separada para datos sensibles.',
+        'Conservamos evidencia de tu autorización: el texto mostrado, fecha y hora, versión de la política y cuenta asociada.',
 
-        'Puedes revocar el consentimiento o solicitar la supresión por los canales de esta política. Detendremos el tratamiento correspondiente y eliminaremos los datos cuando legalmente proceda, salvo excepciones aplicables. La revocatoria no convierte retroactivamente en ilícito el tratamiento previo que haya sido lícito.',
+        'Puedes revocar tu autorización en cualquier momento desde Ajustes o por los canales de esta política. Detendremos el tratamiento relacionado y eliminaremos los datos cuando la ley lo permita. La revocatoria no afecta el tratamiento realizado lícitamente antes de ella.',
 
       ]],
 
       ['Quiénes reciben tus datos', [
 
-        'API Node.js y almacenamiento autohospedado: en la instalación autohospedada, la API y el volumen de datos configurado procesan y guardan datos de cuenta y entrenamiento.',
+        hostLabel
 
-        'Proveedor de infraestructura: el proveedor real del servidor o alojamiento puede procesar registros técnicos. Debe identificarse según el despliegue publicado.',
+          ? `${hostLabel}: alojamiento del servidor, la API y la base de datos de gymbook.`
 
-        'Google: inicio de sesión con Google y, si se habilita la facturación, Google Play para compras.',
+          : 'Servidor de gymbook: la API y la base de datos se ejecutan en infraestructura que administramos nosotros.',
 
-        'Apple: distribución en App Store y, si se habilita la facturación, compras.',
+        `${mailEs[0].toUpperCase()}${mailEs.slice(1)}: envío de correos de confirmación, recuperación y avisos del servicio, para lo cual recibe tu correo y el contenido del mensaje.`,
 
-        'jsDelivr (y sus socios de CDN Cloudflare, Fastly, Bunny y Gcore): entrega de imágenes y GIF de ejercicios.',
+        `${procEs[0].toUpperCase()}${procEs.slice(1)}: procesamiento de los pagos de los planes. Trata tus datos de pago bajo sus propias condiciones y nos informa si un pago se completó.`,
+
+        'Google: inicio de sesión con Google, si lo eliges. Google actúa como responsable independiente de ese servicio.',
+
+        'jsDelivr (y sus socios de CDN Cloudflare, Fastly, Bunny y Gcore): entrega de imágenes y GIF de ejercicios. Tu dispositivo los solicita directamente, por lo que estos proveedores pueden ver tu dirección IP y datos básicos de la solicitud.',
 
         'El servicio de notificaciones de tu navegador o dispositivo, solo si activas las notificaciones web.',
 
-        'El papel de cada proveedor depende del servicio concreto y de los acuerdos aplicables: algunos pueden actuar como encargados y otros como responsables independientes. La lista publicada debe identificar únicamente los proveedores realmente utilizados en la versión que estás usando. Consulta Servicios de terceros.',
+        'Cada proveedor trata datos bajo sus propias condiciones y aviso de privacidad. Consulta Servicios de terceros.',
 
       ]],
 
-      ['Transferencias y transmisiones internacionales', 'Si la versión desplegada utiliza proveedores o servidores fuera de Colombia, algunos datos técnicos o de cuenta podrían tratarse en esos países. Antes de publicar, identificaremos los proveedores, países y finalidades reales y aplicaremos el mecanismo exigido por la normativa colombiana para cada transferencia o transmisión; una aceptación genérica de esta política no reemplaza las autorizaciones o garantías que legalmente se requieran. Si el servicio está alojado exclusivamente en Colombia, esta cláusula deberá ajustarse a esa realidad.'],
+      ['Transferencias y transmisiones internacionales', `Algunos proveedores tratan datos fuera de Colombia, incluido Estados Unidos: Google (inicio de sesión), jsDelivr y sus socios de CDN (imágenes de ejercicios)${hostedAbroad ? `, ${hostLabel} (alojamiento)` : ''} y, según dónde operen, nuestros proveedores de correo y de pagos. Al aceptar la autorización de registro, autorizas expresamente estas transferencias y transmisiones, necesarias para prestar el servicio. No usamos tus datos para finalidades distintas de las de esta política.`],
 
-      ['Almacenamiento local e invitado', 'Solo usamos almacenamiento del navegador o dispositivo estrictamente necesario para que la app funcione (preferencias, estado del entrenamiento y sesión). No usamos cookies publicitarias ni analítica de terceros. El progreso de invitado permanece en tu dispositivo y no se sincroniza con nuestra base de datos de cuentas; borrar los datos de la app o desinstalarla puede eliminarlo. Los perfiles registrados se sincronizan con el servicio.'],
+      ['Almacenamiento local, app Android e invitado', [
+
+        'Solo usamos almacenamiento del navegador o dispositivo estrictamente necesario para que la app funcione (preferencias, estado del entrenamiento y sesión). No usamos cookies publicitarias ni analítica de terceros.',
+
+        'La app Android (APK) solicita únicamente los permisos que necesita para funcionar, como acceso a internet y notificaciones. Instálala solo desde los canales oficiales que indicamos, para recibir actualizaciones auténticas.',
+
+        'El progreso de invitado permanece en tu dispositivo y no se sincroniza con nuestra base de datos de cuentas; borrar los datos de la app o desinstalarla puede eliminarlo. Los perfiles registrados se sincronizan con el servicio.',
+
+      ]],
 
       ['Menores de edad', 'gymbook está dirigida a personas mayores de 18 años y no a niños, niñas o adolescentes. No recopilamos a sabiendas datos de menores. Si detectamos que un menor creó una cuenta, la eliminaremos junto con sus datos. Si crees que un menor usa la app, escríbenos al correo indicado.'],
 
-      ['Conservación y eliminación de cuenta', [
+      ['Gestionar, eliminar y corregir tus datos', [
 
-        'Conservamos los datos de cuenta y entrenamiento mientras sean necesarios para prestar el servicio y, tras eliminar una cuenta, solo durante un plazo definido cuando resulte necesario por seguridad, gestión de disputas u obligaciones legales. Antes de publicar, el operador debe fijar y cumplir plazos reales para copias de seguridad, registros técnicos y cuentas eliminadas; los datos no se conservarán indefinidamente solo por permanecer en una copia.',
+        'Corregir tus datos: puedes editar tu perfil y cambiar tu correo desde Ajustes. Para cambiar el correo, confirmamos la nueva dirección antes de aplicar el cambio.',
 
-        ACCOUNT_DELETION_IN_APP
+        'Eliminar tus datos de entrenamiento: desde Ajustes puedes borrar todos tus datos de entrenamiento y conservar tu cuenta.',
 
-          ? 'Puedes eliminar tu cuenta y tus datos en cualquier momento desde Ajustes. Algunos registros podrían conservarse cuando la ley lo exija.'
+        'Eliminar tu cuenta: desde Ajustes puedes eliminar tu cuenta y todos los datos asociados. También puedes solicitarlo escribiendo al correo de contacto.',
 
-          : `Por ahora la eliminación de cuenta se gestiona por solicitud: escribe a ${CONTACT} desde el correo de tu cuenta. Verificaremos la solicitud de forma proporcional y la tramitaremos dentro de los plazos legales aplicables, suprimiendo los datos que ya no deban conservarse y explicando cualquier excepción legal.`,
+        `Cuando eliminas datos o tu cuenta, los retiramos de inmediato de los sistemas activos y de las copias de seguridad en un máximo de ${BACKUP_DAYS} días. Los registros técnicos y de seguridad se conservan hasta ${LOG_DAYS} días. Solo conservamos registros por más tiempo cuando la ley lo exija (por ejemplo, registros de pagos) o para atender una disputa, y te informaremos cuáles.`,
 
-        'Restablecer los datos de entrenamiento en Ajustes borra tu información de entrenamiento, pero no elimina tu cuenta.',
+        'Eliminar tu cuenta no cancela por sí solo un plan pagado a través de un tercero; cancela primero el plan si está activo.',
 
       ]],
 
@@ -294,15 +414,17 @@ const COPY = {
 
         'Las consultas se responden en máximo 10 días hábiles; si no es posible, te informaremos el motivo y una nueva fecha, que no superará 5 días hábiles adicionales.',
 
-        'Los reclamos se responden en máximo 15 días hábiles; si no es posible, te informaremos el motivo y una nueva fecha, que no superará 8 días hábiles adicionales. Si tu reclamo está incompleto, te pediremos completarlo dentro de los 5 días siguientes.',
+        'Los reclamos se responden en máximo 15 días hábiles; si no es posible, te informaremos el motivo y una nueva fecha, que no superará 8 días hábiles adicionales.',
+
+        'Si tu reclamo está incompleto, te pediremos completarlo dentro de los 5 días siguientes a su recepción. Si no respondes en 2 meses, entenderemos que desististe del reclamo.',
 
         'Solo podrás acudir a la SIC (sic.gov.co) después de haber agotado este trámite con nosotros.',
 
       ]],
 
-      ['Seguridad e incidentes', 'Aplicamos medidas de seguridad adecuadas al despliegue real, que pueden incluir conexiones cifradas, controles de acceso, protección de autenticación, copias de seguridad y actualizaciones. Estas medidas deben estar configuradas y mantenerse efectivamente; ningún sistema es totalmente seguro. Gestionaremos y reportaremos los incidentes de datos personales a la autoridad y a las personas afectadas cuando lo exija la normativa aplicable.'],
+      ['Seguridad e incidentes', 'Protegemos tus datos con conexiones cifradas, controles de acceso, contraseñas guardadas únicamente como hash, copias de seguridad y actualizaciones periódicas de software, y revisamos periódicamente la seguridad del servicio. Ningún sistema es totalmente seguro. Si un incidente de seguridad afecta datos personales, lo reportaremos a la autoridad competente y avisaremos a las personas afectadas según lo exija la normativa aplicable.'],
 
-      ['Cambios y vigencia', `Esta política rige desde el ${UPDATED_ES} (versión ${VERSION}). Si un cambio afecta de forma material las finalidades o el tratamiento, te avisaremos en la app y solicitaremos una nueva autorización cuando la ley lo exija. Las versiones anteriores están disponibles si las solicitas.`],
+      ['Cambios y vigencia', `Esta política rige desde el ${UPDATED_ES} (versión ${VERSION}) y durante el tiempo que se opere el servicio. Si un cambio afecta de forma material las finalidades o el tratamiento, te avisaremos en la app, te pediremos aceptar la nueva versión y solicitaremos una nueva autorización cuando la ley lo exija. Las versiones anteriores están disponibles si las solicitas.`],
 
       ['Idioma', 'Esta política se ofrece en español e inglés. Si hay diferencias, prevalece la versión en español.'],
 
@@ -314,11 +436,15 @@ const COPY = {
 
     en: [
 
-      ['Collected when you register', 'Email and basic profile details provided by Google or entered for email sign-in, plus account identifiers. The authentication component actually deployed handles sign-in credentials; the workout database should not store passwords in plain text. The published notice must match the authentication implementation in production. At sign-up we also record your acceptance of these documents (date and version).'],
+      ['Collected when you register', 'Email and basic profile details provided by Google or entered for email sign-in, plus account identifiers. Passwords entered for email sign-in are stored only as a cryptographic hash, never in plain text. At sign-up we also record your acceptance of these documents (date and version) and, separately, your authorization for sensitive data. The start date of your free period is recorded when you create your account.'],
 
-      ['Created by your use of gymbook', 'Training routines and logs, exercise selections, dates, sets, repetitions, weights, body-weight entries, effort ratings, custom exercises, preferences and the name attached to your profile. This information may reveal aspects of your physical condition and may constitute sensitive data depending on its content and context. Where separate authorization is legally required, it must be obtained before processing.'],
+      ['Created by your use of gymbook', 'Training routines and logs, exercise selections, dates, sets, repetitions, weights, effort ratings, custom exercises, preferences and the name attached to your profile. Body-weight entries are optional and treated as sensitive data, processed only with your separate authorization.'],
 
-      ['Collected by the device or service', 'Session and storage data on your device. IP address, browser/device details, request times and diagnostic or security logs may be processed by our hosting, authentication, database, CDN and push providers. If you enable web push, a push endpoint and notification settings are stored to deliver alerts; you can turn them off at any time from your browser or device settings.'],
+      ['Plan and payment data', 'Free-period dates, plan status, billing period and payment confirmations. Payments are handled by the payment processor shown at checkout; gymbook does not receive or store your card number.'],
+
+      ['Emails we send', 'We send account confirmation, password recovery, email-change confirmation and plan notices to the email address of your account. We do not send advertising emails.'],
+
+      ['Collected by the device or service', 'Session and storage data on your device. IP address, browser/device details, request times and diagnostic or security logs may be processed by our hosting provider, the CDN that serves exercise images, our email provider and, if you enable them, push notification services. If you enable web push, a push endpoint and notification settings are stored to deliver alerts; you can turn them off at any time from your browser or device settings.'],
 
       ['Not collected', 'The app does not request precise GPS location, contact list, microphone, camera, advertising identifier or third-party analytics events. Exercise photos/GIFs are content requests to the CDN, not uploads of your workouts.'],
 
@@ -328,11 +454,15 @@ const COPY = {
 
     es: [
 
-      ['Al registrarte', 'Correo y datos básicos de perfil entregados por Google o escritos para iniciar con correo, además de identificadores de cuenta. El componente de autenticación realmente desplegado gestiona las credenciales; la base de entrenamiento no debe almacenar contraseñas en texto plano. El aviso publicado debe coincidir con la implementación de autenticación en producción. Al registrarte también guardamos constancia de tu aceptación de estos documentos (fecha y versión).'],
+      ['Al registrarte', 'Correo y datos básicos de perfil entregados por Google o escritos para iniciar con correo, además de identificadores de cuenta. Las contraseñas del inicio con correo se almacenan únicamente como hash criptográfico, nunca en texto plano. Al registrarte también guardamos constancia de tu aceptación de estos documentos (fecha y versión) y, por separado, de tu autorización para datos sensibles. La fecha de inicio de tu periodo gratuito se registra al crear tu cuenta.'],
 
-      ['Generados por el uso de gymbook', 'Rutinas y entrenamientos, ejercicios elegidos, fechas, series, repeticiones, pesos, registros de peso corporal, esfuerzo percibido, ejercicios personalizados, preferencias y el nombre asociado al perfil. Esta información puede revelar aspectos de tu condición física y constituir datos sensibles según su contenido y contexto. Cuando la ley exija autorización separada, debe obtenerse antes del tratamiento.'],
+      ['Generados por el uso de gymbook', 'Rutinas y entrenamientos, ejercicios elegidos, fechas, series, repeticiones, pesos, esfuerzo percibido, ejercicios personalizados, preferencias y el nombre asociado al perfil. Los registros de peso corporal son opcionales y se tratan como datos sensibles, solo con tu autorización separada.'],
 
-      ['Procesados por el dispositivo o los servicios', 'Datos de sesión y almacenamiento en tu dispositivo. Dirección IP, detalles del navegador o dispositivo, horas de solicitud y registros de diagnóstico o seguridad pueden ser tratados por nuestros proveedores de alojamiento, autenticación, base de datos, CDN y notificaciones. Si activas notificaciones web, se almacena un endpoint de notificación y sus preferencias para entregar alertas; puedes desactivarlas en cualquier momento desde los ajustes de tu navegador o dispositivo.'],
+      ['Datos de plan y de pago', 'Fechas del periodo gratuito, estado del plan, periodo de facturación y confirmaciones de pago. Los pagos los gestiona el procesador de pagos que se muestra al pagar; gymbook no recibe ni guarda el número de tu tarjeta.'],
+
+      ['Correos que enviamos', 'Enviamos confirmación de cuenta, recuperación de contraseña, confirmación de cambio de correo y avisos del plan al correo de tu cuenta. No enviamos correos publicitarios.'],
+
+      ['Procesados por el dispositivo o los servicios', 'Datos de sesión y almacenamiento en tu dispositivo. Dirección IP, detalles del navegador o dispositivo, horas de solicitud y registros de diagnóstico o seguridad pueden ser tratados por nuestro proveedor de alojamiento, por el CDN que sirve las imágenes de ejercicios, por nuestro proveedor de correo y, si los activas, por los servicios de notificaciones. Si activas notificaciones web, se almacena un endpoint de notificación y sus preferencias para entregar alertas; puedes desactivarlas en cualquier momento desde los ajustes de tu navegador o dispositivo.'],
 
       ['No recopilados', 'La app no solicita ubicación GPS precisa, contactos, micrófono, cámara, identificador publicitario ni eventos de analítica de terceros. Las imágenes y GIF de ejercicios son solicitudes de contenido al CDN, no cargas de tus entrenamientos.'],
 
@@ -346,13 +476,13 @@ const COPY = {
 
     en: [
 
-      ['Self-hosted Node.js API and data storage', 'In the self-hosted deployment, the Node.js API and configured data volume process account and workout data. The server operator and infrastructure provider, if any, may process technical logs.'],
+      ['Hosting and server', hostLabel ? `${hostLabel} hosts gymbook’s server, API and database. It may process IP address, device/browser information, request paths, timestamps and errors in its logs.` : 'gymbook’s server, API and database run on infrastructure administered by the responsible person. Server logs may include IP address, device/browser information, request paths, timestamps and errors.'],
 
-      ['Server infrastructure', 'The server operator and the infrastructure provider actually used for the published instance may process IP address, device/browser information, request paths, timestamps and errors. The identity of the real infrastructure provider must be disclosed in the deployed policy.'],
+      ['Email delivery', `${mailEn[0].toUpperCase()}${mailEn.slice(1)} sends our confirmation, recovery and service emails. To do so it receives your email address and the content of the message, and may keep delivery logs under its own privacy notice.`],
 
-      ['Google', 'Google OAuth sign-in receives your authorization request and returns basic identity details such as name and email, subject to the permissions shown on Google’s consent screen. Android purchases, if enabled in the future, are processed by Google Play.'],
+      ['Payments', `${procEn[0].toUpperCase()}${procEn.slice(1)} processes the payments for plans and handles your payment data under its own terms and privacy notice. gymbook receives only the information needed to confirm that a payment was completed and to manage your plan; it does not receive your card number.`],
 
-      ['Apple', 'iOS distribution and, if enabled in the future, purchases are handled by Apple and the App Store. Apple may share transaction identifiers and subscription status with gymbook; payment credentials are handled by Apple.'],
+      ['Google', 'If you choose Google sign-in, Google receives your authorization request and returns basic identity details such as name and email, subject to the permissions shown on Google’s consent screen. Google acts as an independent controller for that service.'],
 
       ['jsDelivr and exercise media', 'Exercise images and GIFs are requested from jsDelivr’s CDN. A CDN request can reveal network and device metadata such as IP address, browser, referrer domain, requested asset and time.'],
 
@@ -360,23 +490,19 @@ const COPY = {
 
       ['Browser/device push service', 'If you enable web push, your browser/device’s push provider routes notifications using the subscription endpoint. This varies by browser and device. Native workout reminders are scheduled locally on your device.'],
 
-      ['Payments', 'This version does not process payments and gymbook does not receive card numbers through the app. If paid plans are offered in the future, purchases will be handled by Google Play and the App Store, and these documents will be updated before they are offered.'],
-
-      ['International processing', 'These providers may process data in countries outside Colombia, including the United States. See “International transfers and transmissions” in the Privacy policy.'],
-
-      ['Provider notices', 'Consult the current privacy notices of each provider actually used in the deployed version, including Google, Apple or jsDelivr only if those services are enabled. The operator must add the name and privacy notice of the actual hosting/infrastructure provider.'],
+      ['International processing', `Google, jsDelivr and its CDN partners${hostedAbroad ? `, ${hostLabel},` : ''} and, depending on where they operate, our email and payment providers may process data outside Colombia, including the United States. See “International transfers and transmissions” in the Privacy policy.`],
 
     ],
 
     es: [
 
-      ['API Node.js y almacenamiento autohospedado', 'En la instalación autohospedada, la API Node.js y el volumen de datos configurado procesan y guardan datos de cuenta y entrenamiento. El operador del servidor y el proveedor de infraestructura, si existe, pueden tratar registros técnicos.'],
+      ['Alojamiento y servidor', hostLabel ? `${hostLabel} aloja el servidor, la API y la base de datos de gymbook. Puede tratar en sus registros la dirección IP, datos de dispositivo/navegador, rutas solicitadas, fechas y errores.` : 'El servidor, la API y la base de datos de gymbook se ejecutan en infraestructura administrada por el responsable. Los registros del servidor pueden incluir IP, datos de dispositivo/navegador, rutas solicitadas, fechas y errores.'],
 
-      ['Infraestructura del servidor', 'El operador del servidor y el proveedor de infraestructura realmente utilizado en la versión publicada pueden tratar IP, datos de dispositivo/navegador, rutas solicitadas, fechas y errores. La política desplegada debe identificar al proveedor de infraestructura real.'],
+      ['Envío de correos', `${mailEs[0].toUpperCase()}${mailEs.slice(1)} envía nuestros correos de confirmación, recuperación y avisos del servicio. Para ello recibe tu correo y el contenido del mensaje, y puede conservar registros de entrega según su propio aviso de privacidad.`],
 
-      ['Google', 'Google OAuth procesa tu solicitud de acceso y entrega datos básicos de identidad, como nombre y correo, de acuerdo con los permisos que muestra la pantalla de autorización de Google. Las compras Android, si se habilitan en el futuro, las procesará Google Play.'],
+      ['Pagos', `${procEs[0].toUpperCase()}${procEs.slice(1)} procesa los pagos de los planes y trata tus datos de pago bajo sus propias condiciones y aviso de privacidad. gymbook recibe solo la información necesaria para confirmar que un pago se completó y gestionar tu plan; no recibe el número de tu tarjeta.`],
 
-      ['Apple', 'La distribución iOS y, si se habilitan en el futuro, las compras las gestionan Apple y App Store. Apple puede compartir identificadores de transacción y estado de suscripción con gymbook; Apple gestiona los datos de pago.'],
+      ['Google', 'Si eliges iniciar con Google, Google recibe tu solicitud de acceso y entrega datos básicos de identidad, como nombre y correo, de acuerdo con los permisos que muestra su pantalla de autorización. Google actúa como responsable independiente de ese servicio.'],
 
       ['jsDelivr y contenido de ejercicios', 'Las imágenes y GIF de ejercicios se solicitan al CDN de jsDelivr. Una solicitud al CDN puede revelar metadatos de red y dispositivo como IP, navegador, dominio de referencia, archivo solicitado y hora.'],
 
@@ -384,11 +510,7 @@ const COPY = {
 
       ['Servicio de notificaciones del navegador/dispositivo', 'Si activas notificaciones web, el proveedor de notificaciones de tu navegador o dispositivo las entrega usando el endpoint de suscripción. Varía según el navegador y dispositivo. Los recordatorios nativos de entrenamiento se programan localmente en tu dispositivo.'],
 
-      ['Pagos', 'Esta versión no procesa pagos y gymbook no recibe números de tarjeta desde la app. Si en el futuro se ofrecen planes de pago, las compras las gestionarán Google Play y App Store, y estos documentos se actualizarán antes de ofrecerlos.'],
-
-      ['Tratamiento internacional', 'Estos proveedores pueden tratar datos en países fuera de Colombia, incluido Estados Unidos. Consulta “Transferencias y transmisiones internacionales” en la Política de privacidad.'],
-
-      ['Avisos de los proveedores', 'Consulta los avisos de privacidad vigentes de cada proveedor que realmente use la versión desplegada, incluidos Google, Apple o jsDelivr solo si esos servicios están habilitados. El operador debe añadir el nombre y aviso de privacidad del proveedor real de alojamiento/infraestructura.'],
+      ['Tratamiento internacional', `Google, jsDelivr y sus socios de CDN${hostedAbroad ? `, ${hostLabel},` : ''} y, según dónde operen, nuestros proveedores de correo y de pagos pueden tratar datos fuera de Colombia, incluido Estados Unidos. Consulta “Transferencias y transmisiones internacionales” en la Política de privacidad.`],
 
     ],
 
@@ -398,41 +520,41 @@ const COPY = {
 
     en: [
 
-      ['Who may use gymbook', 'You must be at least 18 years old and able to enter into a binding agreement. Before account creation, the app must display these terms and the Privacy policy and allow express acceptance of the current versions. This general acceptance does not replace separate authorizations required by law. If you do not agree, do not create an account or use the service. If we learn that a minor has an account, we will delete it.'],
+      ['Who may use gymbook', 'You must be at least 18 years old and able to enter into a binding agreement. When you create an account, you expressly accept these terms and the Privacy policy in their current versions, and we record the version and date. This acceptance does not replace separate authorizations required by law. If you do not agree, do not create an account or use the service. If we learn that a minor has an account, we will delete it.'],
 
-      ['Accounts and user content', 'Keep your sign-in credentials secure and provide accurate information. You are responsible for the routines, logs, notes, imports and other content you enter, and for keeping your own export/backup. Do not upload another person’s personal or medical information without permission. You keep ownership of your content and grant us only the permission needed to store and sync it to provide the service.'],
+      ['Accounts and user content', 'Keep your sign-in credentials secure and provide accurate information. You can change your email address and delete your data or account from Settings. You are responsible for the routines, logs, notes, imports and other content you enter, and for keeping your own export/backup. Do not upload another person’s personal or medical information without permission. You keep ownership of your content and grant us only the permission needed to store and sync it to provide the service.'],
 
-      ['Fitness use only; no medical advice', 'gymbook is a workout logging and planning tool, not a medical service. Estimates and progress summaries are informational and may be inaccurate. You choose your exercises and loads. Stop if you feel pain or unwell and consult a qualified health professional before exercising if you have a condition or concern. See the Fitness and health notice.'],
+      ['Fitness use only; no medical advice', 'gymbook is a workout logging and planning tool, not a medical service. Estimates and progress summaries are informational and may be inaccurate. You choose your exercises and loads, and the information does not replace the advice of a professional. Stop if you feel pain or unwell and consult a qualified health professional before exercising if you have a condition or concern. See the Fitness and health notice.'],
 
-      ['Paid plans', 'This version does not offer paid plans or subscriptions and no charge applies. If they are offered in the future, the store purchase screen will clearly show the total price and currency, taxes, trial terms, renewal date and frequency, cancellation method and refund conditions before you confirm. See Subscription terms.'],
+      ['Free period and paid plans', `New accounts have a free period of ${TRIAL_DAYS} days from account creation, with no charge. When it ends, access to account features requires an active plan. Your data is not deleted because the free period ends: you can activate a plan, or delete your data or account whenever you want. Plans are paid through the payment methods shown in the app, and before you confirm any purchase we show the total price, currency, taxes, billing period, renewal terms and cancellation method.${priceEn} See Subscription terms.`],
 
-      ['Availability and changes', 'We may maintain, update, suspend or discontinue features for operational, security or legal reasons. We will make reasonable efforts to notify users of material changes to these terms. If we discontinue the service, we will give reasonable notice and a reasonable opportunity to export or retrieve your data where feasible.'],
+      ['Availability and changes', 'We may maintain, update, suspend or discontinue features for operational, security or legal reasons. We will make reasonable efforts to notify users of material changes to these terms, and of price changes before they apply to you. If we discontinue the service, we will give reasonable notice and a reasonable opportunity to export or retrieve your data where feasible.'],
 
-      ['Liability', 'We provide the service with reasonable care but do not guarantee that it will be uninterrupted or error-free. To the extent permitted by law, we are not liable for indirect damages or for injuries resulting from how you use workout information. This does not exclude or limit liability that cannot be excluded by law (such as intent or gross negligence), nor your mandatory rights as a consumer under Law 1480 of 2011, including legal warranty and, where applicable, the right of withdrawal for distance purchases.'],
+      ['Liability', 'We provide the service with reasonable care but do not guarantee that it will be uninterrupted or error-free. To the extent permitted by law, we are not liable for indirect damages. Nothing in these terms excludes or limits liability that cannot be excluded by law, such as liability for intent or gross negligence or for damage to a person’s life or physical integrity, nor your mandatory rights as a consumer under Law 1480 of 2011, including legal warranty and, where applicable, the right of withdrawal for distance purchases.'],
 
-      ['Software and third-party content', 'gymbook’s source code and exercise media may be subject to different licenses. These terms do not revoke rights granted under the AGPL-3.0-or-later license or the dataset’s separate terms. See the LICENSE and NOTICE files distributed with the source.'],
+      ['Software and third-party content', 'gymbook’s source code and exercise media may be subject to different licenses. These terms do not revoke rights granted under the AGPL-3.0-or-later license or the dataset’s separate terms. See the LICENSE and NOTICE files distributed with the source. Install the Android app (APK) only from the official channels we indicate.'],
 
-      ['Governing law, language and contact', `These terms are governed by Colombian law, subject to mandatory consumer protections that apply where you live. If the English and Spanish versions differ, the Spanish version prevails. Contact ${CONTACT} with questions or complaints. Version ${VERSION}, effective ${UPDATED_EN}.`],
+      ['Governing law, language and contact', `These terms are governed by Colombian law, subject to mandatory consumer protections that apply where you live. If the English and Spanish versions differ, the Spanish version prevails. Contact ${CONTACT} with questions or complaints. For consumer complaints you may also go to the Superintendencia de Industria y Comercio (SIC). Version ${VERSION}, effective ${UPDATED_EN}.`],
 
     ],
 
     es: [
 
-      ['Quién puede usar gymbook', 'Debes tener al menos 18 años y capacidad para celebrar un acuerdo vinculante. Antes de crear la cuenta, la app debe mostrar estos términos y la Política de privacidad y permitir aceptar expresamente su versión vigente. Esta aceptación general no sustituye autorizaciones separadas que exija la ley. Si no estás de acuerdo, no crees una cuenta ni uses el servicio. Si detectamos que un menor tiene una cuenta, la eliminaremos.'],
+      ['Quién puede usar gymbook', 'Debes tener al menos 18 años y capacidad para celebrar un acuerdo vinculante. Al crear una cuenta aceptas expresamente estos términos y la Política de privacidad en su versión vigente, y guardamos la versión y la fecha. Esta aceptación no sustituye autorizaciones separadas que exija la ley. Si no estás de acuerdo, no crees una cuenta ni uses el servicio. Si detectamos que un menor tiene una cuenta, la eliminaremos.'],
 
-      ['Cuentas y contenido', 'Protege tus credenciales y entrega información correcta. Eres responsable de las rutinas, registros, notas, importaciones y contenido que agregues, así como de conservar tus propias copias. No cargues información personal o médica de otra persona sin autorización. Conservas la titularidad de tu contenido y nos otorgas solo el permiso necesario para almacenarlo y sincronizarlo para prestar el servicio.'],
+      ['Cuentas y contenido', 'Protege tus credenciales y entrega información correcta. Puedes cambiar tu correo y eliminar tus datos o tu cuenta desde Ajustes. Eres responsable de las rutinas, registros, notas, importaciones y contenido que agregues, así como de conservar tus propias copias. No cargues información personal o médica de otra persona sin autorización. Conservas la titularidad de tu contenido y nos otorgas solo el permiso necesario para almacenarlo y sincronizarlo para prestar el servicio.'],
 
-      ['Solo para ejercicio; no es asesoría médica', 'gymbook sirve para planificar y registrar entrenamientos, no es un servicio médico. Las estimaciones y resúmenes de progreso son informativos y pueden ser inexactos. Tú eliges ejercicios y cargas. Detente si sientes dolor o malestar y consulta a un profesional de salud antes de entrenar si tienes una condición o inquietud. Consulta el Aviso de ejercicio y salud.'],
+      ['Solo para ejercicio; no es asesoría médica', 'gymbook sirve para planificar y registrar entrenamientos, no es un servicio médico. Las estimaciones y resúmenes de progreso son informativos y pueden ser inexactos. Tú eliges ejercicios y cargas, y la información no sustituye el consejo de un profesional. Detente si sientes dolor o malestar y consulta a un profesional de salud antes de entrenar si tienes una condición o inquietud. Consulta el Aviso de ejercicio y salud.'],
 
-      ['Planes de pago', 'Esta versión no ofrece planes de pago ni suscripciones y no se realiza ningún cobro. Si se ofrecen en el futuro, la pantalla de compra de la tienda mostrará claramente el precio total y moneda, impuestos, condiciones de la prueba, fecha y frecuencia de renovación, método de cancelación y condiciones de reembolso antes de que confirmes. Consulta Condiciones de suscripción.'],
+      ['Periodo gratuito y planes de pago', `Las cuentas nuevas tienen un periodo gratuito de ${TRIAL_DAYS} días desde la creación de la cuenta, sin costo. Al terminar, el acceso a las funciones de la cuenta requiere un plan activo. Tus datos no se eliminan porque termine el periodo gratuito: puedes activar un plan, o eliminar tus datos o tu cuenta cuando quieras. Los planes se pagan con los medios de pago que muestra la app y, antes de que confirmes cualquier compra, mostramos el precio total, moneda, impuestos, periodo de facturación, condiciones de renovación y método de cancelación.${priceEs} Consulta Condiciones de suscripción.`],
 
-      ['Disponibilidad y cambios', 'Podemos mantener, actualizar, suspender o retirar funciones por motivos operativos, de seguridad o legales. Haremos esfuerzos razonables para avisar cambios importantes de estos términos. Si cerramos el servicio, daremos un aviso razonable y, cuando sea viable, una oportunidad razonable para exportar o recuperar tus datos.'],
+      ['Disponibilidad y cambios', 'Podemos mantener, actualizar, suspender o retirar funciones por motivos operativos, de seguridad o legales. Haremos esfuerzos razonables para avisar cambios importantes de estos términos y los cambios de precio antes de que te apliquen. Si cerramos el servicio, daremos un aviso razonable y, cuando sea viable, una oportunidad razonable para exportar o recuperar tus datos.'],
 
-      ['Responsabilidad', 'Prestamos el servicio con diligencia razonable, pero no garantizamos que sea ininterrumpido o libre de errores. En la medida permitida por la ley, no respondemos por daños indirectos ni por lesiones derivadas del uso que hagas de la información de entrenamiento. Esto no excluye ni limita la responsabilidad que no pueda excluirse por ley (como el dolo o la culpa grave), ni tus derechos imperativos como consumidor bajo la Ley 1480 de 2011, incluida la garantía legal y, cuando aplique, el derecho de retracto en compras a distancia.'],
+      ['Responsabilidad', 'Prestamos el servicio con diligencia razonable, pero no garantizamos que sea ininterrumpido o libre de errores. En la medida permitida por la ley, no respondemos por daños indirectos. Nada en estos términos excluye ni limita la responsabilidad que no pueda excluirse por ley, como la derivada de dolo o culpa grave o de daños a la vida o la integridad física de una persona, ni tus derechos imperativos como consumidor bajo la Ley 1480 de 2011, incluida la garantía legal y, cuando aplique, el derecho de retracto en compras a distancia.'],
 
-      ['Software y contenido de terceros', 'El código fuente de gymbook y los medios de ejercicios pueden tener licencias diferentes. Estos términos no revocan derechos concedidos por la licencia AGPL-3.0-or-later ni las condiciones separadas del conjunto de datos. Consulta los archivos LICENSE y NOTICE distribuidos con el código.'],
+      ['Software y contenido de terceros', 'El código fuente de gymbook y los medios de ejercicios pueden tener licencias diferentes. Estos términos no revocan derechos concedidos por la licencia AGPL-3.0-or-later ni las condiciones separadas del conjunto de datos. Consulta los archivos LICENSE y NOTICE distribuidos con el código. Instala la app Android (APK) solo desde los canales oficiales que indicamos.'],
 
-      ['Ley aplicable, idioma y contacto', `Estos términos se rigen por la ley colombiana, sin perjuicio de las protecciones obligatorias para consumidores del lugar donde vivas. Si hay diferencias entre las versiones en español e inglés, prevalece la española. Escríbenos a ${CONTACT} para preguntas o reclamaciones. Versión ${VERSION}, vigente desde el ${UPDATED_ES}.`],
+      ['Ley aplicable, idioma y contacto', `Estos términos se rigen por la ley colombiana, sin perjuicio de las protecciones obligatorias para consumidores del lugar donde vivas. Si hay diferencias entre las versiones en español e inglés, prevalece la española. Escríbenos a ${CONTACT} para preguntas o reclamaciones. Para reclamaciones de consumo también puedes acudir a la Superintendencia de Industria y Comercio (SIC). Versión ${VERSION}, vigente desde el ${UPDATED_ES}.`],
 
     ],
 
@@ -442,41 +564,73 @@ const COPY = {
 
     en: [
 
-      ['Current status', 'This version of gymbook does not offer paid plans or subscriptions. No price, charge or free trial is active, and the app does not integrate Google Play or Apple billing.'],
+      ['Free period', `Every new account has a free period of ${TRIAL_DAYS} days, counted from account creation, with no charge. When it ends, access to account features requires an active plan. Your data is kept: you can activate a plan, or delete your data or account at any time from Settings.`],
 
-      ['If paid plans are offered in the future', [
+      ['Plan, price and payment', [
 
-        'Before any plan is offered, these terms and the Privacy policy will be updated and you will be notified.',
+        `Before you confirm a purchase, the app shows the total price, currency, taxes, billing period, renewal terms and cancellation method.${priceEn}`,
 
-        'Purchases will be made through Google Play or the App Store, which will show the total price, currency, taxes, trial terms, renewal frequency, cancellation method and refund conditions before you confirm.',
+        `Payments are processed by ${procEn}, under its own terms. gymbook does not receive or store your card number; it only receives the confirmation that a payment was completed and your plan status.`,
 
-        'Automatic renewal will only start with your explicit purchase and acceptance in the store. You can cancel in Google Play Subscriptions or Apple Account → Subscriptions; uninstalling the app does not cancel a subscription.',
-
-        'The store handles payment, refunds and billing disputes. gymbook only receives the purchase status needed to grant access, not your card number.',
-
-        'Your mandatory consumer rights remain unaffected, including legal warranty and, where applicable, the right of withdrawal.',
+        'We will notify you before any price change applies to you, and you can cancel before it takes effect.',
 
       ]],
+
+      ['Renewal and cancellation', [
+
+        renewEn,
+
+        'If you stop paying, you keep your data and can reactivate a plan later. Uninstalling the app does not cancel a plan.',
+
+      ]],
+
+      ['Refunds and right of withdrawal', [
+
+        'Under Law 1480 of 2011, for distance purchases you may have a right of withdrawal of 5 business days, subject to the exceptions in the law. If it applies to your purchase, write to us and we will return the amount through the same payment method.',
+
+        'For payment errors, duplicate charges or unauthorized charges, write to us at the contact email with the payment details and we will review the case with the payment processor.',
+
+        'Your mandatory consumer rights, including legal warranty, remain unaffected.',
+
+      ]],
+
+      ['Contact', `For questions about your plan or payments, write to ${CONTACT}. For consumer complaints you may also go to the Superintendencia de Industria y Comercio (SIC).`],
 
     ],
 
     es: [
 
-      ['Estado actual', 'Esta versión de gymbook no ofrece planes de pago ni suscripciones. No hay precio, cobro ni prueba gratuita activos, y la app no integra la facturación de Google Play ni de Apple.'],
+      ['Periodo gratuito', `Toda cuenta nueva tiene un periodo gratuito de ${TRIAL_DAYS} días, contados desde la creación de la cuenta, sin costo. Al terminar, el acceso a las funciones de la cuenta requiere un plan activo. Tus datos se conservan: puedes activar un plan, o eliminar tus datos o tu cuenta en cualquier momento desde Ajustes.`],
 
-      ['Si se ofrecen planes de pago en el futuro', [
+      ['Plan, precio y pago', [
 
-        'Antes de ofrecer cualquier plan, se actualizarán estas condiciones y la Política de privacidad, y te lo notificaremos.',
+        `Antes de que confirmes una compra, la app muestra el precio total, la moneda, los impuestos, el periodo de facturación, las condiciones de renovación y el método de cancelación.${priceEs}`,
 
-        'Las compras se harán mediante Google Play o App Store, que mostrarán el precio total, moneda, impuestos, condiciones de la prueba, frecuencia de renovación, método de cancelación y condiciones de reembolso antes de que confirmes.',
+        `Los pagos los procesa ${procEs}, bajo sus propias condiciones. gymbook no recibe ni guarda el número de tu tarjeta; solo recibe la confirmación de que un pago se completó y el estado de tu plan.`,
 
-        'La renovación automática solo se activará con tu compra y aceptación expresa en la tienda. Puedes cancelar en Suscripciones de Google Play o Cuenta de Apple → Suscripciones; desinstalar la app no cancela una suscripción.',
-
-        'La tienda gestiona el pago, los reembolsos y las disputas de cobro. gymbook solo recibe el estado de compra necesario para habilitar el acceso, no tu número de tarjeta.',
-
-        'Se respetarán tus derechos imperativos como consumidor, incluida la garantía legal y, cuando aplique, el derecho de retracto.',
+        'Te avisaremos antes de que cualquier cambio de precio te aplique, y podrás cancelar antes de que entre en vigor.',
 
       ]],
+
+      ['Renovación y cancelación', [
+
+        renewEs,
+
+        'Si dejas de pagar, conservas tus datos y puedes reactivar un plan más adelante. Desinstalar la app no cancela un plan.',
+
+      ]],
+
+      ['Reembolsos y derecho de retracto', [
+
+        'Según la Ley 1480 de 2011, en compras a distancia puedes tener derecho de retracto de 5 días hábiles, sujeto a las excepciones de la ley. Si aplica a tu compra, escríbenos y devolveremos el valor por el mismo medio de pago.',
+
+        'Si hay errores de pago, cobros duplicados o cobros no autorizados, escríbenos al correo de contacto con los datos del pago y revisaremos el caso con el procesador de pagos.',
+
+        'Se respetan tus derechos imperativos como consumidor, incluida la garantía legal.',
+
+      ]],
+
+      ['Contacto', `Para preguntas sobre tu plan o tus pagos, escribe a ${CONTACT}. Para reclamaciones de consumo también puedes acudir a la Superintendencia de Industria y Comercio (SIC).`],
 
     ],
 
@@ -490,7 +644,7 @@ const COPY = {
 
       ['Use your judgment', 'Exercise carries risk. Choose loads and movements appropriate to your ability and surroundings, use equipment safely, and stop if you experience pain, dizziness, shortness of breath or other concerning symptoms. Ask a qualified healthcare professional before beginning or changing exercise if you are pregnant, injured, have a health condition, or are unsure whether an activity is safe for you.'],
 
-      ['Personal data', 'Workout logs and body-weight entries may reveal aspects of your physical condition and may constitute sensitive data depending on their content and context. Enter only information you are comfortable storing in your account or on your device. Do not use gymbook for emergency care or clinical monitoring.'],
+      ['Personal data', 'Body-weight entries are sensitive data because they can reveal aspects of your physical condition, and workout logs may do so as well. Enter only information you are comfortable storing in your account or on your device. Do not use gymbook for emergency care or clinical monitoring.'],
 
     ],
 
@@ -500,7 +654,7 @@ const COPY = {
 
       ['Usa tu criterio', 'El ejercicio implica riesgos. Elige cargas y movimientos acordes con tu capacidad y entorno, utiliza el equipo de forma segura y detente si sientes dolor, mareo, falta de aire u otro síntoma preocupante. Consulta a un profesional de salud antes de empezar o cambiar tu ejercicio si estás embarazada, lesionado, tienes una condición de salud o dudas sobre la seguridad de una actividad.'],
 
-      ['Datos personales', 'Los registros de entrenamiento y de peso corporal pueden revelar aspectos de tu condición física y constituir datos sensibles según su contenido y contexto. Ingresa únicamente información que estés dispuesto a guardar en tu cuenta o dispositivo. No uses gymbook para emergencias ni monitoreo clínico.'],
+      ['Datos personales', 'Los registros de peso corporal son datos sensibles porque pueden revelar aspectos de tu condición física, y los registros de entrenamiento también pueden hacerlo. Ingresa únicamente información que estés dispuesto a guardar en tu cuenta o dispositivo. No uses gymbook para emergencias ni monitoreo clínico.'],
 
     ],
 
@@ -530,7 +684,7 @@ function LegalText({ id }) {
 
     </section>)}
 
-    {id === 'third-parties' && <p className="small dim">{lang === 'es' ? 'Avisos de privacidad (consulta solo los servicios que estén habilitados): ' : 'Privacy notices (consult only services that are enabled): '}<a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google</a> · <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noreferrer">Apple</a> · <a href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noreferrer">jsDelivr</a></p>}
+    {id === 'third-parties' && <p className="small dim">{lang === 'es' ? 'Avisos de privacidad: ' : 'Privacy notices: '}<a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google</a> · <a href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noreferrer">jsDelivr</a></p>}
 
     {id === 'privacy' && <p className="small dim">{lang === 'es' ? 'Autoridad colombiana de protección de datos: ' : 'Colombian data protection authority: '}<a href="https://www.sic.gov.co/" target="_blank" rel="noreferrer">Superintendencia de Industria y Comercio (SIC)</a></p>}
 
