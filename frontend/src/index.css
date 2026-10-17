@@ -249,6 +249,16 @@ h4.sec{
 .lrow-c{color:var(--label);font-size:15px;flex:none;--icon-stroke:2.4}
 .lrow-k{color:var(--acc);font-size:17px;flex:none;--icon-stroke:2.4}
 .lrow.danger,.lrow.danger .lrow-t{color:var(--red)}
+.data-more{border-top:var(--hair) solid var(--sep)}
+.data-more-summary{
+  display:flex;align-items:center;gap:12px;min-height:52px;padding:10px 14px;
+  color:var(--label);cursor:pointer;list-style:none;user-select:none;
+}
+.data-more-summary::-webkit-details-marker{display:none}
+.data-more-summary:active{background:var(--surface-2)}
+.data-more-chevron{margin-left:auto;color:var(--label-2);font-size:15px;transition:transform var(--fast) var(--ease)}
+.data-more[open] .data-more-chevron{transform:rotate(180deg)}
+.data-more-content{border-top:var(--hair) solid var(--sep)}
 /* an (i) before a row's control: painted small and dim so the control stays the loud thing,
    but with a finger-sized target like everything else — the padding is the hit area and the
    vertical negative margin keeps it from making the row taller. The horizontal ones pull the
@@ -320,16 +330,14 @@ h4.sec{
 #tabbar button.start:active .cir{transform:scale(.93)}
 #tabbar button.start .cir .icn{font-size:26px;--icon-stroke:2;color:inherit;opacity:1}
 #tabbar button.start span{color:var(--acc);font-weight:600}
-/* `.cir` is itself a <span>, so the label rules above and below reach it too and
-   outrank the `.cir` block — which is how the running state ended up painting an
-   orange play glyph onto an orange disc. Both states restate their own colour.
-   The disc is orange in either theme, so its glyph is black, not `--on-acc`. */
+/* Keep the user-selected accent color while the workout is running; only the
+   pulsing ring changes to indicate the active state. */
 #tabbar button.start .cir{color:var(--on-acc)}
-#tabbar button.start.rec .cir{background:var(--orange);color:#000;box-shadow:0 6px 18px -4px color-mix(in srgb,var(--orange) 55%,transparent)}
-#tabbar button.start.rec span{color:var(--orange)}
+#tabbar button.start.rec .cir{background:var(--acc);color:var(--on-acc);box-shadow:0 6px 18px -4px color-mix(in srgb,var(--acc) 55%,transparent)}
+#tabbar button.start.rec span{color:var(--acc)}
 #tabbar button.start.rec .cir::after{
   content:'';position:absolute;inset:0;border-radius:50%;
-  border:2px solid var(--orange);animation:ping 1.9s var(--ease) infinite;
+  border:2px solid var(--acc);animation:ping 1.9s var(--ease) infinite;
 }
 @keyframes ping{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.45);opacity:0}}
 
@@ -421,6 +429,10 @@ h4.sec{
 .login-screen .input:focus{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 17%,transparent)}
 .login-screen .login-choice{min-height:48px;border-radius:13px}
 .login-screen form>.btn.primary{min-height:54px;border-radius:13px;font-weight:600}
+.login-screen .signup-field-label{display:block;text-align:left;font-size:13px;font-weight:600;color:var(--label-2);margin:4px 2px -5px}
+.login-screen .signup-consent{display:flex;align-items:flex-start;gap:10px;text-align:left;font-size:13px;line-height:1.5;color:var(--label-2);padding:4px 2px}
+.login-screen .signup-consent .chk{margin-top:1px}
+.login-screen .signup-legal-link{display:inline;padding:0;color:var(--acc);font-size:inherit;text-decoration:underline;text-underline-offset:2px}
 .login-screen .login-panel>.btn.ghost{margin-top:8px}
 .login-screen .login-panel>.small{color:#b2bbb4}
 .login-legal-link{
@@ -745,6 +757,31 @@ h4.sec{
   display:flex;align-items:center;gap:12px;margin-bottom:8px;
 }
 .sheet-full-head h3{font-size:20px;font-weight:600;letter-spacing:-.021em;margin:0}
+.tutorial-shell{height:calc(100dvh - 34px - var(--sat) - var(--sab));display:flex;flex-direction:column;max-width:720px;margin:0 auto;overflow:auto;overscroll-behavior:contain}
+.tutorial-header{justify-content:space-between;align-items:center;margin-bottom:10px;flex:none}
+.tutorial-title-wrap{display:flex;align-items:center;gap:10px}
+.tutorial-kicker{font-size:12px;font-weight:600;color:var(--label-2)}
+.tutorial-heading{margin:0;font-size:18px;font-weight:650;letter-spacing:-.02em}
+.tutorial-close{color:var(--label-2);flex:none}
+.tutorial-content{flex:1;display:flex;flex-direction:column;justify-content:center;padding:8px 0}
+.tutorial-counter{color:var(--label-3);font-size:12px;font-weight:600;text-align:center;margin:0 0 14px}
+.tutorial-route{display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:14px;color:var(--label-2);font-size:13px}
+.tutorial-route-icon{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:var(--bg-el);color:var(--acc)}
+.tutorial-route-icon .icn{font-size:17px}
+.tutorial-route strong{color:var(--label);font-weight:650}
+.tutorial-info-card{width:100%;max-width:540px;margin:0 auto;padding:clamp(22px,6vw,34px);border:1px solid var(--line);border-radius:var(--r-lg);background:var(--bg-el);box-shadow:var(--shadow-sm);text-align:center}
+.tutorial-step-icon{width:62px;height:62px;margin:0 auto 16px;display:grid;place-items:center;border-radius:18px;background:color-mix(in srgb,var(--acc) 14%,var(--bg));color:var(--acc)}
+.tutorial-step-icon .icn{font-size:30px}
+.tutorial-info-card h2{margin:0;font-size:23px;font-weight:650;letter-spacing:-.03em}
+.tutorial-info-card>p{margin:10px 0 0;color:var(--label-2);font-size:15px;line-height:1.6}
+.tutorial-hint{display:flex;align-items:flex-start;gap:9px;margin-top:22px;padding:12px 14px;border-radius:var(--r-md);background:var(--bg);color:var(--label-2);text-align:left;font-size:13px;line-height:1.5}
+.tutorial-hint .icn{flex:none;color:var(--acc);margin-top:1px}
+.tutorial-dots{display:flex;justify-content:center;gap:6px;padding:18px 0 6px}
+.tutorial-dots span{width:6px;height:6px;border-radius:99px;background:var(--line);transition:all var(--fast)}
+.tutorial-dots span.active{width:20px;background:var(--acc)}
+.tutorial-dots span.done{background:color-mix(in srgb,var(--acc) 45%,var(--line))}
+.tutorial-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0 max(14px,var(--sab));flex:none}
+@media(max-width:560px){.tutorial-title-wrap{gap:7px}.tutorial-heading{font-size:16px}.tutorial-kicker{font-size:11px}.tutorial-info-card{padding:25px 20px}.tutorial-info-card h2{font-size:21px}.tutorial-info-card>p{font-size:14px}.tutorial-content{justify-content:flex-start;padding-top:12px}}
 .center{
   position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
   width:min(84vw,300px);background:var(--bg-el);border-radius:var(--r-lg);padding:20px;

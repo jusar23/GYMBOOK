@@ -1,0 +1,22 @@
+@'
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Archivos generados
+frontend/dist/
+frontend/android/.gradle/
+frontend/android/app/build/
+
+# Configuración local de IDE
+.idea/
+**/.idea/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Temporales de Supabase
+supabase/.temp/
+'@ | Set-Content -Path .gitignore -Encoding utf8

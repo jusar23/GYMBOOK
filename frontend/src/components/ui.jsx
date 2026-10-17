@@ -196,14 +196,16 @@ export function Slider({ value, min = 0, max = 100, step = 1, onChange, classNam
 
 /* ============================ checkbox ============================ */
 
-export function Check({ checked, onChange, className = '', size }) {
+export function Check({ checked, onChange, className = '', size, ...rest }) {
   return (
     <button
+      type="button"
       role="checkbox"
       aria-checked={!!checked}
       className={'chk' + (checked ? ' on' : '') + ' ' + className}
       style={size ? { width: size, height: size } : null}
       onClick={() => onChange(!checked)}
+      {...rest}
     >
       <Icon name="check" />
     </button>

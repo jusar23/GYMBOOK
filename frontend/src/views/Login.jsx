@@ -1,35 +1,57 @@
 import { useStore, hasData } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { passkeyRegister, api, BIO, createAppSessionWithSupabase } from '../lib/api.js'
-import { cancelPasswordRecovery, clearPendingRecoveryCode, createEmailAccount, getPendingRecoveryCode, isPasswordRecovery, requestPasswordReset, signInWithEmail, signInWithGoogle, supabaseAuthConfigured, updateRecoveredPassword } from '../lib/supabaseAuth.js'
+import { cancelPasswordRecovery, clearPendingRecoveryCode, createEmailAccount, getPendingRecoveryCode, isPasswordRecovery, requestPasswordReset, signInWithEmail, signInWithGoogle, supabaseAuthConfigured, updateAuthUserMetadata, updateRecoveredPassword } from '../lib/supabaseAuth.js'
 import { t } from '../lib/i18n.js'
+import { countryOptions } from '../lib/countries.js'
+import { legalConsentMetadata, needsLegalSetup } from '../lib/legalConsent.js'
+import { LegalContent } from './Legal.jsx'
 import { DEMO } from '../lib/demo.js'
+import { MOBILE } from '../lib/mobile.js'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
-import { Button } from '../components/ui.jsx'
+import { Button, Check } from '../components/ui.jsx'
+
+function ofAdultAge(dateValue) {
+  if (!dateValue) return false
+  const dob = new Date(`${dateValue}T00:00:00`)
+  if (Number.isNaN(dob.getTime()) || dob > new Date()) return false
+  const today = new Date()
+  let age = today.getFullYear() - dob.getFullYear()
+  if (today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) age--
+  return age > 18
+}
+
+function maxBirthDate() {
+  const limit = new Date()
+  limit.setFullYear(limit.getFullYear() - 18)
+  limit.setDate(limit.getDate() - 1)
+  const pad = value => String(value).padStart(2, '0')
+  return `${limit.getFullYear()}-${pad(limit.getMonth() + 1)}-${pad(limit.getDate())}`
+}
+
+function LegalPreview({ close, ids, title }) {
+  return <div style={{ padding: 'max(18px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom))' }}>
+    <div className="sheet-full-head">
+      <h3 style={{ flex: 1 }}>{title}</h3>
+      <button type="button" className="iconbtn" onClick={close} aria-label={t('Close')}><Icon name="xmark" /></button>
+    </div>
+    <LegalContent ids={ids} />
+    <Button variant="primary" onClick={close}>{t('Close')}</Button>
+  </div>
+}
 
 function authErrorText(error) {
   const message = String(error?.message || '')
   if (/invalid login credentials/i.test(message)) return t('Email or password is incorrect.')
   if (/user already registered|already been registered/i.test(message)) return t('An account already uses this email. Sign in instead.')
   if (/email not confirmed/i.test(message)) return t('Confirm your email from the link we sent you, then sign in.')
+  if (/authentication request timed out/i.test(message)) return t('Authentication request timed out. Check your connection and try again.')
   if (/recovery code/i.test(message)) return t('That recovery code is invalid, already used, or belongs to another profile.')
   if (/already linked to another account/i.test(message)) return t('That imported profile is already linked to another account.')
-  if (/supabase auth is not configured/i.test(message)) return t('Online sign-in is not configured yet. Add the Supabase Auth settings to the app and server environment.')
+  if (/supabase auth is not configured/i.test(message)) return t('Online sign-in is not configured yet. Add the Supabase Auth settings to the app.')
   return message || t('Authentication failed. Please try again.')
-}
-
-function GuestWarning({ close }) {
-  const setGuest = useStore(s => s.setGuest)
-  return <>
-    <h3>{t('Continue as a guest?')}</h3>
-    <div className="card small muted" style={{ lineHeight: 1.55, margin: '12px 0 16px' }}>
-      {t('Your progress will stay only on this device and will not sync. You may lose it if you clear app data, uninstall gymbook or change devices.')}
-    </div>
-    <Button variant="primary" onClick={() => { close(); setGuest(true) }}>{t('Continue as guest')}</Button>
-    <Button variant="ghost" onClick={close}>{t('Go back')}</Button>
-  </>
 }
 
 function RegisterSheet({ close }) {
@@ -66,15 +88,19 @@ function RegisterSheet({ close }) {
   </>
 }
 
-export default function Login() {
+export default function Login({ legalSetup = false }) {
   const navigate = useNavigate()
-  const { setUser, pullState, setGuest, setSigningIn } = useStore()
+  const { setUser, pullState, setSigningIn } = useStore()
   const [mode, setMode] = useState('signin')
   const [recoveryMode, setRecoveryMode] = useState(isPasswordRecovery)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState('')
+  const [countryCode, setCountryCode] = useState('')
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [trainingDataAccepted, setTrainingDataAccepted] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -86,8 +112,37 @@ export default function Login() {
     if (message) { setError(message); localStorage.removeItem('gym_auth_error') }
   }, [])
 
+  // Google returns to this same Login component for accounts that still need legal setup.
+  // Clear the OAuth launch spinner so the user can submit the required registration details.
+  useEffect(() => {
+    if (legalSetup) { setBusy(false); setSigningIn(false) }
+  }, [legalSetup])
+
   const finishLogin = async session => {
     if (!session?.access_token) throw new Error(t('Check your email to confirm your account, then sign in.'))
+    if (MOBILE) {
+      const authUser = session.user || {}
+      const needsSetup = needsLegalSetup(authUser)
+      setUser({
+        id: authUser.id,
+        email: authUser.email,
+        name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'GYMBOOK user',
+        needsLegalSetup: needsSetup,
+      })
+      clearPendingRecoveryCode()
+      if (!needsSetup) useUI.getState().toast(t('Signed in. Your workout data stays on this phone.'))
+      return
+    }
+    if (needsLegalSetup(session.user)) {
+      const authUser = session.user
+      setUser({
+        id: authUser.id, email: authUser.email,
+        name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'GYMBOOK user',
+        needsLegalSetup: true,
+      })
+      clearPendingRecoveryCode()
+      return
+    }
     const result = await createAppSessionWithSupabase(session.access_token, getPendingRecoveryCode())
     clearPendingRecoveryCode()
     const { user, state } = result
@@ -117,9 +172,16 @@ export default function Login() {
         setNotice(t('If an account exists for that email, we sent a password reset link. Check your inbox.'))
       } else if (mode === 'signup') {
         if (!name.trim()) throw new Error(t('Enter a name'))
-        const result = await createEmailAccount({ name, email, password })
+        const legalMetadata = validatedLegalMetadata()
+        const result = await createEmailAccount({ name, email, password, legalMetadata })
         if (result.confirmationRequired) setNotice(t('Account created. Check your email for a confirmation link before signing in.'))
         else await finishLogin(result)
+      } else if (legalSetup) {
+        const legalMetadata = validatedLegalMetadata()
+        const authUser = await updateAuthUserMetadata(legalMetadata)
+        const currentUser = useStore.getState().user
+        setUser({ ...currentUser, needsLegalSetup: needsLegalSetup(authUser) })
+        navigate('/home', { replace: true })
       } else {
         await finishLogin(await signInWithEmail({ email, password }))
       }
@@ -127,10 +189,38 @@ export default function Login() {
     finally { setBusy(false); if (loadingApp) setSigningIn(false) }
   }
 
+  const validatedLegalMetadata = () => {
+    if (!ofAdultAge(dateOfBirth)) throw new Error(t('You must be over 18 years old to create an account.'))
+    if (!countryCode) throw new Error(t('Select your country.'))
+    if (!termsAccepted) throw new Error(t('Accept the terms and privacy notice to continue.'))
+    return legalConsentMetadata({ dateOfBirth, countryCode, trainingDataAccepted })
+  }
+
+  const openLegal = (ids, title) => useUI.getState().openSheet(close => <LegalPreview close={close} ids={ids} title={title} />, { kind: 'full', locked: true })
+
+  const legalFields = () => <>
+    <label className="signup-field-label" htmlFor="gymbook-dob">{t('Date of birth')}</label>
+    <input id="gymbook-dob" className="input" type="date" autoComplete="bday" max={maxBirthDate()} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} required />
+    <label className="signup-field-label" htmlFor="gymbook-country">{t('Country of residence')}</label>
+    <select id="gymbook-country" className="input" value={countryCode} onChange={e => setCountryCode(e.target.value)} required>
+      <option value="" disabled>{t('Select your country')}</option>
+      {countryOptions().map(country => <option key={country.code} value={country.code}>{country.name}</option>)}
+    </select>
+    <div className="signup-consent">
+      <Check checked={termsAccepted} onChange={setTermsAccepted} aria-label={t('Accept the terms and privacy notice')} />
+      <div>{t('I accept the')} <button type="button" className="signup-legal-link" onClick={() => openLegal(['terms'], t('Terms and conditions'))}>{t('Terms and conditions')}</button> {t('and the')} <button type="button" className="signup-legal-link" onClick={() => openLegal(['privacy'], t('Privacy policy'))}>{t('Privacy policy')}</button>.</div>
+    </div>
+    <div className="signup-consent">
+      <Check checked={trainingDataAccepted} onChange={setTrainingDataAccepted} aria-label={t('Authorize workout data processing')} />
+      <div>{t('Optional: I explicitly authorize processing of my workout and body-weight data for progress tracking and server backups. Without this authorization, my workouts stay on this device and server backup and restore are unavailable.')}</div>
+    </div>
+  </>
+
   const google = async () => {
     setError(''); setNotice(''); setBusy(true); setSigningIn(true)
     try { await signInWithGoogle() }
-    catch (e) { setError(authErrorText(e)); setBusy(false); setSigningIn(false) }
+    catch (e) { setError(authErrorText(e)) }
+    finally { setBusy(false); setSigningIn(false) }
   }
 
   const head = <>
@@ -144,7 +234,7 @@ export default function Login() {
     <div className="narrow" style={wrap}>
       {head}
       <div className="muted" style={{ marginBottom: 30 }}>{t('Live demo — everything stays in this browser.')}</div>
-      <Button variant="primary" icon="sparkles" onClick={() => setGuest(true)}>{t('Start the demo')}</Button>
+      {!MOBILE && <Button variant="primary" icon="sparkles" onClick={() => useStore.getState().setGuest(true)}>{t('Start the demo')}</Button>}
       <div className="card small muted" style={{ textAlign: 'left', marginTop: 16 }}>
         {t('This demo runs entirely in your browser on example data — nothing is sent anywhere. Your own profile and workout data are available after you create an account or sign in.')}
       </div>
@@ -155,9 +245,18 @@ export default function Login() {
     <div className="narrow login-screen" style={{ ...wrap, padding: '24px 0' }}>
       {head}
       <div className="login-panel">
-      <div className="login-price-notice">{t('30 days free, then $1/month')}</div>
+      <div className="login-price-notice">{t('No paid subscription is currently offered')}</div>
 
-      {authReady ? recoveryMode ? <>
+      {authReady ? legalSetup ? <>
+        <h2 style={{ textAlign: 'left', margin: '10px 0' }}>{t('Complete your account')}</h2>
+        <div className="muted small" style={{ textAlign: 'left', marginBottom: 12 }}>{t('Before using a signed-in account, add your age and country and accept the current legal documents.')}</div>
+        <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
+          {legalFields()}
+          <Button variant="primary" type="submit" disabled={busy}>{busy ? t('Please wait…') : t('Save and continue')}</Button>
+        </form>
+        {error && <div role="alert" className="small" style={{ color: 'var(--red)', textAlign: 'left', marginTop: 12 }}>{error}</div>}
+        <Button variant="ghost" className="dim" onClick={async () => { await useStore.getState().signOut(); navigate('/login', { replace: true }) }}>{t('Sign out')}</Button>
+      </> : recoveryMode ? <>
         <div className="muted small" style={{ margin: '12px 0' }}>{t('Choose a new password for your gymbook account.')}</div>
         <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
           <div className="password-field">
@@ -192,16 +291,19 @@ export default function Login() {
               <Icon name={showPassword ? 'eyeOff' : 'eye'} size={20} />
             </button>
           </div>}
+          {mode === 'signup' && legalFields()}
           <Button variant="primary" type="submit" disabled={busy}>{busy ? t('Please wait…') : mode === 'forgot' ? t('Send reset link') : mode === 'signup' ? t('Create account') : t('Sign in')}</Button>
         </form>
         {error && <div role="alert" className="small" style={{ color: 'var(--red)', textAlign: 'left', marginTop: 12 }}>{error}</div>}
         {notice && <div role="status" className="card small muted" style={{ textAlign: 'left', marginTop: 12 }}>{notice}</div>}
         {mode === 'signin' && <Button variant="ghost" className="dim" onClick={() => { setMode('forgot'); setError(''); setNotice('') }}>{t('Forgot password?')}</Button>}
         {mode === 'forgot' && <Button variant="ghost" className="dim" onClick={() => { setMode('signin'); setError(''); setNotice('') }}>{t('Back to sign in')}</Button>}
-      </> : <div className="card small muted" style={{ textAlign: 'left' }}>{t('Online sign-in is not configured yet. Add the Supabase Auth settings to the app and server environment.')}</div>}
+      </> : <div className="card small muted" style={{ textAlign: 'left' }}>{t('Online sign-in is not configured yet. Add the Supabase Auth settings to the app.')}</div>}
 
-      <Button variant="ghost" className="dim" onClick={() => useUI.getState().openSheet(close => <GuestWarning close={close} />)}>{t('Continue as a guest')}</Button>
-      <div className="dim small" style={{ marginTop: 12, lineHeight: 1.5 }}>{t('Guest progress stays on this device and is not synced.')}</div>
+      {!MOBILE && <>
+        <Button variant="ghost" className="dim" onClick={() => useStore.getState().setGuest(true)}>{t('Continue as a guest')}</Button>
+        <div className="dim small" style={{ marginTop: 12, lineHeight: 1.5 }}>{t('Guest progress stays on this device and is not synced.')}</div>
+      </>}
       {authReady && <div className="dim small" style={{ marginTop: 16, lineHeight: 1.5 }}>{t('Your account keeps your profile and workout progress synced across devices.')}</div>}
       <button className="login-legal-link" onClick={() => navigate('/legal', { state: { from: '/' } })}>{t('Legal & privacy')}</button>
       </div>

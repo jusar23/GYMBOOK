@@ -20,14 +20,14 @@ const ADDRESS = 'El Carmen de Viboral, Antioquia, Colombia'
 // Teléfono de contacto (recomendado por la normativa colombiana). Si lo dejas vacío no se muestra.
 const PHONE = '' // Completa este dato antes de publicar si corresponde a tu canal de contacto
 
-const VERSION = '1.2'
+const VERSION = '1.4'
 
-const UPDATED_EN = '12 October 2026'
+const UPDATED_EN = '16 October 2026'
 
-const UPDATED_ES = '12 de octubre de 2026'
+const UPDATED_ES = '16 de octubre de 2026'
 
 // Pon en true SOLO cuando exista el botón "Eliminar cuenta" dentro de la app (exigido por Google Play y Apple).
-const ACCOUNT_DELETION_IN_APP = false
+const ACCOUNT_DELETION_IN_APP = true
 
 
 
@@ -45,11 +45,7 @@ export const DOCS = [
 
   { id: 'third-parties', icon: 'globe', title: 'Third-party services', es: 'Servicios de terceros' },
 
-  { id: 'terms', icon: 'clipboard', title: 'Terms of use', es: 'Términos de uso' },
-
-  { id: 'subscription', icon: 'trophy', title: 'Subscription terms', es: 'Condiciones de suscripción' },
-
-  { id: 'fitness', icon: 'figureStrength', title: 'Fitness and health notice', es: 'Aviso de ejercicio y salud' },
+  { id: 'terms', icon: 'clipboard', title: 'Terms and conditions', es: 'Términos y condiciones' },
 
 ]
 
@@ -66,7 +62,7 @@ const COPY = {
 
       ['Information we process', [
 
-        'Account data: display name, email address and sign-in identifiers (including those provided by Google if you choose Google sign-in).',
+        'Account data: display name, email address, sign-in identifiers, date of birth, country, and records of the terms, privacy notice and separate training-data consent you accepted.',
 
         'Training data: routines, exercises, dates, sets, repetitions, logged weights, effort ratings, favorites, custom exercises, preferences and backup/import content.',
 
@@ -82,9 +78,9 @@ const COPY = {
 
       ['Why we use it', [
 
-        'Create and secure your account and authenticate you.',
+        'Create and secure your account, authenticate you, verify the minimum-age requirement and identify the country whose mandatory rules may apply.',
 
-        'Sync your profile and training data across your devices and restore imported profiles.',
+        'On signed-in mobile accounts, update your server backup after each completed workout and let you restore it manually. Guest data stays on the device.',
 
         'Send notifications you request.',
 
@@ -100,19 +96,19 @@ const COPY = {
 
         'Workout history and body-weight records may reveal information about your physical condition or health and may therefore constitute sensitive personal data depending on their content and context.',
 
-        'Where the law treats these records as sensitive data, we will request prior, express, informed and separate authorization through an unticked control before processing them. Silence or inaction is not consent. Do not enable collection of such data until this control and its evidence are implemented in the app.',
+        'Before creating a signed-in account, the app asks separately for your explicit authorization to process workout logs and body-weight entries, which may reveal sensitive health information. The control is unticked by default; the app records the authorization, time and policy version. This authorization is separate from accepting these terms and the privacy notice.',
 
         'Providing sensitive data is optional. Declining does not prevent you from using features that do not need it, and you will be told which features depend on it.',
 
         'Where authorization is required, we retain evidence of the specific consent given, including its wording, date/time, policy version and the account or session associated with it. A general acceptance of the terms is not a substitute for separate sensitive-data consent.',
 
-        'You can withdraw consent or request deletion through the contact details in this policy. We will stop the relevant processing and delete data where legally required, subject to applicable exceptions. Withdrawal does not make prior lawful processing retroactively unlawful.',
+        `You can withdraw this authorization or request deletion through ${CONTACT}. Withdrawal stops future server backups of workout data; it does not make prior lawful processing retroactively unlawful. Your account can continue with workout data stored on this device, without server backup or restoration.`,
 
       ]],
 
       ['Who receives your data', [
 
-        'The backend/API and database actually configured for the deployed version of gymbook. In the self-hosted version, the Node.js API and the storage volume configured by the operator process and store account/workout data; the server operator and hosting provider may be able to access technical data.',
+        'Supabase Auth stores account identifiers and the registration details and consent versions you submit. Supabase Postgres stores a server backup of workout data after each completed workout when you have separately authorized it. Supabase processes these data under its applicable service terms; the project region is the one configured by the operator.',
 
         'The web/server hosting provider actually used for the published instance. If gymbook is self-hosted, this is the person or organization operating the server and its infrastructure provider, if any.',
 
@@ -130,9 +126,9 @@ const COPY = {
 
       ['International transfers and transmissions', 'If the deployed version uses providers or servers outside Colombia, some account or technical data may be processed in those countries. Before publication, we will identify the actual providers, countries and purposes and apply the mechanism required by Colombian law for each transfer or transmission; general acceptance of this policy does not replace any consent or safeguards required by law. If the service is hosted exclusively in Colombia, this clause must be adjusted to reflect that fact.'],
 
-      ['Local storage and guest use', 'We only use storage on your browser or device that is strictly necessary to run the app (settings, workout state and sign-in session). We do not use advertising cookies or third-party analytics. Guest progress stays on your device and is not synced to our account database; clearing app data or uninstalling may erase it. Signed-in profiles are synced to the service.'],
+      ['Local storage and server backups', 'Workout history and settings are stored on your device. If you separately authorize processing of workout data, the app sends one updated backup to Supabase after each completed workout; restoration is started manually. Without that optional authorization, workout data stays on this device and server backup and restoration are unavailable. Clearing app data or uninstalling may erase the local copy.'],
 
-      ['Minors', 'gymbook is intended for people aged 18 or over and is not directed at children or teenagers. We do not knowingly collect data from minors. If we learn that a minor has created an account, we will delete the account and its data. If you believe a minor is using the app, write to us at the email above.'],
+      ['Minors', 'gymbook is intended for people over 18 and is not directed at children or teenagers. We do not knowingly collect data from minors. If we learn that a minor has created an account, we will delete the account and its data. If you believe a minor is using the app, write to us at the email above.'],
 
       ['Retention and account deletion', [
 
@@ -190,7 +186,7 @@ const COPY = {
 
       ['Información que tratamos', [
 
-        'Datos de cuenta: nombre visible, correo electrónico e identificadores de inicio de sesión (incluidos los entregados por Google si eliges ese método).',
+        'Datos de cuenta: nombre visible, correo, identificadores de inicio de sesión, fecha de nacimiento, país y constancias de aceptación de los términos, el aviso de privacidad y la autorización separada para datos de entrenamiento.',
 
         'Datos de entrenamiento: rutinas, ejercicios, fechas, series, repeticiones, pesos registrados, esfuerzo percibido, favoritos, ejercicios personalizados, preferencias y contenido importado o de respaldo.',
 
@@ -206,9 +202,9 @@ const COPY = {
 
       ['Finalidades', [
 
-        'Crear y proteger tu cuenta y autenticarte.',
+        'Crear y proteger tu cuenta, autenticarte, verificar la edad mínima e identificar el país cuyas normas obligatorias pueden aplicar.',
 
-        'Sincronizar tu perfil y entrenamiento entre tus dispositivos y restaurar perfiles importados.',
+        'En cuentas móviles con sesión iniciada y autorización separada, actualizar la copia del servidor al terminar cada entrenamiento y permitirte restaurarla manualmente. Sin esa autorización, los datos permanecen en el dispositivo y no se habilitan copias del servidor.',
 
         'Enviar las notificaciones que solicites.',
 
@@ -224,19 +220,19 @@ const COPY = {
 
         'Tu historial de entrenamiento y los registros de peso corporal pueden revelar información sobre tu condición física o salud y, según su contenido y contexto, pueden constituir datos personales sensibles.',
 
-        'Cuando la ley considere estos registros datos sensibles, solicitaremos autorización previa, expresa, informada y separada mediante un control sin marcar por defecto antes de tratarlos. El silencio o la inacción no son autorización. No habilites la recopilación de esos datos hasta implementar este control y guardar evidencia en la app.',
+        'Antes de crear una cuenta, la app solicita por separado tu autorización expresa para tratar registros de entrenamiento y peso corporal, que pueden revelar información sensible de salud. La casilla aparece desmarcada; la app conserva la autorización, fecha y versión de los documentos. Esta autorización es independiente de aceptar los términos y el aviso de privacidad.',
 
         'Entregar datos sensibles es opcional. Si te niegas, puedes seguir usando las funciones que no los necesitan, y te indicaremos cuáles dependen de ellos.',
 
         'Cuando se requiera autorización, conservaremos evidencia del consentimiento específico, incluido el texto mostrado, fecha y hora, versión de la política y cuenta o sesión asociada. La aceptación general de los términos no sustituye la autorización separada para datos sensibles.',
 
-        'Puedes revocar el consentimiento o solicitar la supresión por los canales de esta política. Detendremos el tratamiento correspondiente y eliminaremos los datos cuando legalmente proceda, salvo excepciones aplicables. La revocatoria no convierte retroactivamente en ilícito el tratamiento previo que haya sido lícito.',
+        `Puedes revocar esta autorización o solicitar la supresión escribiendo a ${CONTACT}. La revocatoria detiene futuras copias de entrenamiento en el servidor; no vuelve ilícito retroactivamente el tratamiento previo que haya sido lícito. Tu cuenta puede continuar con los datos de entrenamiento almacenados en este dispositivo, sin copias ni restauración desde el servidor.`,
 
       ]],
 
       ['Quiénes reciben tus datos', [
 
-        'API Node.js y almacenamiento autohospedado: en la instalación autohospedada, la API y el volumen de datos configurado procesan y guardan datos de cuenta y entrenamiento.',
+        'Supabase Auth guarda identificadores de cuenta y los datos de registro y versiones de consentimiento que envías. Supabase Postgres guarda una copia de entrenamiento al terminar cada sesión si autorizaste por separado ese tratamiento. Supabase trata estos datos conforme a las condiciones aplicables del servicio; el proyecto usa la región configurada por el operador.',
 
         'Proveedor de infraestructura: el proveedor real del servidor o alojamiento puede procesar registros técnicos. Debe identificarse según el despliegue publicado.',
 
@@ -254,7 +250,7 @@ const COPY = {
 
       ['Transferencias y transmisiones internacionales', 'Si la versión desplegada utiliza proveedores o servidores fuera de Colombia, algunos datos técnicos o de cuenta podrían tratarse en esos países. Antes de publicar, identificaremos los proveedores, países y finalidades reales y aplicaremos el mecanismo exigido por la normativa colombiana para cada transferencia o transmisión; una aceptación genérica de esta política no reemplaza las autorizaciones o garantías que legalmente se requieran. Si el servicio está alojado exclusivamente en Colombia, esta cláusula deberá ajustarse a esa realidad.'],
 
-      ['Almacenamiento local e invitado', 'Solo usamos almacenamiento del navegador o dispositivo estrictamente necesario para que la app funcione (preferencias, estado del entrenamiento y sesión). No usamos cookies publicitarias ni analítica de terceros. El progreso de invitado permanece en tu dispositivo y no se sincroniza con nuestra base de datos de cuentas; borrar los datos de la app o desinstalarla puede eliminarlo. Los perfiles registrados se sincronizan con el servicio.'],
+      ['Almacenamiento local y copias en el servidor', 'El historial de entrenamiento y la configuración se guardan en tu dispositivo. Si autorizas por separado el tratamiento de datos de entrenamiento, la app envía una copia actualizada a Supabase al terminar cada entrenamiento; la restauración se inicia manualmente. Sin esa autorización, los entrenamientos permanecen en este dispositivo y no se habilitan las copias ni la restauración desde el servidor. Borrar los datos de la app o desinstalarla puede eliminar la copia local.'],
 
       ['Menores de edad', 'gymbook está dirigida a personas mayores de 18 años y no a niños, niñas o adolescentes. No recopilamos a sabiendas datos de menores. Si detectamos que un menor creó una cuenta, la eliminaremos junto con sus datos. Si crees que un menor usa la app, escríbenos al correo indicado.'],
 
@@ -314,29 +310,29 @@ const COPY = {
 
     en: [
 
-      ['Collected when you register', 'Email and basic profile details provided by Google or entered for email sign-in, plus account identifiers. The authentication component actually deployed handles sign-in credentials; the workout database should not store passwords in plain text. The published notice must match the authentication implementation in production. At sign-up we also record your acceptance of these documents (date and version).'],
+      ['Collected when you register', 'Email, name, date of birth, country and account identifiers. The app records the versions and time of your acceptance of the Terms and Conditions, Privacy policy and separate workout-data authorization. Sign-in credentials are handled by Supabase Auth.'],
 
-      ['Created by your use of gymbook', 'Training routines and logs, exercise selections, dates, sets, repetitions, weights, body-weight entries, effort ratings, custom exercises, preferences and the name attached to your profile. This information may reveal aspects of your physical condition and may constitute sensitive data depending on its content and context. Where separate authorization is legally required, it must be obtained before processing.'],
+      ['Created by your use of gymbook', 'Training routines and logs, exercise selections, dates, sets, repetitions, weights, body-weight entries, effort ratings, custom exercises, preferences and the name attached to your profile. This information may reveal aspects of your physical condition and may constitute sensitive data depending on its content and context. Signed-in server backups are enabled only after separate authorization.'],
 
       ['Collected by the device or service', 'Session and storage data on your device. IP address, browser/device details, request times and diagnostic or security logs may be processed by our hosting, authentication, database, CDN and push providers. If you enable web push, a push endpoint and notification settings are stored to deliver alerts; you can turn them off at any time from your browser or device settings.'],
 
       ['Not collected', 'The app does not request precise GPS location, contact list, microphone, camera, advertising identifier or third-party analytics events. Exercise photos/GIFs are content requests to the CDN, not uploads of your workouts.'],
 
-      ['Guest mode', 'Guest data stays in browser/device storage. It is not sent to the account sync API unless you later choose to create or link an account and transfer that data.'],
+      ['Local-only storage', 'Workout data can remain on the device when server backup authorization has not been granted. It is not sent to the account backup service without that separate authorization.'],
 
     ],
 
     es: [
 
-      ['Al registrarte', 'Correo y datos básicos de perfil entregados por Google o escritos para iniciar con correo, además de identificadores de cuenta. El componente de autenticación realmente desplegado gestiona las credenciales; la base de entrenamiento no debe almacenar contraseñas en texto plano. El aviso publicado debe coincidir con la implementación de autenticación en producción. Al registrarte también guardamos constancia de tu aceptación de estos documentos (fecha y versión).'],
+      ['Al registrarte', 'Correo, nombre, fecha de nacimiento, país e identificadores de cuenta. La app registra las versiones y la fecha de aceptación de los Términos y condiciones, la Política de privacidad y la autorización separada para datos de entrenamiento. Supabase Auth gestiona las credenciales de inicio de sesión.'],
 
-      ['Generados por el uso de gymbook', 'Rutinas y entrenamientos, ejercicios elegidos, fechas, series, repeticiones, pesos, registros de peso corporal, esfuerzo percibido, ejercicios personalizados, preferencias y el nombre asociado al perfil. Esta información puede revelar aspectos de tu condición física y constituir datos sensibles según su contenido y contexto. Cuando la ley exija autorización separada, debe obtenerse antes del tratamiento.'],
+      ['Generados por el uso de gymbook', 'Rutinas y entrenamientos, ejercicios elegidos, fechas, series, repeticiones, pesos, registros de peso corporal, esfuerzo percibido, ejercicios personalizados, preferencias y el nombre asociado al perfil. Esta información puede revelar aspectos de tu condición física y constituir datos sensibles según su contenido y contexto. Las copias en el servidor solo se habilitan después de una autorización separada.'],
 
       ['Procesados por el dispositivo o los servicios', 'Datos de sesión y almacenamiento en tu dispositivo. Dirección IP, detalles del navegador o dispositivo, horas de solicitud y registros de diagnóstico o seguridad pueden ser tratados por nuestros proveedores de alojamiento, autenticación, base de datos, CDN y notificaciones. Si activas notificaciones web, se almacena un endpoint de notificación y sus preferencias para entregar alertas; puedes desactivarlas en cualquier momento desde los ajustes de tu navegador o dispositivo.'],
 
       ['No recopilados', 'La app no solicita ubicación GPS precisa, contactos, micrófono, cámara, identificador publicitario ni eventos de analítica de terceros. Las imágenes y GIF de ejercicios son solicitudes de contenido al CDN, no cargas de tus entrenamientos.'],
 
-      ['Modo invitado', 'Los datos de invitado permanecen en el almacenamiento del navegador o dispositivo. No se envían a la API de sincronización de cuentas salvo que después decidas crear o vincular una cuenta y transferirlos.'],
+      ['Almacenamiento solo local', 'Los datos de entrenamiento pueden permanecer en el dispositivo si no se ha otorgado la autorización para copias en el servidor. No se envían al servicio de copias de la cuenta sin esa autorización separada.'],
 
     ],
 
@@ -370,7 +366,7 @@ const COPY = {
 
     es: [
 
-      ['API Node.js y almacenamiento autohospedado', 'En la instalación autohospedada, la API Node.js y el volumen de datos configurado procesan y guardan datos de cuenta y entrenamiento. El operador del servidor y el proveedor de infraestructura, si existe, pueden tratar registros técnicos.'],
+      ['Supabase', 'Supabase Auth guarda identificadores de cuenta y los datos de registro y versiones de consentimiento que envías. Supabase Postgres guarda una copia de entrenamiento al terminar cada sesión si autorizaste por separado ese tratamiento. Supabase trata estos datos conforme a las condiciones aplicables del servicio; el proyecto usa la región configurada por el operador.'],
 
       ['Infraestructura del servidor', 'El operador del servidor y el proveedor de infraestructura realmente utilizado en la versión publicada pueden tratar IP, datos de dispositivo/navegador, rutas solicitadas, fechas y errores. La política desplegada debe identificar al proveedor de infraestructura real.'],
 
@@ -398,13 +394,13 @@ const COPY = {
 
     en: [
 
-      ['Who may use gymbook', 'You must be at least 18 years old and able to enter into a binding agreement. Before account creation, the app must display these terms and the Privacy policy and allow express acceptance of the current versions. This general acceptance does not replace separate authorizations required by law. If you do not agree, do not create an account or use the service. If we learn that a minor has an account, we will delete it.'],
+      ['Who may use gymbook', 'You must be over 18 and able to enter into a binding agreement. gymbook requires a registered account. Account creation asks for your date of birth and country; you confirm these details are accurate and must accept the current Terms and Conditions and Privacy policy. Authorization to process workout and body-weight data for server backups is separate and optional; without it, workouts stay on this device and server backup and restoration are unavailable. If we learn that a minor created an account, we may suspend and delete it.'],
 
       ['Accounts and user content', 'Keep your sign-in credentials secure and provide accurate information. You are responsible for the routines, logs, notes, imports and other content you enter, and for keeping your own export/backup. Do not upload another person’s personal or medical information without permission. You keep ownership of your content and grant us only the permission needed to store and sync it to provide the service.'],
 
-      ['Fitness use only; no medical advice', 'gymbook is a workout logging and planning tool, not a medical service. Estimates and progress summaries are informational and may be inaccurate. You choose your exercises and loads. Stop if you feel pain or unwell and consult a qualified health professional before exercising if you have a condition or concern. See the Fitness and health notice.'],
+      ['Fitness use only; no medical advice', 'gymbook is a workout logging and planning tool, not a medical service. Estimates and progress summaries are informational and may be inaccurate. You choose your exercises and loads. Stop if you feel pain or unwell and consult a qualified health professional before exercising if you have a condition or concern. The complete Fitness and health notice is included below.'],
 
-      ['Paid plans', 'This version does not offer paid plans or subscriptions and no charge applies. If they are offered in the future, the store purchase screen will clearly show the total price and currency, taxes, trial terms, renewal date and frequency, cancellation method and refund conditions before you confirm. See Subscription terms.'],
+      ['Paid plans', 'This version does not currently offer paid plans or subscriptions and no charge applies. If they are offered in the future, the store purchase screen will clearly show the total price and currency, taxes, trial terms, renewal date and frequency, cancellation method and refund conditions before you confirm. The complete Subscription terms are included below.'],
 
       ['Availability and changes', 'We may maintain, update, suspend or discontinue features for operational, security or legal reasons. We will make reasonable efforts to notify users of material changes to these terms. If we discontinue the service, we will give reasonable notice and a reasonable opportunity to export or retrieve your data where feasible.'],
 
@@ -418,13 +414,13 @@ const COPY = {
 
     es: [
 
-      ['Quién puede usar gymbook', 'Debes tener al menos 18 años y capacidad para celebrar un acuerdo vinculante. Antes de crear la cuenta, la app debe mostrar estos términos y la Política de privacidad y permitir aceptar expresamente su versión vigente. Esta aceptación general no sustituye autorizaciones separadas que exija la ley. Si no estás de acuerdo, no crees una cuenta ni uses el servicio. Si detectamos que un menor tiene una cuenta, la eliminaremos.'],
+      ['Quién puede usar gymbook', 'Debes ser mayor de 18 años y tener capacidad para celebrar un acuerdo vinculante. gymbook requiere una cuenta registrada. Al crearla pedimos tu fecha de nacimiento y país; confirmas que son correctos y debes aceptar los Términos y condiciones y la Política de privacidad vigentes. La autorización para tratar datos de entrenamiento y peso para copias en el servidor es independiente y opcional; si no la otorgas, los entrenamientos permanecen en este dispositivo y no estarán disponibles las copias ni la restauración desde el servidor. Si sabemos que un menor creó una cuenta, podremos suspenderla y eliminarla.'],
 
       ['Cuentas y contenido', 'Protege tus credenciales y entrega información correcta. Eres responsable de las rutinas, registros, notas, importaciones y contenido que agregues, así como de conservar tus propias copias. No cargues información personal o médica de otra persona sin autorización. Conservas la titularidad de tu contenido y nos otorgas solo el permiso necesario para almacenarlo y sincronizarlo para prestar el servicio.'],
 
-      ['Solo para ejercicio; no es asesoría médica', 'gymbook sirve para planificar y registrar entrenamientos, no es un servicio médico. Las estimaciones y resúmenes de progreso son informativos y pueden ser inexactos. Tú eliges ejercicios y cargas. Detente si sientes dolor o malestar y consulta a un profesional de salud antes de entrenar si tienes una condición o inquietud. Consulta el Aviso de ejercicio y salud.'],
+      ['Solo para ejercicio; no es asesoría médica', 'gymbook sirve para planificar y registrar entrenamientos, no es un servicio médico. Las estimaciones y resúmenes de progreso son informativos y pueden ser inexactos. Tú eliges ejercicios y cargas. Detente si sientes dolor o malestar y consulta a un profesional de salud antes de entrenar si tienes una condición o inquietud. El Aviso de ejercicio y salud completo está incluido más abajo.'],
 
-      ['Planes de pago', 'Esta versión no ofrece planes de pago ni suscripciones y no se realiza ningún cobro. Si se ofrecen en el futuro, la pantalla de compra de la tienda mostrará claramente el precio total y moneda, impuestos, condiciones de la prueba, fecha y frecuencia de renovación, método de cancelación y condiciones de reembolso antes de que confirmes. Consulta Condiciones de suscripción.'],
+      ['Planes de pago', 'Esta versión no ofrece planes de pago ni suscripciones y no se realiza ningún cobro. Si se ofrecen en el futuro, la pantalla de compra de la tienda mostrará claramente el precio total y moneda, impuestos, condiciones de la prueba, fecha y frecuencia de renovación, método de cancelación y condiciones de reembolso antes de que confirmes. Las Condiciones de suscripción completas están incluidas más abajo.'],
 
       ['Disponibilidad y cambios', 'Podemos mantener, actualizar, suspender o retirar funciones por motivos operativos, de seguridad o legales. Haremos esfuerzos razonables para avisar cambios importantes de estos términos. Si cerramos el servicio, daremos un aviso razonable y, cuando sea viable, una oportunidad razonable para exportar o recuperar tus datos.'],
 
@@ -514,7 +510,16 @@ function LegalText({ id }) {
 
   const lang = getLang() === 'es' ? 'es' : 'en'
 
-  const sections = COPY[id]?.[lang] || []
+  const sections = id === 'terms'
+    ? [
+        ...(COPY.terms?.[lang] || []),
+        ...(COPY.privacy?.[lang] || []),
+        ...(COPY.collection?.[lang] || []),
+        ...(COPY['third-parties']?.[lang] || []),
+        ...(COPY.fitness?.[lang] || []),
+        ...(COPY.subscription?.[lang] || []),
+      ]
+    : COPY[id]?.[lang] || []
 
   return <div className="legal-copy">
 
@@ -530,7 +535,7 @@ function LegalText({ id }) {
 
     </section>)}
 
-    {id === 'third-parties' && <p className="small dim">{lang === 'es' ? 'Avisos de privacidad (consulta solo los servicios que estén habilitados): ' : 'Privacy notices (consult only services that are enabled): '}<a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google</a> · <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noreferrer">Apple</a> · <a href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noreferrer">jsDelivr</a></p>}
+    {(id === 'third-parties' || id === 'terms') && <p className="small dim">{lang === 'es' ? 'Avisos de privacidad (consulta solo los servicios que estén habilitados): ' : 'Privacy notices (consult only services that are enabled): '}<a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google</a> · <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noreferrer">Apple</a> · <a href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noreferrer">jsDelivr</a></p>}
 
     {id === 'privacy' && <p className="small dim">{lang === 'es' ? 'Autoridad colombiana de protección de datos: ' : 'Colombian data protection authority: '}<a href="https://www.sic.gov.co/" target="_blank" rel="noreferrer">Superintendencia de Industria y Comercio (SIC)</a></p>}
 
@@ -538,6 +543,13 @@ function LegalText({ id }) {
 
   </div>
 
+}
+
+export function LegalContent({ ids = ['terms'] }) {
+  useLang()
+  return <div className="legal-copy">
+    {ids.map(id => <LegalText key={id} id={id} />)}
+  </div>
 }
 
 
