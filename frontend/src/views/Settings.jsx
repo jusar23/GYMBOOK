@@ -12,7 +12,8 @@ import { effortOf } from '../lib/history.js'
 
 import { api, createAppSessionWithSupabase, webauthnOK, passkeyLogin, passkeyRegister, IS_ANDROID } from '../lib/api.js'
 
-import { getAuthSession } from '../lib/supabaseAuth.js'
+import { deleteSupabaseAccount, getAuthSession } from '../lib/supabaseAuth.js'
+import { loadCloudBackup, saveCloudBackup } from '../lib/supabaseBackup.js'
 
 import { pushSupported, enablePush, disablePush, sendTestPush } from '../lib/push.js'
 
@@ -27,6 +28,7 @@ import { MOBILE, shareExport, syncReminder } from '../lib/mobile.js'
 import { loadStarterPlan, confirmSheet, importFromApp } from '../sheets.jsx'
 
 import Icon from '../components/Icon.jsx'
+import { openTutorial } from '../components/Tutorial.jsx'
 
 import { Section, Row, SelectRow, Switch, Segmented, Button, TextField } from '../components/ui.jsx'
 
@@ -42,7 +44,7 @@ export default function Settings() {
 
   const user = useStore(s => s.user)
 
-  const { update, replaceState, setUser, setSigningIn, pullState, pushState, signOut, signOutAll, resetDemo } = useStore()
+  const { update, replaceState, setUser, setSigningIn, pullState, pushState, signOut, signOutAll, completeAccountDeletion, resetDemo } = useStore()
 
   const toast = useUI(s => s.toast)
 
@@ -51,6 +53,55 @@ export default function Settings() {
   const importRef = useRef(null)
 
   const wakeOK = wakeLockSupported()
+  const [cloudBusy, setCloudBusy] = useState(false)
+  const [accountDeleting, setAccountDeleting] = useState(false)
+
+  const showAccountNotice = (title, message, success = false) => useUI.getState().openSheet(close => (
+    <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', padding: 'max(24px, env(safe-area-inset-top)) 22px max(24px, env(safe-area-inset-bottom))' }}>
+      <div className="sheet-full-head">
+        <h3>{title}</h3>
+        <button className="iconbtn" onClick={close} aria-label={t('Close')}><Icon name="xmark" /></button>
+      </div>
+      <div style={{ display: 'grid', placeItems: 'center', flex: 1, padding: '30px 0' }}>
+        <div style={{ width: 68, height: 68, borderRadius: 34, display: 'grid', placeItems: 'center', color: success ? 'var(--green)' : 'var(--red)', background: success ? 'color-mix(in srgb, var(--green) 13%, transparent)' : 'color-mix(in srgb, var(--red) 13%, transparent)' }}>
+          <Icon name={success ? 'checkCircle' : 'info'} size={34} />
+        </div>
+        <p style={{ textAlign: 'center', lineHeight: 1.55, whiteSpace: 'pre-wrap', marginTop: 22, maxWidth: 440 }}>{message}</p>
+      </div>
+      <Button variant="primary" onClick={close}>{t('Close')}</Button>
+    </div>
+  ), { kind: 'full', locked: true })
+
+  const backUpToCloud = async () => {
+    setCloudBusy(true)
+    try { await saveCloudBackup(S); toast(t('Cloud backup saved')) }
+    catch (e) { toast(e.message || t('Cloud backup failed')) }
+    finally { setCloudBusy(false) }
+  }
+
+  const restoreCloudBackup = async () => {
+    setCloudBusy(true)
+    try {
+      const backup = await loadCloudBackup()
+      if (!backup) { toast(t('No cloud backup found')); return }
+      if (!backup.state || typeof backup.state !== 'object' || Array.isArray(backup.state)) {
+        throw new Error(t('The server backup is invalid or incomplete.'))
+      }
+      confirmSheet({
+        title: t('Restore cloud backup?'),
+        message: t('This replaces the progress on this phone with the backup from {0}.', new Date(backup.updatedAt).toLocaleString()),
+        confirmText: t('Restore backup'), danger: true,
+        onConfirm: () => {
+          try {
+            const restored = Object.assign(JSON.parse(JSON.stringify(DEF)), backup.state)
+            replaceState(restored, false)
+            toast(t('Server backup restored'))
+          } catch (e) { toast(e.message || t('Cloud backup failed')) }
+        },
+      })
+    } catch (e) { toast(e.message || t('Cloud backup failed')) }
+    finally { setCloudBusy(false) }
+  }
 
 
 
@@ -168,6 +219,38 @@ export default function Settings() {
 
   })
 
+  const deleteAccount = () => confirmSheet({
+    title: t('Delete account?'),
+    message: t('Delete account warning'),
+    confirmText: t('Continue'), danger: true,
+    onConfirm: () => confirmSheet({
+      title: t('Delete account permanently?'),
+      message: t('Delete account final confirmation'),
+      confirmText: t('Delete my account'), danger: true,
+      onConfirm: async () => {
+        setAccountDeleting(true)
+        try {
+          await deleteSupabaseAccount()
+          await completeAccountDeletion()
+          nav('/login', { replace: true })
+          showAccountNotice(t('Account deleted'), t('Account deleted confirmation'), true)
+        } catch (e) {
+          const message = t(e.message || 'Account deletion failed')
+          const details = e.details ? `\n\n${t('Technical details')}: ${e.details}` : ''
+          showAccountNotice(t('Account deletion failed'), `${message}${details}`)
+        }
+        finally { setAccountDeleting(false) }
+      },
+    }),
+  })
+
+  const confirmTutorial = () => confirmSheet({
+    title: t('Open the tutorial?'),
+    message: t('The chalkboard guide will open so you can review the main parts of gymbook.'),
+    confirmText: t('Open tutorial'),
+    onConfirm: openTutorial,
+  })
+
 
 
   return <div className="narrow">
@@ -227,6 +310,10 @@ export default function Settings() {
           value={S.unit} onChange={v => update(s => { s.unit = v })} />
 
       </Row>
+
+      <Row icon="lightbulb" iconTint="var(--yellow)" title={t('Tutorial')}
+        subtitle={t('Review the chalkboard guide to using gymbook.')}
+        accessory="chevron" onClick={confirmTutorial} />
 
     </Section>
 
@@ -338,13 +425,19 @@ export default function Settings() {
 
 
 
-    {/* ---------- account (demo and mobile builds have nothing to sign in to) ---------- */}
+    {/* ---------- account ---------- */}
 
-    <Section title={MOBILE ? t('Your data') : DEMO ? t('Demo') : t('Account')}>
+    <Section title={MOBILE ? (user ? t('Account') : t('Your data')) : DEMO ? t('Demo') : t('Account')}>
 
       {MOBILE ? <>
 
-        <Row icon="lock" iconTint="var(--acc)" title={t('All data stays on this phone')} subtitle={t('No account, no cloud — back it up anytime with Export below.')} />
+        <Row icon="lock" iconTint="var(--acc)" title={user ? user.name : t('Local data on this phone')} subtitle={t('Workout data is stored on this phone. Cloud backup runs only when you start it here.')} />
+        {user
+          ? <>
+            <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your progress stays on this phone. Cloud backup is not changed.'), confirmText: t('Sign out'), danger: true, onConfirm: async () => { await signOut(); nav('/home') } })} />
+            <Row icon="trash" iconTint="var(--red)" title={t('Delete account')} subtitle={t('Permanently delete your account and its data.')} danger onClick={deleteAccount} />
+          </>
+          : <Row icon="person" iconTint="var(--blue)" title={t('Sign in')} subtitle={t('Sign in to back up or restore your progress manually.')} accessory="chevron" onClick={() => nav('/login')} />}
 
       </> : DEMO ? <>
 
@@ -363,6 +456,7 @@ export default function Settings() {
         <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your data is synced to your profile first, then cleared from this device.'), confirmText: t('Sign out'), danger: true, onConfirm: async () => { await signOut(); nav('/home') } })} />
 
         <Row icon="shield" iconTint="var(--red)" title={t('Sign out everywhere')} subtitle={t('Ends this profile’s sessions on all your devices.')} danger onClick={signOutEverywhere} />
+        <Row icon="trash" iconTint="var(--red)" title={t('Delete account')} subtitle={t('Permanently delete your account and its data.')} danger onClick={deleteAccount} />
       
       </> : (
         <Row
@@ -384,21 +478,40 @@ export default function Settings() {
 
     <Section title={t('Data')}>
 
-      {user && <Row icon="reset" iconTint="var(--blue)" title={t('Restore an imported profile')} subtitle={t('Use a one-time code from your previous gymbook installation.')} accessory="chevron" onClick={restoreProfile} />}
+      {MOBILE && user && <>
+        <Row icon="upload" iconTint="var(--blue)" title={t('Back up to server')} subtitle={t('Save a copy now. Finished workouts also update it automatically.')} accessory={cloudBusy ? undefined : 'chevron'} onClick={cloudBusy ? undefined : backUpToCloud} />
+        <Row icon="download" iconTint="var(--blue)" title={t('Restore from server')} subtitle={t('Replace this phone’s progress with your last server backup.')} accessory={cloudBusy ? undefined : 'chevron'} onClick={cloudBusy ? undefined : restoreCloudBackup} />
+        <details className="data-more">
+          <summary className="data-more-summary">
+            <span className="lrow-i" style={{ '--tint': 'var(--label-2)' }}><Icon name="list" /></span>
+            <span className="lrow-m"><span className="lrow-t">{t('More data options')}</span></span>
+            <Icon name="chevronDown" className="data-more-chevron" />
+          </summary>
+          <div className="data-more-content">
+            <Row icon="sparkles" iconTint="var(--acc)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={confirmStarterPlan} />
+            <Row icon="shuffle" iconTint="var(--teal)" title={t('Import from another app')} subtitle={t('FitNotes, Strong, Hevy — or body weight from Apple Health')} accessory="chevron" onClick={() => importRef.current.click()} />
+            <Row icon="upload" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />
+            <Row icon="download" iconTint="var(--blue)" title={t('Export backup (JSON)')} accessory="chevron" onClick={confirmExport} />
+            <Row icon="trash" iconTint="var(--red)" title={t('Reset everything')} danger onClick={() => confirmSheet({ title: t('Reset everything?'), message: t('Deletes your plan, workouts and body weight on this device. This cannot be undone.'), confirmText: t('Delete everything'), danger: true, onConfirm: () => { replaceState(JSON.parse(JSON.stringify(DEF)), true); nav('/home'); toast(t('All data reset')) } })} />
+          </div>
+        </details>
+      </>}
 
-      <Row icon="sparkles" iconTint="var(--acc)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={confirmStarterPlan} />
+      {!MOBILE && user && <Row icon="reset" iconTint="var(--blue)" title={t('Restore an imported profile')} subtitle={t('Use a one-time code from your previous gymbook installation.')} accessory="chevron" onClick={restoreProfile} />}
 
-      <Row icon="shuffle" iconTint="var(--teal)" title={t('Import from another app')}
+      {!MOBILE && <Row icon="sparkles" iconTint="var(--acc)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={confirmStarterPlan} />}
+
+      {!MOBILE && <Row icon="shuffle" iconTint="var(--teal)" title={t('Import from another app')}
 
         subtitle={t('FitNotes, Strong, Hevy — or body weight from Apple Health')}
 
-        accessory="chevron" onClick={() => importRef.current.click()} />
+        accessory="chevron" onClick={() => importRef.current.click()} />}
 
-      <Row icon="upload" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />
+      {!MOBILE && <Row icon="upload" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />}
 
-      <Row icon="download" iconTint="var(--blue)" title={t('Export backup (JSON)')} accessory="chevron" onClick={confirmExport} />
+      {!MOBILE && <Row icon="download" iconTint="var(--blue)" title={t('Export backup (JSON)')} accessory="chevron" onClick={confirmExport} />}
 
-      <Row icon="trash" iconTint="var(--red)" title={t('Reset everything')} danger onClick={() => confirmSheet({ title: t('Reset everything?'), message: t('Deletes your plan, workouts and body weight on this device. This cannot be undone.'), confirmText: t('Delete everything'), danger: true, onConfirm: () => { replaceState(JSON.parse(JSON.stringify(DEF)), true); nav('/home'); toast(t('All data reset')) } })} />
+      {!MOBILE && <Row icon="trash" iconTint="var(--red)" title={t('Reset everything')} danger onClick={() => confirmSheet({ title: t('Reset everything?'), message: t('Deletes your plan, workouts and body weight on this device. This cannot be undone.'), confirmText: t('Delete everything'), danger: true, onConfirm: () => { replaceState(JSON.parse(JSON.stringify(DEF)), true); nav('/home'); toast(t('All data reset')) } })} />}
 
     </Section>
 
@@ -434,9 +547,23 @@ export default function Settings() {
 
 
 
+    {cloudBusy && <div className="app-loading-overlay">
+      <div className="loading-mark" role="status" aria-label={t('Loading data...')}>
+        <Icon name="dumbbell" />
+        <div className="loading-label">{t('Loading data...')}</div>
+      </div>
+    </div>}
+
+    {accountDeleting && <div className="app-loading-overlay">
+      <div className="loading-mark" role="status" aria-label={t('Deleting account...')}>
+        <Icon name="dumbbell" />
+        <div className="loading-label">{t('Deleting account...')}</div>
+      </div>
+    </div>}
+
     <div className="dim small" style={{ textAlign: 'center', marginTop: 4, lineHeight: 1.6 }}>
 
-      gymbook · {t('30 days free, then $1/month')}<br />
+      gymbook · {t('No paid subscription is currently offered')}<br />
 
       exercise data: hasaneyldrm/exercises-dataset (CC)
 

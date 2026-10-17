@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["./web-K5I4j5TR.js","./dist-oAENMu04.js"])))=>i.map(i=>d[i]);
+import{t as e}from"./preload-helper-HclGiUj8.js";import{registerPlugin as t}from"./dist-oAENMu04.js";var n=t(`Browser`,{web:()=>e(()=>import(`./web-K5I4j5TR.js`).then(e=>new e.BrowserWeb),__vite__mapDeps([0,1]),import.meta.url)});export{n as Browser};

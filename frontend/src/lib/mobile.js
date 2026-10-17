@@ -1,7 +1,7 @@
 // Mobile build (VITE_MOBILE=1) — the standalone app-store version (Capacitor native shell).
 //
-// There is no backend: nothing to sign in to, everything lives on the phone. Unlike guest
-// mode in a browser, this is the user's only copy of their training log, so it can't depend
+// Workout data lives on the phone; only Supabase Auth and user-triggered backups use a
+// network. Unlike guest mode in a browser, this is the user's primary copy of their training log, so it can't depend
 // on WebView localStorage alone (iOS evicts that under storage pressure). Every persist()
 // therefore also lands in a JSON file in the app's private data directory, and boot()
 // restores from it. The workout reminder uses native local notifications scheduled per
@@ -28,6 +28,17 @@ export async function nativeSave(state) {
     const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem')
     await Filesystem.writeFile({ path: FILE, directory: Directory.Data, data: JSON.stringify(state), encoding: Encoding.UTF8 })
   } catch (e) { /* keep the localStorage copy */ }
+}
+
+export async function nativeClear() {
+  try {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem')
+    await Filesystem.deleteFile({ path: FILE, directory: Directory.Data })
+  } catch (e) { /* File may not exist on a fresh install. */ }
+  try {
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    await LocalNotifications.cancel({ notifications: [0, 1, 2, 3, 4, 5, 6].map(d => ({ id: 100 + d })) })
+  } catch (e) { /* Account deletion still clears app data if notifications are unavailable. */ }
 }
 
 // (Re)schedule the workout-day reminder: one repeating notification per weekday that has a

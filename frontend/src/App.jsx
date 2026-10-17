@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useStore } from './store/useStore.js'
 import { useUI } from './store/useUI.js'
@@ -15,6 +15,10 @@ import Modals from './components/Modals.jsx'
 import Toast from './components/Toast.jsx'
 import RestTimer from './components/RestTimer.jsx'
 import Login from './views/Login.jsx'
+import { MOBILE } from './lib/mobile.js'
+import { NATIVE_OAUTH_REDIRECT, processOAuthCallback } from './lib/supabaseAuth.js'
+import { needsLegalSetup } from './lib/legalConsent.js'
+import { openTutorial, tutorialSeenKey } from './components/Tutorial.jsx'
 
 const Home = lazy(() => import('./views/Home.jsx'))
 const Plan = lazy(() => import('./views/Plan.jsx'))
@@ -49,7 +53,8 @@ function Shell() {
   const { S, user, ready, signingOut, signingIn } = useStore()
   const isGuest = useStore(s => s.isGuest())
   const langV = useLang()
-  const authed = !!user || isGuest
+  const tutorialOpenedFor = useRef('')
+  const authed = !!user || (!MOBILE && isGuest)
   const loginRoute = loc.pathname === '/login'
 
   useEffect(() => { setNav(navigate) }, [navigate])
@@ -58,6 +63,17 @@ function Shell() {
   useEffect(() => { document.documentElement.lang = S.lang || 'en' }, [langV, S.lang])
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
   useWakeLock(!!S.active && S.keepAwake !== false)
+
+  useEffect(() => {
+    if (!MOBILE || !ready || !user?.id || user.needsLegalSetup) return
+    const hasTrainingHistory = !!(S.workouts?.length || S.routines?.length || S.active)
+    if (hasTrainingHistory) return
+    const key = tutorialSeenKey(user.id)
+    if (tutorialOpenedFor.current === user.id || localStorage.getItem(key) === '1') return
+    tutorialOpenedFor.current = user.id
+    localStorage.setItem(key, '1')
+    openTutorial()
+  }, [ready, user?.id, user?.needsLegalSetup, S.workouts?.length, S.routines?.length, !!S.active])
 
   if (signingOut) return (
     <div id="app">
@@ -72,7 +88,7 @@ function Shell() {
     <div id="app">
       <div className="loading-mark" role="status" aria-label="Signing in to gymbook">
         <Icon name="dumbbell" />
-        <div className="loading-label">{signingIn ? 'Signing in…' : 'Loading…'}</div>
+        <div className="loading-label">{signingIn ? 'Signing in…' : t('Loading data...')}</div>
       </div>
     </div>
   )
@@ -95,14 +111,16 @@ function Shell() {
       </div>}
 
       <div id="app" className="vfade" key={loc.pathname}>
-        {authed && !loginRoute && <div className="app-topbar">
+        {authed && !loginRoute && !user?.needsLegalSetup && <div className="app-topbar">
           <div className="app-brand">gymbook</div>
           {MAIN_TABS.has(loc.pathname) && <button className="iconbtn" onClick={() => navigate('/settings')} aria-label={t('Settings')} title={t('Settings')}><Icon name="gear" /></button>}
         </div>}
 
         <ErrorBoundary>
           {loginRoute
-            ? (user ? <Navigate to="/home" replace /> : <Login />)
+            ? (user && !user.needsLegalSetup ? <Navigate to="/home" replace /> : <Login legalSetup={!!user?.needsLegalSetup} />)
+            : user?.needsLegalSetup
+              ? <Login legalSetup />
             : !authed
               ? <Login />
               : (
@@ -124,8 +142,8 @@ function Shell() {
         </ErrorBoundary>
       </div>
 
-      {authed && !loginRoute && <TabBar onStart={startFlow} />}
-      {authed && !loginRoute && <RestTimer />}
+      {authed && !loginRoute && !user?.needsLegalSetup && <TabBar onStart={startFlow} />}
+      {authed && !loginRoute && !user?.needsLegalSetup && <RestTimer />}
       <Modals />
       <Toast />
     </>
@@ -134,6 +152,55 @@ function Shell() {
 
 export default function App() {
   const boot = useStore(s => s.boot)
+  useEffect(() => {
+    if (!MOBILE) return
+    let disposed = false
+    let removeListener = null
+    const handled = new Set()
+
+    const handleOAuthUrl = async url => {
+      if (!url?.startsWith(NATIVE_OAUTH_REDIRECT) || handled.has(url)) return
+      handled.add(url)
+      try { await import('@capacitor/browser').then(({ Browser }) => Browser.close()) } catch { /* tab may already be closed */ }
+      try {
+        const session = await processOAuthCallback(url)
+        if (session?.user) {
+          if (!useStore.getState().ready) await new Promise(resolve => {
+            const unsubscribe = useStore.subscribe(state => {
+              if (state.ready) { unsubscribe(); resolve() }
+            })
+            if (useStore.getState().ready) { unsubscribe(); resolve() }
+          })
+          const authUser = session.user
+          useStore.getState().setUser({
+            id: authUser.id,
+            email: authUser.email,
+            name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'GYMBOOK user',
+            needsLegalSetup: needsLegalSetup(authUser),
+          })
+        }
+        useStore.getState().setSigningIn(false)
+      } catch (error) {
+        localStorage.setItem('gym_auth_error', error.message || 'Google sign-in failed. Please try again.')
+        window.location.reload()
+      }
+    }
+
+    ;(async () => {
+      const { Capacitor } = await import('@capacitor/core')
+      if (!Capacitor.isNativePlatform()) return
+      const { App: NativeApp } = await import('@capacitor/app')
+      const listener = await NativeApp.addListener('appUrlOpen', ({ url }) => { void handleOAuthUrl(url) })
+      if (disposed) { listener.remove(); return }
+      removeListener = () => listener.remove()
+      const launch = await NativeApp.getLaunchUrl()
+      if (launch?.url) await handleOAuthUrl(launch.url)
+    })().catch(error => {
+      localStorage.setItem('gym_auth_error', error.message || 'Could not initialize Google sign-in.')
+    })
+
+    return () => { disposed = true; removeListener?.() }
+  }, [])
   useEffect(() => { boot() }, [boot])
   return <HashRouter><Shell /></HashRouter>
 }

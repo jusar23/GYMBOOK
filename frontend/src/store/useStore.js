@@ -4,7 +4,8 @@ import { clearPendingRecoveryCode, getAuthSession, getPendingRecoveryCode, isPas
 import { localTZ } from '../lib/format.js'
 import { registerCustom } from '../lib/exercises.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
-import { MOBILE, nativeLoad, nativeSave, syncReminder } from '../lib/mobile.js'
+import { MOBILE, nativeLoad, nativeSave, nativeClear, syncReminder } from '../lib/mobile.js'
+import { needsLegalSetup } from '../lib/legalConsent.js'
 
 const KEY = 'gym_state_v1'
 const SIGNED_OUT_KEY = 'gym_signed_out_v1'
@@ -64,7 +65,7 @@ export const useStore = create((set, get) => {
     localStorage.setItem(KEY, JSON.stringify(S))
     set({ S })
     if (MOBILE) nativePersist()
-    if (push && get().user) {
+    if (push && get().user && !MOBILE) {
       stateRevision++
       localStorage.setItem('gym_dirty', '1')
       clearTimeout(pushTm)
@@ -161,6 +162,13 @@ export const useStore = create((set, get) => {
 
     async signOut() {
       set({ signingOut: true })
+      if (MOBILE) {
+        await signOutSupabase(false)
+        get().setUser(null)
+        get().setGuest(false)
+        set({ signingOut: false })
+        return
+      }
       await get().pushState()
       // Keep boot from silently recreating the app session from a cookie or an old Supabase
       // token if this browser reloads immediately after sign-out.
@@ -192,6 +200,26 @@ export const useStore = create((set, get) => {
       if (serverError) throw serverError
     },
 
+    async completeAccountDeletion() {
+      set({ signingOut: true })
+      // The account is already gone remotely. Clear auth, local progress/settings, and the
+      // Android private state file without attempting to push anything to the deleted account.
+      clearTimeout(saveTm)
+      saveTm = null
+      clearTimeout(pushTm)
+      pushTm = null
+      await signOutSupabase(false).catch(() => {})
+      if (!MOBILE) await api('/api/logout', { method: 'POST', body: '{}' }).catch(() => {})
+      localStorage.setItem(SIGNED_OUT_KEY, '1')
+      for (const key of ['gym_user', 'gym_guest', 'gym_dirty', KEY]) localStorage.removeItem(key)
+      registerCustom([])
+      set({ S: clone(DEF), user: null, signingOut: false, signingIn: false })
+      if (MOBILE) {
+        await nativeClear()
+        await syncReminder(DEF)
+      }
+    },
+
     // Demo build only: drop the seeded example profile back in (Settings → "Reset demo data").
     // Dynamic import so the generator never ships in a self-hosted bundle.
     async resetDemo() {
@@ -202,9 +230,11 @@ export const useStore = create((set, get) => {
 
     // Boot: ask the server for the current profile and its state together.
     async boot() {
-      // Mobile build: no backend either — restore from the file mirror (the durable copy;
-      // localStorage may have been evicted since the last run) and go straight in.
+      // Mobile build: restore local progress first, then restore only the Supabase Auth
+      // session. Workout data is never fetched automatically.
       if (MOBILE) {
+        // Mobile requires an authenticated account; discard any legacy guest-mode flag.
+        get().setGuest(false)
         const saved = await nativeLoad()
         const S = get().S
         if (saved && (!hasData(S) || (saved._ts || 0) >= (S._ts || 0))) {
@@ -212,7 +242,20 @@ export const useStore = create((set, get) => {
         } else if (hasData(S)) {
           nativeSave(S)   // first run after an update from a file-less version: seed the mirror
         }
-        get().setGuest(true)
+        let authSession = null
+        try { authSession = await processOAuthCallback() || await getAuthSession() }
+        catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Sign-in failed. Please try again.') }
+        if (authSession?.user) {
+          const authUser = authSession.user
+          get().setUser({
+            id: authUser.id,
+            email: authUser.email,
+            name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'GYMBOOK user',
+            needsLegalSetup: needsLegalSetup(authUser),
+          })
+        } else {
+          get().setUser(null)
+        }
         syncReminder(get().S)
         set({ ready: true, signingIn: false })
         return
@@ -234,6 +277,17 @@ export const useStore = create((set, get) => {
       // A recovery link grants a temporary Supabase session only for setting a new
       // password. Do not create a gymbook app session until the user signs in again.
       if (authSession && isPasswordRecovery()) {
+        set({ ready: true, signingIn: false })
+        return
+      }
+
+      if (authSession?.user && needsLegalSetup(authSession.user)) {
+        const authUser = authSession.user
+        get().setUser({
+          id: authUser.id, email: authUser.email,
+          name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'GYMBOOK user',
+          needsLegalSetup: true,
+        })
         set({ ready: true, signingIn: false })
         return
       }

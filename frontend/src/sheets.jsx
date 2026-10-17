@@ -21,6 +21,7 @@ import { estimate1RM, best1RM, is1RMRecord, REP_CAP } from './lib/onerm.js'
 import { nextPrescription, applyPrescription, policyFor, defaultIncrement, POLICIES_FOR, POLICY_NAME, POLICY_DESC, MAX_BW_SETS } from './lib/progression.js'
 import { MOBILE, shareExport } from './lib/mobile.js'
 import { convertWeight } from './lib/units.js'
+import { saveCloudBackup } from './lib/supabaseBackup.js'
 
 const S = () => useStore.getState().S
 const update = (...a) => useStore.getState().update(...a)
@@ -939,8 +940,20 @@ function WorkoutComplete({ close }) {
 }
 export const workoutCompleteSheet = () => ui().openSheet(close => <WorkoutComplete close={close} />, { kind: 'center' })
 
-function FinishSummary({ w, prs, e1prs = [], close }) {
+function FinishSummary({ w, prs, e1prs = [], close, backupResult = null }) {
   const st = useStore(s => s.S)
+  const [backupStatus, setBackupStatus] = useState(backupResult ? 'saving' : '')
+  useEffect(() => {
+    if (!backupResult) return
+    let current = true
+    backupResult.then(ok => { if (current) setBackupStatus(ok ? 'saved' : 'failed') })
+    return () => { current = false }
+  }, [backupResult])
+  const retryBackup = async () => {
+    setBackupStatus('saving')
+    try { await saveCloudBackup(st); setBackupStatus('saved') }
+    catch { setBackupStatus('failed') }
+  }
   return <div style={{ textAlign: 'center', padding: '8px 0' }}>
     <div style={{ fontSize: 44, display: 'flex', justifyContent: 'center', color: 'var(--acc)' }}><Icon name="trophy" /></div>
     <h3 style={{ margin: '8px 0' }}>{t('Workout complete!')}</h3>
@@ -953,6 +966,12 @@ function FinishSummary({ w, prs, e1prs = [], close }) {
     {(prs.length > 0 || e1prs.length > 0) && <div style={{ textAlign: 'left', marginBottom: 12 }}>
       {prs.map(id => <div key={id} className="small accent capitalize row" style={{ gap: 5 }}><Icon name="trophy" style={{ fontSize: 13 }} />{t('New PR:')} {(EXIDX[id] || {}).n || id}</div>)}
       {e1prs.map(p => <div key={p.id} className="small accent capitalize row" style={{ gap: 5 }}><Icon name="chartLine" style={{ fontSize: 13 }} />{t('Best estimated 1RM:')} {(EXIDX[p.id] || {}).n || p.id} · {fmtNum(p.est)} {st.unit}</div>)}
+    </div>}
+    {backupResult && <div className="small" role="status" style={{ margin: '0 0 12px', color: backupStatus === 'failed' ? 'var(--orange)' : 'var(--label-2)' }}>
+      {backupStatus === 'saving' ? t('Updating server backup...') : backupStatus === 'saved' ? t('Server backup updated') : <>
+        <div>{t('Workout saved on this phone, but the server backup could not be updated.')}</div>
+        <Button size="sm" variant="ghost" onClick={retryBackup} style={{ marginTop: 6 }}>{t('Retry backup')}</Button>
+      </>}
     </div>}
     <h4 className="sec" style={{ textAlign: 'left' }}>{t('What you just trained')}</h4>
     <BodyMap load={loadOfWorkouts([w])} body={st.body} />
@@ -1000,7 +1019,10 @@ function doFinishWorkout() {
     s.workouts.push(w)
     s.active = null
   })
+  const backupResult = MOBILE && useStore.getState().user
+    ? saveCloudBackup(useStore.getState().S).then(() => true, () => false)
+    : null
   useUI.getState().stopRest()
   beep(snd(), 880, 0.15); beep(snd(), 1100, 0.15, 0.18); beep(snd(), 1320, 0.3, 0.36)
-  ui().openSheet(close => <FinishSummary w={w} prs={prs} e1prs={e1prs} close={close} />, { kind: 'center', locked: true })
+  ui().openSheet(close => <FinishSummary w={w} prs={prs} e1prs={e1prs} close={close} backupResult={backupResult} />, { kind: 'center', locked: true })
 }
