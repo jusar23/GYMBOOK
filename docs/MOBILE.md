@@ -5,16 +5,30 @@ openGym ships in two flavors from the same codebase:
 | | **Self-hosted** (this repo's default) | **Mobile app** (`VITE_MOBILE=1`) |
 |---|---|---|
 | Runs | in any browser, against your own server | natively on iPhone / Android (Capacitor shell) |
-| Accounts | passkey sign-in, one profile per person | none — the phone *is* the account |
-| Data | synced to your server, readable on desktop | stays on the device (file in the app's private storage) |
+| Accounts | passkey sign-in, one profile per person | Supabase Auth (email/password and configured providers) |
+| Data | synced to your server, readable on desktop | stays on the phone; optional manual Supabase backup from Settings |
 | Reminders | Web Push from your server | native local notifications, no server involved |
-| Exercise media | served by your server (`img/`, `gif/`) | loaded from the jsDelivr CDN |
+| Exercise media | served by your server (`img/`, `gif/`) | packaged in the APK for offline use |
 
-The mobile flavor never talks to a backend: no sign-in screen, no sync, no telemetry.
-State is mirrored from `localStorage` into `opengym-state.json` in the app's private data
-directory on every change (iOS is allowed to evict WebView storage under pressure — the
-file mirror is the durable copy and is restored on launch). Backups go out through the
-OS share sheet instead of a browser download.
+The mobile flavor does not use the app API or sync workout data automatically. Supabase Auth
+is used for sign-in; workout data remains in the app's private storage and is mirrored to
+`opengym-state.json` on every change. Exercise images and animations are packaged in the APK,
+so workouts do not need a media CDN. In Settings, a signed-in user can explicitly save one
+cloud backup or restore it. Apply `supabase/002_gymbook_manual_backups.sql` to create the
+per-user, row-level-secured backup table. JSON file export/import remains available as well.
+
+Copy `frontend/.env.example` to `frontend/.env.local` and set `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_ANON_KEY` before building the APK. Configure the desired Auth providers and redirect URLs in Supabase. Backup
+and restore require an internet connection; local tracking does not.
+
+For Google sign-in to return to Android, add `com.jusar23.gymbook://auth-callback` to
+Supabase Auth's allowed redirect URLs. Keep the Google provider's OAuth callback set to
+Supabase's own `/auth/v1/callback` URL. The Android app opens the system sign-in tab and
+closes it after Supabase redirects back into Gymbook.
+
+To bring existing web progress onto the phone, export its JSON backup from Settings, import
+that file in the APK, then use **Back up to Supabase** once if you want a cloud safety copy.
+Signing in alone does not copy workout data from the old web deployment.
 
 ## Prerequisites
 
