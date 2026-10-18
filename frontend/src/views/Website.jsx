@@ -46,7 +46,7 @@ export default function Website() {
 
   return <div className="site">
     <header className="site-nav">
-      <a className="site-brand" href="#inicio" aria-label="GYMBOOK, home"><span className="site-brand-mark"><Icon name="dumbbell" /></span>gymbook</a>
+      <a className="site-brand" href="#inicio" aria-label="Gym Book Training, home"><span className="site-brand-mark"><Icon name="dumbbell" /></span><span className="site-wordmark"><span>gym book</span><small>training</small></span></a>
       <nav aria-label={copy.nav[0]}>
         <a href="#funciones">{copy.nav[0]}</a>
         <a href="#legal">{copy.nav[1]}</a>
@@ -135,6 +135,6 @@ export default function Website() {
       </section>
     </main>
 
-    <footer className="site-footer"><a className="site-brand" href="#inicio"><span className="site-brand-mark"><Icon name="dumbbell" /></span>gymbook</a><span>{copy.footer[0]}</span><div><a href="#legal">{copy.footer[1]}</a><a href="#contacto">{copy.nav[2]}</a><span>© {new Date().getFullYear()} GYMBOOK</span></div></footer>
+    <footer className="site-footer"><a className="site-brand" href="#inicio" aria-label="Gym Book Training, home"><span className="site-brand-mark"><Icon name="dumbbell" /></span><span className="site-wordmark"><span>gym book</span><small>training</small></span></a><span>{copy.footer[0]}</span><div><a href="#legal">{copy.footer[1]}</a><a href="#contacto">{copy.nav[2]}</a><span>© {new Date().getFullYear()} Gym Book Training</span></div></footer>
   </div>
 }
