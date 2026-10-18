@@ -6,6 +6,7 @@ import './Website.css'
 
 const CONTACT_EMAIL = 'xsebas23@gmail.com'
 const APK_URL = import.meta.env.VITE_ANDROID_APK_URL || ''
+const PUBLIC_SITE_URL = 'https://gymbooktraining.com/'
 const LANGUAGE_KEY = 'gymbook_site_lang'
 const FEATURE_ICONS = ['calendar', 'dumbbell', 'chart', 'star']
 
@@ -17,8 +18,12 @@ export default function Website() {
   useEffect(() => {
     document.documentElement.lang = language
     document.title = copy.title
+    const canonical = document.querySelector('link[rel="canonical"]')
+    if (canonical) canonical.href = PUBLIC_SITE_URL
     const description = document.querySelector('meta[name="description"]')
     if (description) description.content = copy.hero[3]
+    const openGraphUrl = document.querySelector('meta[property="og:url"]')
+    if (openGraphUrl) openGraphUrl.content = PUBLIC_SITE_URL
     const openGraphTitle = document.querySelector('meta[property="og:title"]')
     if (openGraphTitle) openGraphTitle.content = copy.title
     const openGraphDescription = document.querySelector('meta[property="og:description"]')
