@@ -19,6 +19,10 @@ export default function Website() {
     document.title = copy.title
     const description = document.querySelector('meta[name="description"]')
     if (description) description.content = copy.hero[3]
+    const openGraphTitle = document.querySelector('meta[property="og:title"]')
+    if (openGraphTitle) openGraphTitle.content = copy.title
+    const openGraphDescription = document.querySelector('meta[property="og:description"]')
+    if (openGraphDescription) openGraphDescription.content = copy.hero[3]
   }, [languageVersion, language, copy])
 
   const changeLanguage = event => {
