@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
-import { getLang, LANGS, setLang, useLang } from '../lib/i18n.js'
+import { getLang, LANGS, setLang, t, useLang } from '../lib/i18n.js'
 import { DEF } from '../store/useStore.js'
 import { getAuthSession, processOAuthCallback, signInWithEmail, signInWithGoogle, signOutSupabase, updateAuthUserMetadata } from '../lib/supabaseAuth.js'
 import { LEGAL_VERSION, legalConsentMetadata, needsLegalSetup } from '../lib/legalConsent.js'
@@ -27,7 +27,7 @@ export default function AccountPortal() {
   const navigate = useNavigate()
   const languageVersion = useLang()
   const language = getLang()
-  const L = (en, es) => language === 'es' ? es : en
+  const L = (en, es) => language === 'es' ? es : t(en)
   const inputRef = useRef(null)
   const [session, setSession] = useState(null)
   const [state, setState] = useState(null)
@@ -240,7 +240,7 @@ export default function AccountPortal() {
           <button className="site-button primary" onClick={acceptBackupConsent} disabled={busy}>{L('Authorize server copy', 'Autorizar copia del servidor')}</button>
         </div>}
         {currentTerms && hasBackupConsent && <>
-          {state === null ? <div className="account-status" role="alert">{message}<div style={{ marginTop: 12 }}><button className="site-button primary" onClick={() => window.location.reload()}>Retry</button></div></div> : <>
+          {state === null ? <div className="account-status" role="alert">{message}<div style={{ marginTop: 12 }}><button className="site-button primary" onClick={() => window.location.reload()}>{L('Check again', 'Reintentar')}</button></div></div> : <>
           <div className="account-status">{message || L('Your private server copy is ready.', 'Tu copia privada en el servidor está lista.')}</div>
           <div className="account-tools">
             <button className="account-tool" onClick={() => exportFile('routines')}><Icon name="download" /><span><strong>{L('Export routines only', 'Exportar solo rutinas')}</strong><small>{L('A small file with routines and the weekly plan.', 'Un archivo pequeño con rutinas y el plan semanal.')}</small></span></button>

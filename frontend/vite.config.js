@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { cpSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -13,9 +12,8 @@ export default defineConfig(({ mode }) => ({
     react(),
     ...(mode === 'mobile' ? [{
       name: 'copy-exercise-media-for-mobile',
-      closeBundle() {
-        cpSync(resolve(root, '../media/img'), resolve(root, 'dist/img'), { recursive: true })
-        cpSync(resolve(root, '../media/gif'), resolve(root, 'dist/gif'), { recursive: true })
+      async closeBundle() {
+        await import('./scripts/convert-mobile-media.mjs')
       },
     }] : []),
   ],

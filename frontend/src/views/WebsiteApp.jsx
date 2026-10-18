@@ -2,7 +2,7 @@ import { Suspense, useEffect, lazy } from 'react'
 import { HashRouter, Route, Routes } from 'react-router-dom'
 import { LANGS, setLang } from '../lib/i18n.js'
 import Website from './Website.jsx'
-import AccountPortal from './AccountPortal.jsx'
+const AccountPortal = lazy(() => import('./AccountPortal.jsx'))
 
 const Legal = lazy(() => import('./Legal.jsx'))
 
@@ -15,7 +15,7 @@ export default function WebsiteApp() {
       && !window.location.hash.startsWith('#/account')) window.location.hash = '/account'
   }, [])
   return <HashRouter><Routes>
-    <Route path="/account" element={<AccountPortal />} />
+    <Route path="/account" element={<Suspense fallback={<div className="site-loading">Loading your account…</div>}><AccountPortal /></Suspense>} />
     <Route path="/legal/*" element={<Suspense fallback={<div className="site-loading">Cargando información legal…</div>}><Legal /></Suspense>} />
     <Route path="*" element={<Website />} />
   </Routes></HashRouter>

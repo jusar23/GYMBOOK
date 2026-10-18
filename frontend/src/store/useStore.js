@@ -12,7 +12,7 @@ const SIGNED_OUT_KEY = 'gym_signed_out_v1'
 const timeoutSignal = ms => typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
   ? AbortSignal.timeout(ms) : undefined
 export const DEF = {
-  unit: 'kg', restSec: 90, sound: true, keepAwake: true, lang: 'en',
+  unit: 'kg', restSec: 90, sound: true, keepAwake: true, lockOrientation: false, lang: 'en',
   theme: 'dark', accent: 'lime', body: 'male', targetW: null,
   bodyweight: [], routines: [], week: {}, dayPlan: {},
   exWeights: {}, workouts: [], active: null, customEx: [], favoriteEx: [], favoritesMigrated: false, gifSize: 'full',
@@ -49,22 +49,41 @@ const hasData = st => !!((st.workouts || []).length || (st.routines || []).lengt
 export const useStore = create((set, get) => {
   let pushTm = null
   let saveTm = null
+  let reminderTm = null
   let stateRevision = 0
 
-  // Mobile build: mirror the state into a file in the app's data directory (survives WebView
-  // storage eviction) and keep the native reminder schedule in step with the weekly plan.
+  // Mobile build: mirror state locally. Reminders are synced separately only when their
+  // inputs change, so recording sets does not cancel and recreate OS notifications.
   const nativePersist = () => {
     clearTimeout(saveTm)
-    saveTm = setTimeout(() => { saveTm = null; nativeSave(get().S); syncReminder(get().S) }, 800)
+    saveTm = setTimeout(() => { saveTm = null; nativeSave(get().S) }, 800)
+  }
+
+  const reminderConfig = S => JSON.stringify([
+    S.reminder || null,
+    S.week || {},
+    (S.routines || []).map(({ id, name }) => [id, name]),
+  ])
+
+  const nativeReminderPersist = () => {
+    clearTimeout(reminderTm)
+    reminderTm = setTimeout(() => {
+      reminderTm = null
+      syncReminder(get().S)
+    }, 800)
   }
 
   const persist = (S, push = true) => {
+    const reminderChanged = MOBILE && reminderConfig(get().S) !== reminderConfig(S)
     migrateChosenExercises(S)
     S._ts = Date.now()
     registerCustom(S.customEx)
     localStorage.setItem(KEY, JSON.stringify(S))
     set({ S })
-    if (MOBILE) nativePersist()
+    if (MOBILE) {
+      nativePersist()
+      if (reminderChanged) nativeReminderPersist()
+    }
     if (push && get().user && !MOBILE) {
       stateRevision++
       localStorage.setItem('gym_dirty', '1')
@@ -83,6 +102,11 @@ export const useStore = create((set, get) => {
       clearTimeout(saveTm)
       saveTm = null
       nativeSave(get().S)
+    }
+    if (MOBILE && reminderTm) {
+      clearTimeout(reminderTm)
+      reminderTm = null
+      syncReminder(get().S)
     }
     if (pushTm) {
       clearTimeout(pushTm)
@@ -206,6 +230,8 @@ export const useStore = create((set, get) => {
       // Android private state file without attempting to push anything to the deleted account.
       clearTimeout(saveTm)
       saveTm = null
+      clearTimeout(reminderTm)
+      reminderTm = null
       clearTimeout(pushTm)
       pushTm = null
       await signOutSupabase(false).catch(() => {})
@@ -256,6 +282,8 @@ export const useStore = create((set, get) => {
         } else {
           get().setUser(null)
         }
+        clearTimeout(reminderTm)
+        reminderTm = null
         syncReminder(get().S)
         set({ ready: true, signingIn: false })
         return

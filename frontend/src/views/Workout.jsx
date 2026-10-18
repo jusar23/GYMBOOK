@@ -15,6 +15,7 @@ import { Button, Check, NumberField, Segmented } from '../components/ui.jsx'
 import { nextPrescription, applyPrescription } from '../lib/progression.js'
 import { glyphOf } from '../lib/glyphs.js'
 import { convertWeight } from '../lib/units.js'
+import { MOBILE } from '../lib/mobile.js'
 
 function setLabelInUnit(id, set, cfg, fromUnit, toUnit) {
   if (fromUnit === toUnit || set.w == null) return setLabel(id, set, cfg)
@@ -65,7 +66,7 @@ function Elapsed({ start }) {
 }
 
 /* ---------- one exercise block (reps: weight×reps · time: a held duration · cardio: duration+speed) ---------- */
-function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemoveSet, onStartTimed, onUnitChange }) {
+function ExerciseBlock({ entryIdx, compact, focusMode = false, onToggle, onField, onAddSet, onRemoveSet, onStartTimed, onUnitChange }) {
   const S = useStore(s => s.S)
   const working = useUI(s => s.work)
   const entry = S.active.entries[entryIdx]
@@ -125,7 +126,7 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
     </div>
   )
   return <>
-    <Media ex={ex} key={entry.id} compact={compact} minimizable />
+    {!focusMode && <Media ex={ex} key={entry.id} compact={compact} minimizable />}
     <div className="row between" style={{ marginBottom: 6 }}>
       <div style={{ fontSize: compact ? 17 : 20, fontWeight: 600, letterSpacing: '-.02em', textTransform: 'capitalize', lineHeight: 1.2 }}>{ex.n}</div>
       <div className="row" style={{ gap: 6 }}>
@@ -140,10 +141,10 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
       {!cardio && !timed && isPerSide(cfg) && <span className="tag acc nocap"><Icon name="shuffle" />{t('{0} per side', fmtNum(sideReps(entry.sets.find(s => !s.done)?.r ?? entry.sets[0]?.r)))}</span>}
       {(ex.tg || ex.bp) && <span className="tag">{t(ex.tg || ex.bp)}</span>}
       {ex.eq && <span className="tag">{t(ex.eq)}</span>}
-      {best > 0 && <span className="tag nocap">{t('Best:')} {fmtNum(convertWeight(best, S.unit, weightUnit))} {weightUnit}</span>}
+      {!focusMode && best > 0 && <span className="tag nocap">{t('Best:')} {fmtNum(convertWeight(best, S.unit, weightUnit))} {weightUnit}</span>}
     </div>
-    {last && <div className="small dim" style={{ marginBottom: 4 }}>{t('Last time')} ({fmtDate(last.d)}): {last.sets.map(s => setLabelInUnit(entry.id, s, last.target, S.unit, weightUnit)).join(', ')}</div>}
-    {plan && plan.why && plan.kind !== 'off' && <div className={'progline' + (plan.kind === 'deload' ? ' warn' : '')}>
+    {!focusMode && last && <div className="small dim" style={{ marginBottom: 4 }}>{t('Last time')} ({fmtDate(last.d)}): {last.sets.map(s => setLabelInUnit(entry.id, s, last.target, S.unit, weightUnit)).join(', ')}</div>}
+    {!focusMode && plan && plan.why && plan.kind !== 'off' && <div className={'progline' + (plan.kind === 'deload' ? ' warn' : '')}>
       <Icon name={plan.kind === 'up' ? 'arrowUp' : plan.kind === 'deload' ? 'arrowDown' : 'lightbulb'} />
       <span>{t(...plan.why)}</span>
     </div>}
@@ -172,16 +173,73 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
 
 /* ---------- active workout ---------- */
 function ActiveWorkout() {
+  const [focusMode, setFocusMode] = useState(false)
   const nav = useNavigate()
   const S = useStore(s => s.S)
   const update = useStore(s => s.update)
-  const { startRest, stopRest } = useUI()
+  const startRest = useUI(s => s.startRest)
+  const stopRest = useUI(s => s.stopRest)
   const A = S.active
   const units = supersetUnits(A.entries)
   const cur = Math.min(A.cur, Math.max(0, A.entries.length - 1))
   const unit = A.entries.length ? unitOf(units, cur) : []
   const unitIdx = units.findIndex(u => u === unit)
   const isSuperset = unit.length > 1
+
+  useEffect(() => {
+    if (!focusMode) return
+    let awayFromApp = false
+    let disposed = false
+    let noticeOpen = false
+    let nativeListener
+    const showFocusNotice = message => {
+      if (!awayFromApp || disposed || noticeOpen) return
+      awayFromApp = false
+      noticeOpen = true
+      useUI.getState().openSheet(close => {
+        const closeNotice = () => { noticeOpen = false; close() }
+        return <div className="focus-return-dialog">
+        <span className="focus-return-icon"><Icon name="target" /></span>
+        <h2>{t('Keep your focus')}</h2>
+        <p>{t(message)}</p>
+        <div className="focus-return-actions">
+          <Button variant="primary" icon="check" onClick={closeNotice}>{t('Stay in workout')}</Button>
+          <Button onClick={() => { setFocusMode(false); closeNotice() }}>{t('Exit focus mode')}</Button>
+        </div>
+      </div>
+      }, { kind: 'center', locked: true })
+    }
+    const showReturnNotice = () => showFocusNotice('You left Gym Book Training while focus mode was active. Your workout is still running. Continue with the exercise or turn focus mode off.')
+    const showBackButtonNotice = () => {
+      awayFromApp = true
+      showFocusNotice('Focus mode is active. Turn focus mode off before leaving Gym Book Training. Your workout will stay in progress.')
+    }
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') awayFromApp = true
+      else showReturnNotice()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    if (MOBILE) {
+      import('@capacitor/app').then(async ({ App }) => {
+        const listeners = await Promise.all([
+          App.addListener('appStateChange', ({ isActive }) => {
+            if (isActive) showReturnNotice()
+            else awayFromApp = true
+          }),
+          App.addListener('backButton', showBackButtonNotice),
+        ])
+        return { remove: () => listeners.forEach(listener => listener.remove()) }
+      }).then(listener => {
+        if (disposed) listener.remove()
+        else nativeListener = listener
+      }).catch(() => {})
+    }
+    return () => {
+      disposed = true
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      nativeListener?.remove()
+    }
+  }, [focusMode])
 
   const total = A.entries.reduce((n, e) => n + e.sets.length, 0)
   const done = setsDoneActive(A)
@@ -246,7 +304,7 @@ function ActiveWorkout() {
   // Live-presence heartbeat so the admin dashboard can show who's training now. Signed-in only —
   // guests have no server session. Reads fresh state each tick so progress stays current.
   useEffect(() => {
-    if (!useStore.getState().user) return
+    if (MOBILE || !useStore.getState().user) return
     let stopped = false
     const ping = active => {
       const A2 = useStore.getState().S.active
@@ -270,27 +328,34 @@ function ActiveWorkout() {
     }
   }, [])
 
-  return <div className="narrow">
+  return <div className={'narrow active-workout' + (focusMode ? ' focus-mode' : '')}>
     <div className="hdr">
       <button className="iconbtn" aria-label={t('Discard')} onClick={() => confirmSheet({ title: t('Discard workout?'), message: t('The sets you logged in this session will be lost.'), confirmText: t('Discard'), danger: true, onConfirm: () => { update(s => { s.active = null }); stopRest(); nav('/home') } })}><Icon name="xmark" /></button>
       <div style={{ textAlign: 'center' }}><div style={{ fontWeight: 600 }}>{A.name}</div><div className="sub"><Elapsed start={A.start} /> · {t('{0} sets', done + '/' + total)}</div></div>
       <button className="iconbtn" style={{ color: 'var(--acc)' }} aria-label={t('Finish')} onClick={finishWorkout}><Icon name="check" /></button>
     </div>
     <div className="wprog"><i style={{ width: (total ? done / total * 100 : 0) + '%' }} /></div>
+    <div className="workout-focus-row">
+      <button className={'workout-focus-toggle' + (focusMode ? ' selected' : '')} type="button" aria-pressed={focusMode}
+        onClick={() => setFocusMode(value => !value)}>
+        <Icon name={focusMode ? 'eyeOff' : 'eye'} />
+        {t(focusMode ? 'Exit focus mode' : 'Focus mode')}
+      </button>
+    </div>
 
     {A.entries.length ? <>
-      <div className="muted small" style={{ marginBottom: 6 }}>{isSuperset ? t('Superset {0} / {1}', unitIdx + 1, units.length) : t('Exercise {0} / {1}', unitIdx + 1, units.length)}</div>
+      {!focusMode && <div className="muted small" style={{ marginBottom: 6 }}>{isSuperset ? t('Superset {0} / {1}', unitIdx + 1, units.length) : t('Exercise {0} / {1}', unitIdx + 1, units.length)}</div>}
       {isSuperset ? (
         <div className="ss-card">
-          <div className="ss-hd"><Icon name="link" />{t('Superset · do these back-to-back, rest after both')}</div>
+          {!focusMode && <div className="ss-hd"><Icon name="link" />{t('Superset · do these back-to-back, rest after both')}</div>}
           {unit.map((idx, k) => <div key={idx} className="ss-ex">
             {k > 0 && <div className="ss-amp">+</div>}
-            <ExerciseBlock entryIdx={idx} compact
+            <ExerciseBlock entryIdx={idx} compact focusMode={focusMode}
               onToggle={i => toggle(idx, i)} onField={(i, f, v) => setField(idx, i, f, v)} onAddSet={() => addSet(idx)} onRemoveSet={() => removeSet(idx)} onStartTimed={i => startTimed(idx, i)} onUnitChange={v => mutEntry(idx, e => { e.weightUnit = v })} />
           </div>)}
         </div>
       ) : (
-        <ExerciseBlock entryIdx={cur} onToggle={i => toggle(cur, i)} onField={(i, f, v) => setField(cur, i, f, v)} onAddSet={() => addSet(cur)} onRemoveSet={() => removeSet(cur)} onStartTimed={i => startTimed(cur, i)} onUnitChange={v => mutEntry(cur, e => { e.weightUnit = v })} />
+        <ExerciseBlock entryIdx={cur} focusMode={focusMode} onToggle={i => toggle(cur, i)} onField={(i, f, v) => setField(cur, i, f, v)} onAddSet={() => addSet(cur)} onRemoveSet={() => removeSet(cur)} onStartTimed={i => startTimed(cur, i)} onUnitChange={v => mutEntry(cur, e => { e.weightUnit = v })} />
       )}
     </> : <div className="empty"><div className="ico"><Icon name="shuffle" /></div>{t('Freestyle workout — add your first exercise.')}</div>}
 
@@ -300,13 +365,13 @@ function ActiveWorkout() {
       <Button trailingIcon="chevronRight" disabled={unitIdx < 0 || unitIdx >= units.length - 1} onClick={() => update(s => { s.active.cur = units[unitIdx + 1][0] })}>{t('Next')}</Button>
     </div>
     <div style={{ height: 10 }} />
-    <Button onClick={() => exercisePicker(ex => exConfigSheet(ex, null, cfg => update(s => {
+    {!focusMode && <Button onClick={() => exercisePicker(ex => exConfigSheet(ex, null, cfg => update(s => {
       const full = { ...cfg, id: ex.id }
       const plan = nextPrescription(s, full, s.routines.find(r => r.id === s.active.routineId))
       s.active.entries.push({ id: ex.id, target: { ...cfg }, plan, sets: applyPrescription(buildSets(s, full), plan) })
       s.active.cur = s.active.entries.length - 1
       s.favoriteEx = [...new Set([...(s.favoriteEx || []), ex.id])]
-    }), null, S.routines.find(r => r.id === A.routineId)))} icon="plus">{t('Add exercise')}</Button>
+    }), null, S.routines.find(r => r.id === A.routineId)))} icon="plus">{t('Add exercise')}</Button>}
     <div style={{ height: 10 }} />
     {(() => {
       const exDone = A.entries.filter(e => e.sets.length && e.sets.every(s => s.done)).length

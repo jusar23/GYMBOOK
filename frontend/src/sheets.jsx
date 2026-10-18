@@ -5,7 +5,7 @@ import { EXDB, EXIDX, BODYPARTS, isCardio, isBodyweightEq, allExercises, equipme
 import { fmtDate, fmtNum, fmtVol, fmtDur, durPart, todayISO, uid, exCount, DAYN, MONTHS_LONG, ACCENTS } from './lib/format.js'
 import { lastEntryFor, bestWeightFor, buildSets, effectiveRoutineId, workoutVolume, setsDone, setsDoneActive, lastBW, supersetUnits, unitOf, setLabel, fmtSec, defaultConfig, cleanupSg, modeOf, effortOf, isBw, isPerSide, sideReps } from './lib/history.js'
 import { beep, vibrate } from './lib/sound.js'
-import { t, instrFor, getLang, INSTR_LANGS } from './lib/i18n.js'
+import { t, instrFor, getLang, INSTR_LANGS, loadInstructions, useLang } from './lib/i18n.js'
 import { nav } from './lib/nav.js'
 import { starterRoutines } from './lib/starter.js'
 import Media, { Thumb } from './components/Media.jsx'
@@ -295,10 +295,12 @@ function OneRM({ ex, unit }) {
 }
 
 function ExerciseDetail({ ex, close, initialUnit, onUnitChange }) {
+  const languageVersion = useLang()
   const st = useStore(s => s.S)
   const [unit, setUnit] = useState(initialUnit || st.unit)
   const last = lastEntryFor(st, ex.id)
   const best = bestWeightFor(st, ex.id)
+  useEffect(() => { void loadInstructions() }, [languageVersion])
   return <>
     <h3 className="capitalize">{ex.n}</h3>
     <Media ex={ex} />
@@ -946,12 +948,15 @@ function FinishSummary({ w, prs, e1prs = [], close, backupResult = null }) {
   useEffect(() => {
     if (!backupResult) return
     let current = true
-    backupResult.then(ok => { if (current) setBackupStatus(ok ? 'saved' : 'failed') })
+      backupResult.then(status => { if (current) setBackupStatus(status) })
     return () => { current = false }
   }, [backupResult])
   const retryBackup = async () => {
     setBackupStatus('saving')
-    try { await saveCloudBackup(st); setBackupStatus('saved') }
+      try {
+        const result = await saveCloudBackup(st, { skipWithoutConsent: true })
+        setBackupStatus(result.skipped ? 'skipped' : 'saved')
+      }
     catch { setBackupStatus('failed') }
   }
   return <div style={{ textAlign: 'center', padding: '8px 0' }}>
@@ -967,7 +972,7 @@ function FinishSummary({ w, prs, e1prs = [], close, backupResult = null }) {
       {prs.map(id => <div key={id} className="small accent capitalize row" style={{ gap: 5 }}><Icon name="trophy" style={{ fontSize: 13 }} />{t('New PR:')} {(EXIDX[id] || {}).n || id}</div>)}
       {e1prs.map(p => <div key={p.id} className="small accent capitalize row" style={{ gap: 5 }}><Icon name="chartLine" style={{ fontSize: 13 }} />{t('Best estimated 1RM:')} {(EXIDX[p.id] || {}).n || p.id} · {fmtNum(p.est)} {st.unit}</div>)}
     </div>}
-    {backupResult && <div className="small" role="status" style={{ margin: '0 0 12px', color: backupStatus === 'failed' ? 'var(--orange)' : 'var(--label-2)' }}>
+    {backupResult && backupStatus !== 'skipped' && <div className="small" role="status" style={{ margin: '0 0 12px', color: backupStatus === 'failed' ? 'var(--orange)' : 'var(--label-2)' }}>
       {backupStatus === 'saving' ? t('Updating server backup...') : backupStatus === 'saved' ? t('Server backup updated') : <>
         <div>{t('Workout saved on this phone, but the server backup could not be updated.')}</div>
         <Button size="sm" variant="ghost" onClick={retryBackup} style={{ marginTop: 6 }}>{t('Retry backup')}</Button>
@@ -1020,7 +1025,8 @@ function doFinishWorkout() {
     s.active = null
   })
   const backupResult = MOBILE && useStore.getState().user
-    ? saveCloudBackup(useStore.getState().S).then(() => true, () => false)
+    ? saveCloudBackup(useStore.getState().S, { skipWithoutConsent: true })
+      .then(result => result.skipped ? 'skipped' : 'saved', () => 'failed')
     : null
   useUI.getState().stopRest()
   beep(snd(), 880, 0.15); beep(snd(), 1100, 0.15, 0.18); beep(snd(), 1320, 0.3, 0.36)

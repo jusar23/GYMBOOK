@@ -37,6 +37,20 @@ import { Section, Row, SelectRow, Switch, Segmented, Button, TextField } from '.
 
 import { DOCS } from './Legal.jsx'
 
+const SOCIAL_LINKS = [
+  { name: 'Facebook', url: import.meta.env.VITE_SOCIAL_FACEBOOK_URL || '' },
+  { name: 'X', url: import.meta.env.VITE_SOCIAL_X_URL || '' },
+  { name: 'Instagram', url: import.meta.env.VITE_SOCIAL_INSTAGRAM_URL || '' },
+  { name: 'Website', url: import.meta.env.VITE_PUBLIC_WEBSITE_URL || 'https://gymbooktraining.com/' },
+]
+
+function openSocialLink(rawUrl) {
+  try {
+    const url = new URL(rawUrl)
+    if (url.protocol === 'https:' || url.protocol === 'http:') window.open(url.href, '_blank', 'noopener,noreferrer')
+  } catch { /* Ignore invalid public links rather than opening an unsafe URL. */ }
+}
+
 
 
 export default function Settings() {
@@ -47,7 +61,16 @@ export default function Settings() {
 
   const user = useStore(s => s.user)
 
-  const { update, replaceState, setUser, setSigningIn, pullState, pushState, signOut, signOutAll, completeAccountDeletion, resetDemo } = useStore()
+  const update = useStore(s => s.update)
+  const replaceState = useStore(s => s.replaceState)
+  const setUser = useStore(s => s.setUser)
+  const setSigningIn = useStore(s => s.setSigningIn)
+  const pullState = useStore(s => s.pullState)
+  const pushState = useStore(s => s.pushState)
+  const signOut = useStore(s => s.signOut)
+  const signOutAll = useStore(s => s.signOutAll)
+  const completeAccountDeletion = useStore(s => s.completeAccountDeletion)
+  const resetDemo = useStore(s => s.resetDemo)
 
   const toast = useUI(s => s.toast)
 
@@ -266,7 +289,7 @@ export default function Settings() {
 
   const confirmTutorial = () => confirmSheet({
     title: t('Open the tutorial?'),
-    message: t('The chalkboard guide will open so you can review the main parts of Gym Book Training.'),
+    message: t('The usage guide will open so you can review the main parts of Gym Book Training.'),
     confirmText: t('Open tutorial'),
     onConfirm: openTutorial,
   })
@@ -332,7 +355,7 @@ export default function Settings() {
       </Row>
 
       <Row icon="lightbulb" iconTint="var(--yellow)" title={t('Tutorial')}
-        subtitle={t('Review the chalkboard guide to using Gym Book Training.')}
+        subtitle={t('Review the usage guide for Gym Book Training.')}
         accessory="chevron" onClick={confirmTutorial} />
 
     </Section>
@@ -341,7 +364,7 @@ export default function Settings() {
 
     {/* ---------- during a workout ---------- */}
 
-    <Section title={t('During a workout')} footer={wakeOK ? t('The screen stays on while a workout is running, so you don’t have to unlock your phone between sets.') : null}>
+    <Section title={t('During a workout')} footer={wakeOK && S.keepAwake !== false ? t('The screen stays on while a workout is running, so you don’t have to unlock your phone between sets.') : null}>
 
       <SelectRow icon="timer" iconTint="var(--orange)" title={t('Rest timer')}
 
@@ -362,6 +385,11 @@ export default function Settings() {
         </Row>
 
       )}
+
+      {MOBILE && <Row icon="expand" iconTint="var(--purple)" title={t('Lock screen orientation')}
+        subtitle={t('Keep the current screen direction while a workout is active.') }>
+        <Switch checked={!!S.lockOrientation} onChange={v => update(s => { s.lockOrientation = v })} />
+      </Row>}
 
       <Row icon="bell" iconTint="var(--pink)" title={t('Sounds')}>
 
@@ -539,6 +567,13 @@ export default function Settings() {
 
     </Section>
 
+    <Section title={t('Social')}>
+      {SOCIAL_LINKS.map(({ name, url }) => <Row key={name} icon={name === 'Website' ? 'globe' : 'link'}
+        iconTint="var(--acc)" title={t(name)}
+        subtitle={url || t('Coming soon')}
+        accessory={url ? 'chevron' : 'none'} onClick={url ? () => openSocialLink(url) : undefined} />)}
+    </Section>
+
     <Section title={t('Legal')}>
 
       {DOCS.map(doc => <Row key={doc.id} icon={doc.icon} title={t(doc.title)} accessory="chevron"
@@ -683,7 +718,7 @@ function NotificationsCard({ S, update, toast }) {
 
 // Mobile build: the reminder is a native local notification scheduled on planned weekdays —
 
-// no push server involved. The schedule itself is (re)synced by the store on every persist;
+// no push server involved. The store resyncs only when schedule inputs change;
 
 // this card only owns the OS permission prompt when the switch turns on.
 
@@ -953,7 +988,7 @@ function RegisterInline({ close, setUser, setSigningIn, pushState, pullState, to
 
   const [inviteOnly, setInviteOnly] = useState(false)
 
-  useEffect(() => { api('/api/config').then(c => setInviteOnly(!!c.invite_only)).catch(() => {}) }, [])
+  useEffect(() => { if (!MOBILE) api('/api/config').then(c => setInviteOnly(!!c.invite_only)).catch(() => {}) }, [])
 
   const go = async () => {
 
