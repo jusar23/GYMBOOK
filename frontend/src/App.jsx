@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useStore } from './store/useStore.js'
 import { useUI } from './store/useUI.js'
@@ -19,6 +19,8 @@ import { MOBILE } from './lib/mobile.js'
 import { NATIVE_OAUTH_REDIRECT, processOAuthCallback } from './lib/supabaseAuth.js'
 import { needsLegalSetup } from './lib/legalConsent.js'
 import { openTutorial, tutorialSeenKey } from './components/Tutorial.jsx'
+import SubscriptionGate from './views/SubscriptionGate.jsx'
+import { refreshNativeSubscription } from './lib/subscription.js'
 
 const Home = lazy(() => import('./views/Home.jsx'))
 const Plan = lazy(() => import('./views/Plan.jsx'))
@@ -51,13 +53,46 @@ function Shell() {
   const navigate = useNavigate()
   const loc = useLocation()
   const { S, user, ready, signingOut, signingIn } = useStore()
+  const [subscription, setSubscription] = useState(() => MOBILE && useStore.getState().user?.id
+    ? { configured: true, status: 'loading', granted: false, packages: [] }
+    : { configured: false, status: 'unconfigured', granted: true, packages: [] })
   const isGuest = useStore(s => s.isGuest())
   const langV = useLang()
   const tutorialOpenedFor = useRef('')
+  const checkSubscription = useCallback(async () => {
+    if (!MOBILE || !user?.id || user.needsLegalSetup) {
+      setSubscription({ configured: false, status: 'unconfigured', granted: true, packages: [] })
+      return
+    }
+    setSubscription(current => ({ ...current, configured: true, status: 'loading' }))
+    const next = await refreshNativeSubscription(user.id)
+    setSubscription(next)
+  }, [user?.id, user?.needsLegalSetup])
   const authed = !!user || (!MOBILE && isGuest)
   const loginRoute = loc.pathname === '/login'
 
   useEffect(() => { setNav(navigate) }, [navigate])
+  useEffect(() => {
+    if (!ready) return
+    void checkSubscription()
+  }, [ready, checkSubscription])
+  useEffect(() => {
+    if (!MOBILE || !ready || !user?.id || user.needsLegalSetup) return
+    const recheck = () => { if (document.visibilityState === 'visible') void checkSubscription() }
+    window.addEventListener('focus', recheck)
+    document.addEventListener('visibilitychange', recheck)
+    let expiryTimer
+    if (subscription.granted && subscription.expiresAt) {
+      const delay = Date.parse(subscription.expiresAt) - Date.now() + 500
+      if (delay > 0) expiryTimer = setTimeout(() => void checkSubscription(), Math.min(delay, 2147483000))
+      else expiryTimer = setTimeout(() => void checkSubscription(), 0)
+    }
+    return () => {
+      window.removeEventListener('focus', recheck)
+      document.removeEventListener('visibilitychange', recheck)
+      clearTimeout(expiryTimer)
+    }
+  }, [ready, user?.id, user?.needsLegalSetup, subscription.granted, subscription.expiresAt, checkSubscription])
   useEffect(() => { applyPrefs(S.theme, S.accent) }, [S.theme, S.accent])
   useEffect(() => { setLang(S.lang || 'en') }, [S.lang])
   useEffect(() => { document.documentElement.lang = S.lang || 'en' }, [langV, S.lang])
@@ -77,8 +112,8 @@ function Shell() {
 
   if (signingOut) return (
     <div id="app">
-      <div className="loading-mark" role="status" aria-label="Signing out of gymbook">
-        <Icon name="dumbbell" />
+      <div className="loading-mark" role="status" aria-label="Signing out of Gym Book Training">
+        <Icon name="bookTraining" />
         <div className="loading-label">Signing out…</div>
       </div>
     </div>
@@ -86,8 +121,8 @@ function Shell() {
 
   if (!ready) return (
     <div id="app">
-      <div className="loading-mark" role="status" aria-label="Signing in to gymbook">
-        <Icon name="dumbbell" />
+      <div className="loading-mark" role="status" aria-label="Signing in to Gym Book Training">
+        <Icon name="bookTraining" />
         <div className="loading-label">{signingIn ? 'Signing in…' : t('Loading data...')}</div>
       </div>
     </div>
@@ -95,7 +130,7 @@ function Shell() {
 
   if (loc.pathname === '/legal' || loc.pathname.startsWith('/legal/')) return (
     <div id="app" className="vfade">
-      <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading legal information"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
+      <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading legal information"><Icon name="bookTraining" /><div className="loading-label">Loading…</div></div>}>
         <Legal />
       </Suspense>
     </div>
@@ -104,15 +139,15 @@ function Shell() {
   return (
     <>
       {signingIn && <div className="app-loading-overlay">
-        <div className="loading-mark" role="status" aria-label="Signing in to gymbook">
-          <Icon name="dumbbell" />
+        <div className="loading-mark" role="status" aria-label="Signing in to Gym Book Training">
+          <Icon name="bookTraining" />
           <div className="loading-label">Signing in…</div>
         </div>
       </div>}
 
       <div id="app" className="vfade" key={loc.pathname}>
         {authed && !loginRoute && !user?.needsLegalSetup && <div className="app-topbar">
-          <div className="app-brand">gymbook</div>
+          <div className="app-brand">Gym Book Training</div>
           {MAIN_TABS.has(loc.pathname) && <button className="iconbtn" onClick={() => navigate('/settings')} aria-label={t('Settings')} title={t('Settings')}><Icon name="gear" /></button>}
         </div>}
 
@@ -121,10 +156,12 @@ function Shell() {
             ? (user && !user.needsLegalSetup ? <Navigate to="/home" replace /> : <Login legalSetup={!!user?.needsLegalSetup} />)
             : user?.needsLegalSetup
               ? <Login legalSetup />
+            : MOBILE && !!user?.id && subscription.configured && (!subscription.granted || subscription.status === 'loading')
+              ? <SubscriptionGate user={user} status={subscription} refresh={checkSubscription} />
             : !authed
               ? <Login />
               : (
-                <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading gymbook"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
+                <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading Gym Book Training"><Icon name="bookTraining" /><div className="loading-label">Loading…</div></div>}>
                   <Routes>
                     <Route path="/home" element={<Home />} />
                     <Route path="/plan" element={<Plan />} />
@@ -175,7 +212,7 @@ export default function App() {
           useStore.getState().setUser({
             id: authUser.id,
             email: authUser.email,
-            name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'GYMBOOK user',
+            name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
             needsLegalSetup: needsLegalSetup(authUser),
           })
         }

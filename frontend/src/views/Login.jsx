@@ -126,7 +126,7 @@ export default function Login({ legalSetup = false }) {
       setUser({
         id: authUser.id,
         email: authUser.email,
-        name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'GYMBOOK user',
+        name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
         needsLegalSetup: needsSetup,
       })
       clearPendingRecoveryCode()
@@ -137,7 +137,7 @@ export default function Login({ legalSetup = false }) {
       const authUser = session.user
       setUser({
         id: authUser.id, email: authUser.email,
-        name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'GYMBOOK user',
+        name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
         needsLegalSetup: true,
       })
       clearPendingRecoveryCode()
@@ -224,9 +224,9 @@ export default function Login({ legalSetup = false }) {
   }
 
   const head = <>
-    <div style={{ fontSize: 54, display: 'flex', justifyContent: 'center', color: 'var(--acc)' }}><Icon name="dumbbell" /></div>
-    <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-.028em', margin: '10px 0 4px' }}>gymbook</h1>
-    <div style={{ color: 'var(--acc)', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>your personal trainer</div>
+    <div style={{ fontSize: 54, display: 'flex', justifyContent: 'center', color: 'var(--acc)' }}><Icon name="bookTraining" /></div>
+    <h1 style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-.035em', margin: '10px 0 4px' }}>Gym Book Training</h1>
+    <div style={{ color: 'var(--acc)', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Your training, in your pocket</div>
   </>
   const wrap = { display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '78vh', textAlign: 'center' }
 
@@ -245,7 +245,10 @@ export default function Login({ legalSetup = false }) {
     <div className="narrow login-screen" style={{ ...wrap, padding: '24px 0' }}>
       {head}
       <div className="login-panel">
-      <div className="login-price-notice">{t('No paid subscription is currently offered')}</div>
+      <div className="login-price-notice">
+        {t('Planned subscription prices: USD 1 per month, or an eligible new subscriber offer of USD 9 for the first year then USD 12 per year. Local price and cancellation terms appear before checkout; no charge is made unless a plan is displayed and you confirm it.')}
+        <button type="button" className="login-legal-link" onClick={() => navigate('/legal/subscription')}>{t('Subscription terms')}</button>
+      </div>
 
       {authReady ? legalSetup ? <>
         <h2 style={{ textAlign: 'left', margin: '10px 0' }}>{t('Complete your account')}</h2>
@@ -257,7 +260,7 @@ export default function Login({ legalSetup = false }) {
         {error && <div role="alert" className="small" style={{ color: 'var(--red)', textAlign: 'left', marginTop: 12 }}>{error}</div>}
         <Button variant="ghost" className="dim" onClick={async () => { await useStore.getState().signOut(); navigate('/login', { replace: true }) }}>{t('Sign out')}</Button>
       </> : recoveryMode ? <>
-        <div className="muted small" style={{ margin: '12px 0' }}>{t('Choose a new password for your gymbook account.')}</div>
+        <div className="muted small" style={{ margin: '12px 0' }}>{t('Choose a new password for your Gym Book Training account.')}</div>
         <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
           <div className="password-field">
             <input className="input" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder={t('New password')} minLength={6} value={password} onChange={e => setPassword(e.target.value)} required />

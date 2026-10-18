@@ -1,4 +1,4 @@
-export const LEGAL_VERSION = '1.4'
+export const LEGAL_VERSION = '1.6'
 
 export function legalConsentMetadata({ dateOfBirth, countryCode, trainingDataAccepted = false }) {
   const acceptedAt = new Date().toISOString()

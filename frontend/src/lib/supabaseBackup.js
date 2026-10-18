@@ -1,7 +1,7 @@
 import { getAuthSession } from './supabaseAuth.js'
 import { LEGAL_VERSION } from './legalConsent.js'
 
-const URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '')
+const URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '').replace(/\/rest\/v1$/i, '')
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 const TABLE = 'gymbook_backups'
 
