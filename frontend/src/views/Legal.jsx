@@ -516,30 +516,33 @@ function LegalText({ id }) {
 
   const lang = getLang() === 'es' ? 'es' : 'en'
 
-  const sections = id === 'terms'
+  const groups = id === 'terms'
     ? [
-        ...(COPY.terms?.[lang] || []),
-        ...(COPY.privacy?.[lang] || []),
-        ...(COPY.collection?.[lang] || []),
-        ...(COPY['third-parties']?.[lang] || []),
-        ...(COPY.fitness?.[lang] || []),
-        ...(COPY.subscription?.[lang] || []),
+        { title: lang === 'es' ? 'Condiciones del servicio' : 'Service terms', sections: COPY.terms?.[lang] || [] },
+        { title: lang === 'es' ? 'Privacidad y tratamiento de datos' : 'Privacy and data processing', sections: COPY.privacy?.[lang] || [] },
+        { title: lang === 'es' ? 'Recopilación y conservación' : 'Data collection and retention', sections: COPY.collection?.[lang] || [] },
+        { title: lang === 'es' ? 'Proveedores y servicios externos' : 'Third-party providers and services', sections: COPY['third-parties']?.[lang] || [] },
+        { title: lang === 'es' ? 'Uso relacionado con el ejercicio' : 'Exercise-related use', sections: COPY.fitness?.[lang] || [] },
+        { title: lang === 'es' ? 'Suscripciones, precios y cancelación' : 'Subscriptions, pricing and cancellation', sections: COPY.subscription?.[lang] || [] },
       ]
-    : COPY[id]?.[lang] || []
+    : [{ title: null, sections: COPY[id]?.[lang] || [] }]
 
   return <div className="legal-copy">
 
-    {sections.map(([heading, text]) => <section key={heading}>
+    {groups.map(group => <div className="legal-document-group" key={group.title || id}>
+      {group.title && <h2>{group.title}</h2>}
+      {group.sections.map(([heading, text]) => <section key={heading}>
 
-      <h3>{heading}</h3>
+        <h3>{heading}</h3>
 
-      {Array.isArray(text)
+        {Array.isArray(text)
 
-        ? <ul className="legal-list" style={{ paddingLeft: 20, margin: '6px 0' }}>{text.map(item => <li key={item}>{item}</li>)}</ul>
+          ? <ul className="legal-list" style={{ paddingLeft: 20, margin: '6px 0' }}>{text.map(item => <li key={item}>{item}</li>)}</ul>
 
-        : <p>{text}</p>}
+          : <p>{text}</p>}
 
-    </section>)}
+      </section>)}
+    </div>)}
 
     {(id === 'third-parties' || id === 'terms') && <p className="small dim">{lang === 'es' ? 'Avisos de privacidad (consulta solo los servicios que estén habilitados): ' : 'Privacy notices (consult only services that are enabled): '}<a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google</a> · <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noreferrer">Apple</a> · <a href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noreferrer">jsDelivr</a></p>}
 
@@ -578,7 +581,7 @@ export default function Legal() {
 
   const from = location.state?.from || '/home'
 
-  const title = selected ? (lang === 'es' ? selected.es : selected.title) : (lang === 'es' ? 'Legal y privacidad' : 'Legal & privacy')
+  const title = selected ? (lang === 'es' ? selected.es : t(selected.title)) : (lang === 'es' ? 'Legal y privacidad' : t('Legal & privacy'))
 
   const goBack = () => navigate(selected ? '/legal' : from, { replace: true, state: selected ? { from } : undefined })
 
@@ -606,7 +609,7 @@ export default function Legal() {
 
       <div className="sect-b">
 
-        {DOCS.map(item => <Row key={item.id} icon={item.icon} title={lang === 'es' ? item.es : item.title} accessory="chevron" onClick={() => navigate(`/legal/${item.id}`, { state: { from } })} />)}
+        {DOCS.map(item => <Row key={item.id} icon={item.icon} title={lang === 'es' ? item.es : t(item.title)} accessory="chevron" onClick={() => navigate(`/legal/${item.id}`, { state: { from } })} />)}
 
       </div>
 

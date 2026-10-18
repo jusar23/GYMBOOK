@@ -55,13 +55,15 @@ function authErrorText(error) {
 }
 
 function RegisterSheet({ close }) {
-  const { setUser, pushState, pullState } = useStore()
+  const setUser = useStore(s => s.setUser)
+  const pushState = useStore(s => s.pushState)
+  const pullState = useStore(s => s.pullState)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [inviteOnly, setInviteOnly] = useState(false)
   const ref = useRef(null)
   useEffect(() => { setTimeout(() => ref.current?.focus(), 250) }, [])
-  useEffect(() => { api('/api/config').then(c => setInviteOnly(!!c.invite_only)).catch(() => {}) }, [])
+  useEffect(() => { if (!MOBILE) api('/api/config').then(c => setInviteOnly(!!c.invite_only)).catch(() => {}) }, [])
   const go = async () => {
     const n = name.trim()
     if (!n) { useUI.getState().toast(t('Enter a name')); return }
@@ -90,7 +92,9 @@ function RegisterSheet({ close }) {
 
 export default function Login({ legalSetup = false }) {
   const navigate = useNavigate()
-  const { setUser, pullState, setSigningIn } = useStore()
+  const setUser = useStore(s => s.setUser)
+  const pullState = useStore(s => s.pullState)
+  const setSigningIn = useStore(s => s.setSigningIn)
   const [mode, setMode] = useState('signin')
   const [recoveryMode, setRecoveryMode] = useState(isPasswordRecovery)
   const [name, setName] = useState('')

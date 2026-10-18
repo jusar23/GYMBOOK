@@ -5,7 +5,7 @@ export const TRAINING_FILE_VERSION = 1
 export const TRAINING_FILE_MAX_BYTES = 10 * 1024 * 1024
 
 const STATE_KEYS = new Set([
-  'unit', 'restSec', 'sound', 'keepAwake', 'lang', 'theme', 'accent', 'body', 'targetW',
+  'unit', 'restSec', 'sound', 'keepAwake', 'lockOrientation', 'lang', 'theme', 'accent', 'body', 'targetW',
   'bodyweight', 'routines', 'week', 'dayPlan', 'exWeights', 'workouts', 'customEx',
   'favoriteEx', 'favoritesMigrated', 'gifSize', 'reminder', 'effort', 'showRir', 'active', '_ts',
 ])
@@ -28,7 +28,7 @@ function validateState(state) {
   for (const key of ['unit', 'lang', 'theme', 'accent', 'body', 'gifSize']) {
     if (state[key] != null) assert(isText(state[key], 32), `The setting (${key}) is invalid.`)
   }
-  for (const key of ['sound', 'keepAwake', 'favoritesMigrated', 'showRir']) {
+  for (const key of ['sound', 'keepAwake', 'lockOrientation', 'favoritesMigrated', 'showRir']) {
     if (state[key] != null) assert(typeof state[key] === 'boolean', `The setting (${key}) is invalid.`)
   }
   for (const key of ['restSec', 'targetW']) {

@@ -5,9 +5,9 @@ const URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '').replac
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 const TABLE = 'gymbook_backups'
 
-async function request(path, options = {}) {
+async function request(path, options = {}, activeSession = null) {
   if (!URL || !KEY) throw new Error('Supabase is not configured in this mobile build.')
-  const session = await getAuthSession()
+  const session = activeSession || await getAuthSession()
   if (!session?.access_token || !session.user?.id) throw new Error('Sign in to use cloud backup.')
   const metadata = session.user.user_metadata || {}
   if (metadata.gymbook_sensitive_training_consent !== true
@@ -30,21 +30,26 @@ async function request(path, options = {}) {
   return { session, response }
 }
 
-export async function saveCloudBackup(state) {
+export async function saveCloudBackup(state, { skipWithoutConsent = false } = {}) {
   const session = await getAuthSession()
   const row = { user_id: session?.user?.id, state, updated_at: new Date().toISOString() }
   if (!row.user_id) throw new Error('Sign in to use cloud backup.')
+  const metadata = session.user.user_metadata || {}
+  const consentGiven = metadata.gymbook_sensitive_training_consent === true
+    && metadata.gymbook_sensitive_training_consent_version === LEGAL_VERSION
+  if (!consentGiven && skipWithoutConsent) return { skipped: true }
   await request(`${TABLE}?on_conflict=user_id`, {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(row),
-  })
+  }, session)
+  return { saved: true }
 }
 
 export async function loadCloudBackup() {
   const session = await getAuthSession()
   if (!session?.user?.id) throw new Error('Sign in to use cloud backup.')
-  const { response } = await request(`${TABLE}?select=state,updated_at&user_id=eq.${encodeURIComponent(session.user.id)}&limit=1`)
+  const { response } = await request(`${TABLE}?select=state,updated_at&user_id=eq.${encodeURIComponent(session.user.id)}&limit=1`, {}, session)
   const rows = await response.json()
   if (!rows.length) return null
   return { state: rows[0].state, updatedAt: rows[0].updated_at, userId: session.user.id }

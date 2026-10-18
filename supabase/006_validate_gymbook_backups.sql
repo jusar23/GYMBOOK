@@ -37,7 +37,7 @@ declare
   custom_exercise_item jsonb;
   numeric_key text;
   allowed_keys text[] := array[
-    'unit', 'restSec', 'sound', 'keepAwake', 'lang', 'theme', 'accent', 'body',
+    'unit', 'restSec', 'sound', 'keepAwake', 'lockOrientation', 'lang', 'theme', 'accent', 'body',
     'targetW', 'bodyweight', 'routines', 'week', 'dayPlan', 'exWeights',
     'workouts', 'active', 'customEx', 'favoriteEx', 'favoritesMigrated',
     'gifSize', 'reminder', 'effort', 'showRir', '_ts'
@@ -170,6 +170,9 @@ begin
   end if;
   if new.state ? 'active' and jsonb_typeof(new.state -> 'active') not in ('object', 'null') then
     raise exception 'Gym Book Training active workout is invalid.' using errcode = '22023';
+  end if;
+  if new.state ? 'lockOrientation' and jsonb_typeof(new.state -> 'lockOrientation') not in ('boolean', 'null') then
+    raise exception 'Gym Book Training orientation setting is invalid.' using errcode = '22023';
   end if;
 
   if octet_length(convert_to(new.state::text, 'UTF8')) > 10485760 then

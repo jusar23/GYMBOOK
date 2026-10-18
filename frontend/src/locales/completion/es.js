@@ -1,0 +1,23 @@
+// Translation coverage for interface strings added after the main Spanish locale pack.
+export default {
+'Review the usage guide for Gym Book Training.': 'Consulta la guía de uso de Gym Book Training.',
+  'The usage guide will open so you can review the main parts of Gym Book Training.': 'Se abrirá la guía para presentarte las funciones principales de Gym Book Training.',
+  'Back to sign in': 'Volver al inicio de sesión',
+  'Choose a new password for your Gym Book Training account.': 'Elige una contraseña nueva para tu cuenta de Gym Book Training.',
+  'Confirm new password': 'Confirmar contraseña nueva',
+  'Could not load your profile data.': 'No se pudieron cargar los datos de tu perfil.',
+  'Forgot password?': '¿Olvidaste tu contraseña?',
+  'Hide password': 'Ocultar contraseña',
+  'If an account exists for that email, we sent a password reset link. Check your inbox.': 'Si existe una cuenta con ese correo, enviamos un enlace para restablecer la contraseña. Revisa tu bandeja de entrada.',
+  'Live demo — everything stays in this browser.': 'Demostración en vivo: todo permanece en este navegador.',
+  'New password': 'Contraseña nueva',
+  'No exercises yet.': 'Todavía no hay ejercicios.',
+  'Passwords do not match.': 'Las contraseñas no coinciden.',
+  'Previous': 'Anterior',
+  'Save new password': 'Guardar contraseña nueva',
+  'Send reset link': 'Enviar enlace para restablecerla',
+  'Show password': 'Mostrar contraseña',
+  'Start the demo': 'Iniciar la demostración',
+  'This demo runs entirely in your browser on example data — nothing is sent anywhere. Your own profile and workout data are available after you create an account or sign in.': 'Esta demostración funciona por completo en tu navegador con datos de ejemplo; no se envía nada. Podrás usar tu perfil y tus entrenamientos al crear una cuenta o iniciar sesión.',
+  'Your password has been changed. Sign in with your new password.': 'Tu contraseña cambió. Inicia sesión con la nueva contraseña.',
+}

@@ -21,6 +21,7 @@ import { needsLegalSetup } from './lib/legalConsent.js'
 import { openTutorial, tutorialSeenKey } from './components/Tutorial.jsx'
 import SubscriptionGate from './views/SubscriptionGate.jsx'
 import { refreshNativeSubscription } from './lib/subscription.js'
+import { setWorkoutOrientationLocked } from './lib/workout-orientation.js'
 
 const Home = lazy(() => import('./views/Home.jsx'))
 const Plan = lazy(() => import('./views/Plan.jsx'))
@@ -52,7 +53,17 @@ function applyPrefs(theme, accent) {
 function Shell() {
   const navigate = useNavigate()
   const loc = useLocation()
-  const { S, user, ready, signingOut, signingIn } = useStore()
+  const user = useStore(s => s.user)
+  const ready = useStore(s => s.ready)
+  const signingOut = useStore(s => s.signingOut)
+  const signingIn = useStore(s => s.signingIn)
+  const theme = useStore(s => s.S.theme)
+  const accent = useStore(s => s.S.accent)
+  const lang = useStore(s => s.S.lang)
+  const workoutActive = useStore(s => !!s.S.active)
+  const keepAwake = useStore(s => s.S.keepAwake)
+  const lockOrientation = useStore(s => s.S.lockOrientation)
+  const hasTrainingHistory = useStore(s => !!(s.S.workouts?.length || s.S.routines?.length || s.S.active))
   const [subscription, setSubscription] = useState(() => MOBILE && useStore.getState().user?.id
     ? { configured: true, status: 'loading', granted: false, packages: [] }
     : { configured: false, status: 'unconfigured', granted: true, packages: [] })
@@ -78,7 +89,12 @@ function Shell() {
   }, [ready, checkSubscription])
   useEffect(() => {
     if (!MOBILE || !ready || !user?.id || user.needsLegalSetup) return
-    const recheck = () => { if (document.visibilityState === 'visible') void checkSubscription() }
+    let resumeTimer
+    const recheck = () => {
+      if (document.visibilityState !== 'visible') return
+      clearTimeout(resumeTimer)
+      resumeTimer = setTimeout(() => void checkSubscription(), 250)
+    }
     window.addEventListener('focus', recheck)
     document.addEventListener('visibilitychange', recheck)
     let expiryTimer
@@ -90,25 +106,30 @@ function Shell() {
     return () => {
       window.removeEventListener('focus', recheck)
       document.removeEventListener('visibilitychange', recheck)
+      clearTimeout(resumeTimer)
       clearTimeout(expiryTimer)
     }
   }, [ready, user?.id, user?.needsLegalSetup, subscription.granted, subscription.expiresAt, checkSubscription])
-  useEffect(() => { applyPrefs(S.theme, S.accent) }, [S.theme, S.accent])
-  useEffect(() => { setLang(S.lang || 'en') }, [S.lang])
-  useEffect(() => { document.documentElement.lang = S.lang || 'en' }, [langV, S.lang])
+  useEffect(() => { applyPrefs(theme, accent) }, [theme, accent])
+  useEffect(() => { setLang(lang || 'en') }, [lang])
+  useEffect(() => { document.documentElement.lang = lang || 'en' }, [langV, lang])
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
-  useWakeLock(!!S.active && S.keepAwake !== false)
+  useWakeLock(workoutActive && keepAwake !== false)
+  useEffect(() => {
+    const locked = workoutActive && lockOrientation === true
+    void setWorkoutOrientationLocked(locked)
+    return () => { void setWorkoutOrientationLocked(false) }
+  }, [workoutActive, lockOrientation])
 
   useEffect(() => {
     if (!MOBILE || !ready || !user?.id || user.needsLegalSetup) return
-    const hasTrainingHistory = !!(S.workouts?.length || S.routines?.length || S.active)
     if (hasTrainingHistory) return
     const key = tutorialSeenKey(user.id)
     if (tutorialOpenedFor.current === user.id || localStorage.getItem(key) === '1') return
     tutorialOpenedFor.current = user.id
     localStorage.setItem(key, '1')
     openTutorial()
-  }, [ready, user?.id, user?.needsLegalSetup, S.workouts?.length, S.routines?.length, !!S.active])
+  }, [ready, user?.id, user?.needsLegalSetup, hasTrainingHistory])
 
   if (signingOut) return (
     <div id="app">

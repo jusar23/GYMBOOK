@@ -42,9 +42,9 @@ export async function nativeClear() {
 }
 
 // (Re)schedule the workout-day reminder: one repeating notification per weekday that has a
-// routine in the weekly plan. Cheap enough to run after any state change — the plan or the
-// reminder time may just have been edited. `interactive` gates the OS permission prompt to
-// the Settings toggle; a background resync never pops a dialog.
+// routine in the weekly plan. The store calls this only when its schedule inputs change.
+// `interactive` gates the OS permission prompt to the Settings toggle; a background resync
+// never pops a dialog.
 export async function syncReminder(S, interactive = false) {
   try {
     const { LocalNotifications } = await import('@capacitor/local-notifications')
