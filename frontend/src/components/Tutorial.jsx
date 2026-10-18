@@ -29,7 +29,7 @@ export default function Tutorial({ close }) {
     <div className="sheet-full-head tutorial-header">
       <div className="tutorial-title-wrap">
         <div className="tutorial-kicker">{t('USAGE GUIDE')}</div>
-        <h3 className="tutorial-heading">{t('Get to know gymbook')}</h3>
+        <h3 className="tutorial-heading">{t('Get to know Gym Book Training')}</h3>
       </div>
       <button type="button" className="iconbtn tutorial-close" onClick={close} aria-label={t('Close tutorial')}><Icon name="xmark" /></button>
     </div>

@@ -20,11 +20,11 @@ const ADDRESS = 'El Carmen de Viboral, Antioquia, Colombia'
 // Teléfono de contacto (recomendado por la normativa colombiana). Si lo dejas vacío no se muestra.
 const PHONE = '' // Completa este dato antes de publicar si corresponde a tu canal de contacto
 
-const VERSION = '1.4'
+const VERSION = '1.6'
 
-const UPDATED_EN = '16 October 2026'
+const UPDATED_EN = '18 October 2026'
 
-const UPDATED_ES = '16 de octubre de 2026'
+const UPDATED_ES = '18 de octubre de 2026'
 
 // Pon en true SOLO cuando exista el botón "Eliminar cuenta" dentro de la app (exigido por Google Play y Apple).
 const ACCOUNT_DELETION_IN_APP = true
@@ -58,7 +58,7 @@ const COPY = {
 
     en: [
 
-      ['Who is responsible', `${OWNER}, a natural person operating the gymbook brand, is responsible for the processing of your personal data (Law 1581 of 2012, Colombia). Address: ${ADDRESS}. Email: ${CONTACT}.${phoneEn} This email is also the contact point for queries, complaints and data-protection requests.`],
+      ['Who is responsible', `${OWNER}, a natural person operating the Gym Book Training brand, is responsible for the processing of your personal data (Law 1581 of 2012, Colombia). Address: ${ADDRESS}. Email: ${CONTACT}.${phoneEn} This email is also the contact point for queries, complaints and data-protection requests.`],
 
       ['Information we process', [
 
@@ -110,9 +110,13 @@ const COPY = {
 
         'Supabase Auth stores account identifiers and the registration details and consent versions you submit. Supabase Postgres stores a server backup of workout data after each completed workout when you have separately authorized it. Supabase processes these data under its applicable service terms; the project region is the one configured by the operator.',
 
-        'The web/server hosting provider actually used for the published instance. If gymbook is self-hosted, this is the person or organization operating the server and its infrastructure provider, if any.',
+        'The web/server hosting provider actually used for the published instance. If Gym Book Training is self-hosted, this is the person or organization operating the server and its infrastructure provider, if any.',
 
-        'Google: Google sign-in, and Google Play for purchases if billing is enabled.',
+        'Google: Google sign-in and, when subscriptions are enabled, Google Play for Android purchases. Google Play processes the payment and shares subscription status.',
+
+        'RevenueCat: if subscription billing is enabled, purchase verification and cross-platform subscription status. It receives an account identifier and purchase/entitlement information, not card details.',
+
+        'Paddle: if website billing is enabled, subscription checkout, billing, taxes, receipts and customer-portal cancellation. Paddle acts as merchant of record and handles payment credentials.',
 
         'Apple: App Store distribution and purchases if billing is enabled.',
 
@@ -128,7 +132,7 @@ const COPY = {
 
       ['Local storage and server backups', 'Workout history and settings are stored on your device. If you separately authorize processing of workout data, the app sends one updated backup to Supabase after each completed workout; restoration is started manually. Without that optional authorization, workout data stays on this device and server backup and restoration are unavailable. Clearing app data or uninstalling may erase the local copy.'],
 
-      ['Minors', 'gymbook is intended for people over 18 and is not directed at children or teenagers. We do not knowingly collect data from minors. If we learn that a minor has created an account, we will delete the account and its data. If you believe a minor is using the app, write to us at the email above.'],
+      ['Minors', 'Gym Book Training is intended for people over 18 and is not directed at children or teenagers. We do not knowingly collect data from minors. If we learn that a minor has created an account, we will delete the account and its data. If you believe a minor is using the app, write to us at the email above.'],
 
       ['Retention and account deletion', [
 
@@ -182,7 +186,7 @@ const COPY = {
 
     es: [
 
-      ['Responsable', `${OWNER}, persona natural que opera la marca gymbook, es responsable del tratamiento de tus datos personales (Ley 1581 de 2012, Colombia). Domicilio: ${ADDRESS}. Correo: ${CONTACT}.${phoneEs} Este correo también es el canal para consultas, reclamos y solicitudes sobre protección de datos.`],
+      ['Responsable', `${OWNER}, persona natural que opera la marca Gym Book Training, es responsable del tratamiento de tus datos personales (Ley 1581 de 2012, Colombia). Domicilio: ${ADDRESS}. Correo: ${CONTACT}.${phoneEs} Este correo también es el canal para consultas, reclamos y solicitudes sobre protección de datos.`],
 
       ['Información que tratamos', [
 
@@ -236,7 +240,11 @@ const COPY = {
 
         'Proveedor de infraestructura: el proveedor real del servidor o alojamiento puede procesar registros técnicos. Debe identificarse según el despliegue publicado.',
 
-        'Google: inicio de sesión con Google y, si se habilita la facturación, Google Play para compras.',
+        'Google: inicio de sesión con Google y Google Play para compras Android. Google Play procesa el pago y comparte el estado de la suscripción.',
+
+        'RevenueCat: si se habilitan las suscripciones, verifica compras y el estado entre plataformas. Recibe un identificador de cuenta e información de compra/derechos, no datos de tarjeta.',
+
+        'Paddle: si se habilitan pagos web, procesa suscripciones, facturación, impuestos, recibos y cancelación desde su portal. Paddle actúa como comerciante registrado y gestiona los datos de pago.',
 
         'Apple: distribución en App Store y, si se habilita la facturación, compras.',
 
@@ -252,7 +260,7 @@ const COPY = {
 
       ['Almacenamiento local y copias en el servidor', 'El historial de entrenamiento y la configuración se guardan en tu dispositivo. Si autorizas por separado el tratamiento de datos de entrenamiento, la app envía una copia actualizada a Supabase al terminar cada entrenamiento; la restauración se inicia manualmente. Sin esa autorización, los entrenamientos permanecen en este dispositivo y no se habilitan las copias ni la restauración desde el servidor. Borrar los datos de la app o desinstalarla puede eliminar la copia local.'],
 
-      ['Menores de edad', 'gymbook está dirigida a personas mayores de 18 años y no a niños, niñas o adolescentes. No recopilamos a sabiendas datos de menores. Si detectamos que un menor creó una cuenta, la eliminaremos junto con sus datos. Si crees que un menor usa la app, escríbenos al correo indicado.'],
+      ['Menores de edad', 'Gym Book Training está dirigida a personas mayores de 18 años y no a niños, niñas o adolescentes. No recopilamos a sabiendas datos de menores. Si detectamos que un menor creó una cuenta, la eliminaremos junto con sus datos. Si crees que un menor usa la app, escríbenos al correo indicado.'],
 
       ['Conservación y eliminación de cuenta', [
 
@@ -312,7 +320,7 @@ const COPY = {
 
       ['Collected when you register', 'Email, name, date of birth, country and account identifiers. The app records the versions and time of your acceptance of the Terms and Conditions, Privacy policy and separate workout-data authorization. Sign-in credentials are handled by Supabase Auth.'],
 
-      ['Created by your use of gymbook', 'Training routines and logs, exercise selections, dates, sets, repetitions, weights, body-weight entries, effort ratings, custom exercises, preferences and the name attached to your profile. This information may reveal aspects of your physical condition and may constitute sensitive data depending on its content and context. Signed-in server backups are enabled only after separate authorization.'],
+      ['Created by your use of Gym Book Training', 'Training routines and logs, exercise selections, dates, sets, repetitions, weights, body-weight entries, effort ratings, custom exercises, preferences and the name attached to your profile. This information may reveal aspects of your physical condition and may constitute sensitive data depending on its content and context. Signed-in server backups are enabled only after separate authorization.'],
 
       ['Collected by the device or service', 'Session and storage data on your device. IP address, browser/device details, request times and diagnostic or security logs may be processed by our hosting, authentication, database, CDN and push providers. If you enable web push, a push endpoint and notification settings are stored to deliver alerts; you can turn them off at any time from your browser or device settings.'],
 
@@ -326,7 +334,7 @@ const COPY = {
 
       ['Al registrarte', 'Correo, nombre, fecha de nacimiento, país e identificadores de cuenta. La app registra las versiones y la fecha de aceptación de los Términos y condiciones, la Política de privacidad y la autorización separada para datos de entrenamiento. Supabase Auth gestiona las credenciales de inicio de sesión.'],
 
-      ['Generados por el uso de gymbook', 'Rutinas y entrenamientos, ejercicios elegidos, fechas, series, repeticiones, pesos, registros de peso corporal, esfuerzo percibido, ejercicios personalizados, preferencias y el nombre asociado al perfil. Esta información puede revelar aspectos de tu condición física y constituir datos sensibles según su contenido y contexto. Las copias en el servidor solo se habilitan después de una autorización separada.'],
+      ['Generados por el uso de Gym Book Training', 'Rutinas y entrenamientos, ejercicios elegidos, fechas, series, repeticiones, pesos, registros de peso corporal, esfuerzo percibido, ejercicios personalizados, preferencias y el nombre asociado al perfil. Esta información puede revelar aspectos de tu condición física y constituir datos sensibles según su contenido y contexto. Las copias en el servidor solo se habilitan después de una autorización separada.'],
 
       ['Procesados por el dispositivo o los servicios', 'Datos de sesión y almacenamiento en tu dispositivo. Dirección IP, detalles del navegador o dispositivo, horas de solicitud y registros de diagnóstico o seguridad pueden ser tratados por nuestros proveedores de alojamiento, autenticación, base de datos, CDN y notificaciones. Si activas notificaciones web, se almacena un endpoint de notificación y sus preferencias para entregar alertas; puedes desactivarlas en cualquier momento desde los ajustes de tu navegador o dispositivo.'],
 
@@ -348,7 +356,7 @@ const COPY = {
 
       ['Google', 'Google OAuth sign-in receives your authorization request and returns basic identity details such as name and email, subject to the permissions shown on Google’s consent screen. Android purchases, if enabled in the future, are processed by Google Play.'],
 
-      ['Apple', 'iOS distribution and, if enabled in the future, purchases are handled by Apple and the App Store. Apple may share transaction identifiers and subscription status with gymbook; payment credentials are handled by Apple.'],
+      ['Apple', 'iOS distribution and, if enabled in the future, purchases are handled by Apple and the App Store. Apple may share transaction identifiers and subscription status with Gym Book Training; payment credentials are handled by Apple.'],
 
       ['jsDelivr and exercise media', 'Exercise images and GIFs are requested from jsDelivr’s CDN. A CDN request can reveal network and device metadata such as IP address, browser, referrer domain, requested asset and time.'],
 
@@ -356,7 +364,7 @@ const COPY = {
 
       ['Browser/device push service', 'If you enable web push, your browser/device’s push provider routes notifications using the subscription endpoint. This varies by browser and device. Native workout reminders are scheduled locally on your device.'],
 
-      ['Payments', 'This version does not process payments and gymbook does not receive card numbers through the app. If paid plans are offered in the future, purchases will be handled by Google Play and the App Store, and these documents will be updated before they are offered.'],
+      ['Payments', 'When subscription billing is enabled, Android purchases are handled by Google Play and website purchases by Paddle. RevenueCat checks subscription status across platforms. Payment credentials are handled by Google Play or Paddle and are not received by Gym Book Training. No payment is due unless an offer is displayed and you confirm a purchase.'],
 
       ['International processing', 'These providers may process data in countries outside Colombia, including the United States. See “International transfers and transmissions” in the Privacy policy.'],
 
@@ -372,7 +380,7 @@ const COPY = {
 
       ['Google', 'Google OAuth procesa tu solicitud de acceso y entrega datos básicos de identidad, como nombre y correo, de acuerdo con los permisos que muestra la pantalla de autorización de Google. Las compras Android, si se habilitan en el futuro, las procesará Google Play.'],
 
-      ['Apple', 'La distribución iOS y, si se habilitan en el futuro, las compras las gestionan Apple y App Store. Apple puede compartir identificadores de transacción y estado de suscripción con gymbook; Apple gestiona los datos de pago.'],
+      ['Apple', 'La distribución iOS y, si se habilitan en el futuro, las compras las gestionan Apple y App Store. Apple puede compartir identificadores de transacción y estado de suscripción con Gym Book Training; Apple gestiona los datos de pago.'],
 
       ['jsDelivr y contenido de ejercicios', 'Las imágenes y GIF de ejercicios se solicitan al CDN de jsDelivr. Una solicitud al CDN puede revelar metadatos de red y dispositivo como IP, navegador, dominio de referencia, archivo solicitado y hora.'],
 
@@ -380,7 +388,7 @@ const COPY = {
 
       ['Servicio de notificaciones del navegador/dispositivo', 'Si activas notificaciones web, el proveedor de notificaciones de tu navegador o dispositivo las entrega usando el endpoint de suscripción. Varía según el navegador y dispositivo. Los recordatorios nativos de entrenamiento se programan localmente en tu dispositivo.'],
 
-      ['Pagos', 'Esta versión no procesa pagos y gymbook no recibe números de tarjeta desde la app. Si en el futuro se ofrecen planes de pago, las compras las gestionarán Google Play y App Store, y estos documentos se actualizarán antes de ofrecerlos.'],
+      ['Pagos', 'Cuando se habiliten suscripciones, Google Play gestionará las compras Android y Paddle las compras desde la web. RevenueCat comprobará el estado de la suscripción entre plataformas. Google Play o Paddle gestionan los datos de pago; Gym Book Training no recibe los datos de tu tarjeta. No hay cobro salvo que se muestre una oferta y confirmes una compra.'],
 
       ['Tratamiento internacional', 'Estos proveedores pueden tratar datos en países fuera de Colombia, incluido Estados Unidos. Consulta “Transferencias y transmisiones internacionales” en la Política de privacidad.'],
 
@@ -394,19 +402,19 @@ const COPY = {
 
     en: [
 
-      ['Who may use gymbook', 'You must be over 18 and able to enter into a binding agreement. gymbook requires a registered account. Account creation asks for your date of birth and country; you confirm these details are accurate and must accept the current Terms and Conditions and Privacy policy. Authorization to process workout and body-weight data for server backups is separate and optional; without it, workouts stay on this device and server backup and restoration are unavailable. If we learn that a minor created an account, we may suspend and delete it.'],
+      ['Who may use Gym Book Training', 'You must be over 18 and able to enter into a binding agreement. Gym Book Training requires a registered account. Account creation asks for your date of birth and country; you confirm these details are accurate and must accept the current Terms and Conditions and Privacy policy. Authorization to process workout and body-weight data for server backups is separate and optional; without it, workouts stay on this device and server backup and restoration are unavailable. If we learn that a minor created an account, we may suspend and delete it.'],
 
       ['Accounts and user content', 'Keep your sign-in credentials secure and provide accurate information. You are responsible for the routines, logs, notes, imports and other content you enter, and for keeping your own export/backup. Do not upload another person’s personal or medical information without permission. You keep ownership of your content and grant us only the permission needed to store and sync it to provide the service.'],
 
-      ['Fitness use only; no medical advice', 'gymbook is a workout logging and planning tool, not a medical service. Estimates and progress summaries are informational and may be inaccurate. You choose your exercises and loads. Stop if you feel pain or unwell and consult a qualified health professional before exercising if you have a condition or concern. The complete Fitness and health notice is included below.'],
+      ['Fitness use only; no medical advice', 'Gym Book Training is a workout logging and planning tool, not a medical service. Estimates and progress summaries are informational and may be inaccurate. You choose your exercises and loads. Stop if you feel pain or unwell and consult a qualified health professional before exercising if you have a condition or concern. The complete Fitness and health notice is included below.'],
 
-      ['Paid plans', 'This version does not currently offer paid plans or subscriptions and no charge applies. If they are offered in the future, the store purchase screen will clearly show the total price and currency, taxes, trial terms, renewal date and frequency, cancellation method and refund conditions before you confirm. The complete Subscription terms are included below.'],
+      ['Paid plans', 'Planned subscriptions are USD 1 per month or USD 9 for the first year with annual renewal at USD 12. They are purchasable only when a plan is displayed at checkout. Before confirming, Google Play or Paddle shows the applicable localized price and currency, taxes, renewal amount and frequency, cancellation method and refund terms. See the Subscription terms below.'],
 
       ['Availability and changes', 'We may maintain, update, suspend or discontinue features for operational, security or legal reasons. We will make reasonable efforts to notify users of material changes to these terms. If we discontinue the service, we will give reasonable notice and a reasonable opportunity to export or retrieve your data where feasible.'],
 
       ['Liability', 'We provide the service with reasonable care but do not guarantee that it will be uninterrupted or error-free. To the extent permitted by law, we are not liable for indirect damages or for injuries resulting from how you use workout information. This does not exclude or limit liability that cannot be excluded by law (such as intent or gross negligence), nor your mandatory rights as a consumer under Law 1480 of 2011, including legal warranty and, where applicable, the right of withdrawal for distance purchases.'],
 
-      ['Software and third-party content', 'gymbook’s source code and exercise media may be subject to different licenses. These terms do not revoke rights granted under the AGPL-3.0-or-later license or the dataset’s separate terms. See the LICENSE and NOTICE files distributed with the source.'],
+      ['Software and third-party content', 'Gym Book Training’s source code and exercise media may be subject to different licenses. These terms do not revoke rights granted under the AGPL-3.0-or-later license or the dataset’s separate terms. See the LICENSE and NOTICE files distributed with the source.'],
 
       ['Governing law, language and contact', `These terms are governed by Colombian law, subject to mandatory consumer protections that apply where you live. If the English and Spanish versions differ, the Spanish version prevails. Contact ${CONTACT} with questions or complaints. Version ${VERSION}, effective ${UPDATED_EN}.`],
 
@@ -414,19 +422,19 @@ const COPY = {
 
     es: [
 
-      ['Quién puede usar gymbook', 'Debes ser mayor de 18 años y tener capacidad para celebrar un acuerdo vinculante. gymbook requiere una cuenta registrada. Al crearla pedimos tu fecha de nacimiento y país; confirmas que son correctos y debes aceptar los Términos y condiciones y la Política de privacidad vigentes. La autorización para tratar datos de entrenamiento y peso para copias en el servidor es independiente y opcional; si no la otorgas, los entrenamientos permanecen en este dispositivo y no estarán disponibles las copias ni la restauración desde el servidor. Si sabemos que un menor creó una cuenta, podremos suspenderla y eliminarla.'],
+      ['Quién puede usar Gym Book Training', 'Debes ser mayor de 18 años y tener capacidad para celebrar un acuerdo vinculante. Gym Book Training requiere una cuenta registrada. Al crearla pedimos tu fecha de nacimiento y país; confirmas que son correctos y debes aceptar los Términos y condiciones y la Política de privacidad vigentes. La autorización para tratar datos de entrenamiento y peso para copias en el servidor es independiente y opcional; si no la otorgas, los entrenamientos permanecen en este dispositivo y no estarán disponibles las copias ni la restauración desde el servidor. Si sabemos que un menor creó una cuenta, podremos suspenderla y eliminarla.'],
 
       ['Cuentas y contenido', 'Protege tus credenciales y entrega información correcta. Eres responsable de las rutinas, registros, notas, importaciones y contenido que agregues, así como de conservar tus propias copias. No cargues información personal o médica de otra persona sin autorización. Conservas la titularidad de tu contenido y nos otorgas solo el permiso necesario para almacenarlo y sincronizarlo para prestar el servicio.'],
 
-      ['Solo para ejercicio; no es asesoría médica', 'gymbook sirve para planificar y registrar entrenamientos, no es un servicio médico. Las estimaciones y resúmenes de progreso son informativos y pueden ser inexactos. Tú eliges ejercicios y cargas. Detente si sientes dolor o malestar y consulta a un profesional de salud antes de entrenar si tienes una condición o inquietud. El Aviso de ejercicio y salud completo está incluido más abajo.'],
+      ['Solo para ejercicio; no es asesoría médica', 'Gym Book Training sirve para planificar y registrar entrenamientos, no es un servicio médico. Las estimaciones y resúmenes de progreso son informativos y pueden ser inexactos. Tú eliges ejercicios y cargas. Detente si sientes dolor o malestar y consulta a un profesional de salud antes de entrenar si tienes una condición o inquietud. El Aviso de ejercicio y salud completo está incluido más abajo.'],
 
-      ['Planes de pago', 'Esta versión no ofrece planes de pago ni suscripciones y no se realiza ningún cobro. Si se ofrecen en el futuro, la pantalla de compra de la tienda mostrará claramente el precio total y moneda, impuestos, condiciones de la prueba, fecha y frecuencia de renovación, método de cancelación y condiciones de reembolso antes de que confirmes. Las Condiciones de suscripción completas están incluidas más abajo.'],
+      ['Planes de pago', 'Los planes previstos cuestan USD 1 al mes o USD 9 el primer año, con renovación anual por USD 12. Solo se pueden comprar cuando aparezcan en la pantalla de pago. Antes de confirmar, Google Play o Paddle muestra el precio y la moneda local, impuestos, valor y frecuencia de renovación, método de cancelación y condiciones de reembolso. Consulta las Condiciones de suscripción completas más abajo.'],
 
       ['Disponibilidad y cambios', 'Podemos mantener, actualizar, suspender o retirar funciones por motivos operativos, de seguridad o legales. Haremos esfuerzos razonables para avisar cambios importantes de estos términos. Si cerramos el servicio, daremos un aviso razonable y, cuando sea viable, una oportunidad razonable para exportar o recuperar tus datos.'],
 
       ['Responsabilidad', 'Prestamos el servicio con diligencia razonable, pero no garantizamos que sea ininterrumpido o libre de errores. En la medida permitida por la ley, no respondemos por daños indirectos ni por lesiones derivadas del uso que hagas de la información de entrenamiento. Esto no excluye ni limita la responsabilidad que no pueda excluirse por ley (como el dolo o la culpa grave), ni tus derechos imperativos como consumidor bajo la Ley 1480 de 2011, incluida la garantía legal y, cuando aplique, el derecho de retracto en compras a distancia.'],
 
-      ['Software y contenido de terceros', 'El código fuente de gymbook y los medios de ejercicios pueden tener licencias diferentes. Estos términos no revocan derechos concedidos por la licencia AGPL-3.0-or-later ni las condiciones separadas del conjunto de datos. Consulta los archivos LICENSE y NOTICE distribuidos con el código.'],
+      ['Software y contenido de terceros', 'El código fuente de Gym Book Training y los medios de ejercicios pueden tener licencias diferentes. Estos términos no revocan derechos concedidos por la licencia AGPL-3.0-or-later ni las condiciones separadas del conjunto de datos. Consulta los archivos LICENSE y NOTICE distribuidos con el código.'],
 
       ['Ley aplicable, idioma y contacto', `Estos términos se rigen por la ley colombiana, sin perjuicio de las protecciones obligatorias para consumidores del lugar donde vivas. Si hay diferencias entre las versiones en español e inglés, prevalece la española. Escríbenos a ${CONTACT} para preguntas o reclamaciones. Versión ${VERSION}, vigente desde el ${UPDATED_ES}.`],
 
@@ -438,17 +446,17 @@ const COPY = {
 
     en: [
 
-      ['Current status', 'This version of gymbook does not offer paid plans or subscriptions. No price, charge or free trial is active, and the app does not integrate Google Play or Apple billing.'],
+      ['Plans and prices', 'The planned monthly subscription is USD 1 per month. Eligible new subscribers may receive the planned annual introductory offer of USD 9 for the first year, then USD 12 per year. If you are not eligible, checkout shows the price available to you. These plans are available only when displayed at checkout. Google Play and Paddle localize price and currency by country; the exact amount, taxes and renewal terms shown at checkout control your purchase. There is no free trial unless the checkout explicitly says otherwise.'],
 
-      ['If paid plans are offered in the future', [
+      ['Renewal, management and cancellation', [
 
-        'Before any plan is offered, these terms and the Privacy policy will be updated and you will be notified.',
+        'By confirming a plan, you authorize recurring charges at the price and frequency disclosed by the checkout. The annual introductory offer charges USD 9 for the first year and renews at USD 12 each following year, unless the localized checkout displays different converted amounts.',
 
-        'Purchases will be made through Google Play or the App Store, which will show the total price, currency, taxes, trial terms, renewal frequency, cancellation method and refund conditions before you confirm.',
+        'Android purchases are billed and managed through Google Play. Website purchases are billed and managed through the Paddle customer portal. Cancel before the next renewal to stop future charges. After cancellation, access continues until the end of the paid period. Uninstalling the app or deleting your Gym Book Training account does not cancel a subscription; cancel it with the provider separately.',
 
-        'Automatic renewal will only start with your explicit purchase and acceptance in the store. You can cancel in Google Play Subscriptions or Apple Account → Subscriptions; uninstalling the app does not cancel a subscription.',
+        'Google Play or Paddle handles payment credentials and applicable refund requests. Gym Book Training receives purchase and subscription status to provide or restrict access. Any mandatory consumer rights remain unaffected.',
 
-        'The store handles payment, refunds and billing disputes. gymbook only receives the purchase status needed to grant access, not your card number.',
+        'When a subscription expires, the app continues to let you sign in but limits app use to subscription renewal and account actions. Training data stored locally remains on the device. Complimentary access may be assigned to selected accounts by the service operator and is not transferable.',
 
         'Your mandatory consumer rights remain unaffected, including legal warranty and, where applicable, the right of withdrawal.',
 
@@ -458,19 +466,17 @@ const COPY = {
 
     es: [
 
-      ['Estado actual', 'Esta versión de gymbook no ofrece planes de pago ni suscripciones. No hay precio, cobro ni prueba gratuita activos, y la app no integra la facturación de Google Play ni de Apple.'],
+      ['Planes y precios', 'El plan mensual previsto cuesta USD 1 al mes. Los nuevos suscriptores que cumplan los requisitos pueden recibir la oferta anual introductoria prevista de USD 9 el primer año y luego USD 12 al año. Si no cumples los requisitos, el pago muestra el precio que te corresponde. Solo se pueden contratar cuando aparezcan en la pantalla de pago. Google Play y Paddle adaptan precio y moneda al país; el importe exacto, los impuestos y las condiciones de renovación que aparezcan en el pago rigen tu compra. No hay prueba gratuita salvo que el pago la indique expresamente.'],
 
-      ['Si se ofrecen planes de pago en el futuro', [
+      ['Renovación, gestión y cancelación', [
 
-        'Antes de ofrecer cualquier plan, se actualizarán estas condiciones y la Política de privacidad, y te lo notificaremos.',
+        'Al confirmar un plan, autorizas cobros recurrentes al precio y frecuencia informados por el pago. La oferta anual introductoria cobra USD 9 el primer año y se renueva a USD 12 cada año siguiente, salvo que el pago localizado muestre otros importes convertidos.',
 
-        'Las compras se harán mediante Google Play o App Store, que mostrarán el precio total, moneda, impuestos, condiciones de la prueba, frecuencia de renovación, método de cancelación y condiciones de reembolso antes de que confirmes.',
+        'Las compras Android se cobran y gestionan mediante Google Play. Las compras de la web se cobran y gestionan desde el portal de clientes de Paddle. Cancela antes de la siguiente renovación para detener cobros futuros. Tras cancelar, el acceso continúa hasta finalizar el periodo pagado. Desinstalar la app o eliminar tu cuenta de Gym Book Training no cancela la suscripción; debes cancelarla por separado con el proveedor.',
 
-        'La renovación automática solo se activará con tu compra y aceptación expresa en la tienda. Puedes cancelar en Suscripciones de Google Play o Cuenta de Apple → Suscripciones; desinstalar la app no cancela una suscripción.',
+        'Google Play o Paddle gestionan los datos de pago y las solicitudes de reembolso que correspondan. Gym Book Training recibe el estado de compra y suscripción para habilitar o limitar el acceso. Se respetan los derechos imperativos que te otorgue la ley de protección al consumidor.',
 
-        'La tienda gestiona el pago, los reembolsos y las disputas de cobro. gymbook solo recibe el estado de compra necesario para habilitar el acceso, no tu número de tarjeta.',
-
-        'Se respetarán tus derechos imperativos como consumidor, incluida la garantía legal y, cuando aplique, el derecho de retracto.',
+        'Al vencer una suscripción, la app permite iniciar sesión, pero limita el uso a renovar la suscripción y gestionar la cuenta. Los datos de entrenamiento guardados localmente permanecen en el dispositivo. El operador puede asignar acceso gratuito a cuentas seleccionadas; no es transferible.',
 
       ]],
 
@@ -482,21 +488,21 @@ const COPY = {
 
     en: [
 
-      ['Not medical advice', 'gymbook is not a healthcare provider and does not diagnose, treat, prevent or monitor illness or injury. Exercise logs, suggested routines, estimated one-rep max, trends and other calculations are general information only.'],
+      ['Not medical advice', 'Gym Book Training is not a healthcare provider and does not diagnose, treat, prevent or monitor illness or injury. Exercise logs, suggested routines, estimated one-rep max, trends and other calculations are general information only.'],
 
       ['Use your judgment', 'Exercise carries risk. Choose loads and movements appropriate to your ability and surroundings, use equipment safely, and stop if you experience pain, dizziness, shortness of breath or other concerning symptoms. Ask a qualified healthcare professional before beginning or changing exercise if you are pregnant, injured, have a health condition, or are unsure whether an activity is safe for you.'],
 
-      ['Personal data', 'Workout logs and body-weight entries may reveal aspects of your physical condition and may constitute sensitive data depending on their content and context. Enter only information you are comfortable storing in your account or on your device. Do not use gymbook for emergency care or clinical monitoring.'],
+      ['Personal data', 'Workout logs and body-weight entries may reveal aspects of your physical condition and may constitute sensitive data depending on their content and context. Enter only information you are comfortable storing in your account or on your device. Do not use Gym Book Training for emergency care or clinical monitoring.'],
 
     ],
 
     es: [
 
-      ['No es asesoría médica', 'gymbook no es un proveedor de salud y no diagnostica, trata, previene ni monitorea enfermedades o lesiones. Los registros, rutinas sugeridas, estimaciones de repetición máxima, tendencias y cálculos son información general.'],
+      ['No es asesoría médica', 'Gym Book Training no es un proveedor de salud y no diagnostica, trata, previene ni monitorea enfermedades o lesiones. Los registros, rutinas sugeridas, estimaciones de repetición máxima, tendencias y cálculos son información general.'],
 
       ['Usa tu criterio', 'El ejercicio implica riesgos. Elige cargas y movimientos acordes con tu capacidad y entorno, utiliza el equipo de forma segura y detente si sientes dolor, mareo, falta de aire u otro síntoma preocupante. Consulta a un profesional de salud antes de empezar o cambiar tu ejercicio si estás embarazada, lesionado, tienes una condición de salud o dudas sobre la seguridad de una actividad.'],
 
-      ['Datos personales', 'Los registros de entrenamiento y de peso corporal pueden revelar aspectos de tu condición física y constituir datos sensibles según su contenido y contexto. Ingresa únicamente información que estés dispuesto a guardar en tu cuenta o dispositivo. No uses gymbook para emergencias ni monitoreo clínico.'],
+      ['Datos personales', 'Los registros de entrenamiento y de peso corporal pueden revelar aspectos de tu condición física y constituir datos sensibles según su contenido y contexto. Ingresa únicamente información que estés dispuesto a guardar en tu cuenta o dispositivo. No uses Gym Book Training para emergencias ni monitoreo clínico.'],
 
     ],
 
@@ -596,7 +602,7 @@ export default function Legal() {
 
     </> : <>
 
-      <p className="muted small legal-intro">{lang === 'es' ? 'Información sobre privacidad, datos, proveedores externos y condiciones de uso de gymbook.' : 'Information about privacy, data, third-party providers and the terms for using gymbook.'}</p>
+      <p className="muted small legal-intro">{lang === 'es' ? 'Información sobre privacidad, datos, proveedores externos y condiciones de uso de Gym Book Training.' : 'Information about privacy, data, third-party providers and the terms for using Gym Book Training.'}</p>
 
       <div className="sect-b">
 

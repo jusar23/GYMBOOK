@@ -14,6 +14,9 @@ import { api, createAppSessionWithSupabase, webauthnOK, passkeyLogin, passkeyReg
 
 import { deleteSupabaseAccount, getAuthSession } from '../lib/supabaseAuth.js'
 import { loadCloudBackup, saveCloudBackup } from '../lib/supabaseBackup.js'
+import { mergePlan } from '../lib/plan-share.js'
+import { parseTrainingFile, trainingFileText } from '../lib/training-file.js'
+import { openSubscriptionManagement } from '../lib/subscription.js'
 
 import { pushSupported, enablePush, disablePush, sendTestPush } from '../lib/push.js'
 
@@ -103,13 +106,18 @@ export default function Settings() {
     finally { setCloudBusy(false) }
   }
 
+  const manageSubscription = async () => {
+    try { await openSubscriptionManagement(user.id, { native: MOBILE }) }
+    catch (error) { toast(error.message || t('Could not open subscription management.')) }
+  }
 
 
-  const doExport = async () => {
 
-    const json = JSON.stringify(S, null, 2)
+  const doExport = async (kind = 'history') => {
 
-    const name = 'gymbook-backup-' + todayISO() + '.json'
+    const json = trainingFileText(S, kind)
+
+    const name = `Gym-Book-Training-${kind}-${todayISO()}.gbt.json`
 
     // WKWebView can't download blob URLs — the native build hands the file to the share sheet.
 
@@ -129,15 +137,15 @@ export default function Settings() {
 
   }
 
-  const confirmExport = () => confirmSheet({
+  const confirmExport = (kind = 'history') => confirmSheet({
 
-    title: t('Export backup?'),
+    title: kind === 'routines' ? t('Export routines?') : t('Export backup?'),
 
-    message: t('This creates a JSON copy of your gymbook data on this device.'),
+    message: kind === 'routines' ? t('This creates a small file with your routines and weekly schedule.') : t('This creates a JSON copy of your Gym Book Training data on this device.'),
 
     confirmText: t('Export backup'),
 
-    onConfirm: doExport,
+    onConfirm: () => doExport(kind),
 
   })
 
@@ -163,11 +171,23 @@ export default function Settings() {
 
       try {
 
-        const data = JSON.parse(rd.result)
+        const imported = parseTrainingFile(rd.result)
+        const routinesOnly = imported.kind === 'routines'
 
-        if (!data.workouts || !data.routines) throw new Error('not a gymbook backup')
-
-        confirmSheet({ title: t('Import backup?'), message: t('This replaces all current data with the backup file.'), confirmText: t('Import'), danger: true, onConfirm: () => { replaceState(Object.assign(JSON.parse(JSON.stringify(DEF)), data), true); toast(t('Backup imported')) } })
+        confirmSheet({
+          title: routinesOnly ? t('Import routines?') : t('Import backup?'),
+          message: routinesOnly ? t('This adds the routines from the file and keeps your current progress.') : t('This replaces all current data with the backup file.'),
+          confirmText: t('Import'), danger: !routinesOnly,
+          onConfirm: () => {
+            if (routinesOnly) {
+              const next = JSON.parse(JSON.stringify(S))
+              mergePlan(next, imported.data, { schedule: true })
+              replaceState(next, true)
+            }
+            else replaceState(Object.assign(JSON.parse(JSON.stringify(DEF)), imported.data), true)
+            toast(t(routinesOnly ? 'Routines imported' : 'Backup imported'))
+          },
+        })
 
       } catch (e) { toast(t('Import failed: {0}', e.message)) }
 
@@ -246,7 +266,7 @@ export default function Settings() {
 
   const confirmTutorial = () => confirmSheet({
     title: t('Open the tutorial?'),
-    message: t('The chalkboard guide will open so you can review the main parts of gymbook.'),
+    message: t('The chalkboard guide will open so you can review the main parts of Gym Book Training.'),
     confirmText: t('Open tutorial'),
     onConfirm: openTutorial,
   })
@@ -312,7 +332,7 @@ export default function Settings() {
       </Row>
 
       <Row icon="lightbulb" iconTint="var(--yellow)" title={t('Tutorial')}
-        subtitle={t('Review the chalkboard guide to using gymbook.')}
+        subtitle={t('Review the chalkboard guide to using Gym Book Training.')}
         accessory="chevron" onClick={confirmTutorial} />
 
     </Section>
@@ -434,6 +454,7 @@ export default function Settings() {
         <Row icon="lock" iconTint="var(--acc)" title={user ? user.name : t('Local data on this phone')} subtitle={t('Workout data is stored on this phone. Cloud backup runs only when you start it here.')} />
         {user
           ? <>
+            <Row icon="shield" iconTint="var(--acc)" title={t('Manage subscription')} subtitle={t('View your plan, renewal date, payment method or cancellation options.')} accessory="chevron" onClick={manageSubscription} />
             <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your progress stays on this phone. Cloud backup is not changed.'), confirmText: t('Sign out'), danger: true, onConfirm: async () => { await signOut(); nav('/home') } })} />
             <Row icon="trash" iconTint="var(--red)" title={t('Delete account')} subtitle={t('Permanently delete your account and its data.')} danger onClick={deleteAccount} />
           </>
@@ -491,13 +512,14 @@ export default function Settings() {
             <Row icon="sparkles" iconTint="var(--acc)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={confirmStarterPlan} />
             <Row icon="shuffle" iconTint="var(--teal)" title={t('Import from another app')} subtitle={t('FitNotes, Strong, Hevy — or body weight from Apple Health')} accessory="chevron" onClick={() => importRef.current.click()} />
             <Row icon="upload" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />
+            <Row icon="download" iconTint="var(--blue)" title={t('Export routines only')} accessory="chevron" onClick={() => confirmExport('routines')} />
             <Row icon="download" iconTint="var(--blue)" title={t('Export backup (JSON)')} accessory="chevron" onClick={confirmExport} />
             <Row icon="trash" iconTint="var(--red)" title={t('Reset everything')} danger onClick={() => confirmSheet({ title: t('Reset everything?'), message: t('Deletes your plan, workouts and body weight on this device. This cannot be undone.'), confirmText: t('Delete everything'), danger: true, onConfirm: () => { replaceState(JSON.parse(JSON.stringify(DEF)), true); nav('/home'); toast(t('All data reset')) } })} />
           </div>
         </details>
       </>}
 
-      {!MOBILE && user && <Row icon="reset" iconTint="var(--blue)" title={t('Restore an imported profile')} subtitle={t('Use a one-time code from your previous gymbook installation.')} accessory="chevron" onClick={restoreProfile} />}
+      {!MOBILE && user && <Row icon="reset" iconTint="var(--blue)" title={t('Restore an imported profile')} subtitle={t('Use a one-time code from your previous Gym Book Training installation.')} accessory="chevron" onClick={restoreProfile} />}
 
       {!MOBILE && <Row icon="sparkles" iconTint="var(--acc)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={confirmStarterPlan} />}
 
@@ -508,6 +530,8 @@ export default function Settings() {
         accessory="chevron" onClick={() => importRef.current.click()} />}
 
       {!MOBILE && <Row icon="upload" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />}
+
+      {!MOBILE && <Row icon="download" iconTint="var(--blue)" title={t('Export routines only')} accessory="chevron" onClick={() => confirmExport('routines')} />}
 
       {!MOBILE && <Row icon="download" iconTint="var(--blue)" title={t('Export backup (JSON)')} accessory="chevron" onClick={confirmExport} />}
 
@@ -541,7 +565,7 @@ export default function Settings() {
 
         title={IS_ANDROID ? t('In Chrome: ⋮ menu → Add to Home screen') : t('In Safari: Share → Add to Home Screen')}
 
-        subtitle={t('to install gymbook as a full-screen app.') + ' ' + (user ? t('Your data syncs with your profile — sign in anywhere to see it.') : t('Guest data stays on this device — export a backup now and then!'))} />
+        subtitle={t('to install Gym Book Training as a full-screen app.') + ' ' + (user ? t('Your data syncs with your profile — sign in anywhere to see it.') : t('Guest data stays on this device — export a backup now and then!'))} />
 
     </Section>}
 
@@ -563,7 +587,7 @@ export default function Settings() {
 
     <div className="dim small" style={{ textAlign: 'center', marginTop: 4, lineHeight: 1.6 }}>
 
-      gymbook · {t('No paid subscription is currently offered')}<br />
+      Gym Book Training · {t('Your workouts are stored on this device')}<br />
 
       exercise data: hasaneyldrm/exercises-dataset (CC)
 
@@ -789,7 +813,7 @@ function PushCard({ S, update, toast }) {
 
     >
 
-      <Row icon="bell" iconTint="var(--red)" title={t('Push notifications')} subtitle={t('Rest-timer alerts, even if gymbook is closed.')}>
+      <Row icon="bell" iconTint="var(--red)" title={t('Push notifications')} subtitle={t('Rest-timer alerts, even if Gym Book Training is closed.')}>
 
         <Switch checked={on} disabled={busy} onChange={toggle} />
 
@@ -885,7 +909,7 @@ function RestoreProfileInline({ close, user, setUser, replaceState, pullState, t
 
     <div className="muted small" style={{ lineHeight: 1.55, margin: '12px 0 16px' }}>
 
-      {t('Enter the one-time code created when your previous gymbook data was imported. This switches {0} to that profile. Your current profile and its data remain saved.', user?.name || t('this account'))}
+      {t('Enter the one-time code created when your previous Gym Book Training data was imported. This switches {0} to that profile. Your current profile and its data remain saved.', user?.name || t('this account'))}
 
     </div>
 

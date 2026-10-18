@@ -458,9 +458,10 @@ h4.sec{
 .legal-copy a{color:var(--acc);text-decoration:underline;text-underline-offset:2px}
 :root[data-theme="light"] .legal-page .hdr{background:color-mix(in srgb,var(--bg) 92%,transparent)}
 .login-price-notice{
-  align-self:center;margin:4px 0 12px;padding:7px 12px;border-radius:999px;
-  color:var(--acc);background:var(--acc-soft);font-size:14px;font-weight:600;
+  align-self:center;margin:4px 0 12px;padding:10px 13px;border-radius:14px;
+  color:var(--acc);background:var(--acc-soft);font-size:12px;font-weight:600;line-height:1.45;text-align:center;
 }
+.login-price-notice .login-legal-link{display:block;margin:5px auto 0;padding:2px 4px;border:0;background:transparent;color:var(--acc);font:inherit;font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .password-field{position:relative}
 .password-field .input{padding-right:48px}
 .password-visibility-toggle{

@@ -1,6 +1,6 @@
 // Small Supabase Auth REST client. Keeps the web app dependency-light while using
 // Supabase's hosted password, OAuth and refresh-token flows.
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '')
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '').replace(/\/rest\/v1$/i, '')
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 const SESSION_KEY = 'gym_supabase_session_v1'
 const OAUTH_KEY = 'gym_supabase_oauth_v1'

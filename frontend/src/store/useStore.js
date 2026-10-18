@@ -250,7 +250,7 @@ export const useStore = create((set, get) => {
           get().setUser({
             id: authUser.id,
             email: authUser.email,
-            name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'GYMBOOK user',
+            name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
             needsLegalSetup: needsLegalSetup(authUser),
           })
         } else {
@@ -275,7 +275,7 @@ export const useStore = create((set, get) => {
       catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Google sign-in failed. Please try again.') }
 
       // A recovery link grants a temporary Supabase session only for setting a new
-      // password. Do not create a gymbook app session until the user signs in again.
+      // password. Do not create a Gym Book Training app session until the user signs in again.
       if (authSession && isPasswordRecovery()) {
         set({ ready: true, signingIn: false })
         return
@@ -285,7 +285,7 @@ export const useStore = create((set, get) => {
         const authUser = authSession.user
         get().setUser({
           id: authUser.id, email: authUser.email,
-          name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'GYMBOOK user',
+          name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
           needsLegalSetup: true,
         })
         set({ ready: true, signingIn: false })
@@ -319,7 +319,7 @@ export const useStore = create((set, get) => {
           initialStateFetched = Object.hasOwn(result, 'state')
           clearPendingRecoveryCode()
         }
-        catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not connect your account to gymbook.') }
+        catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not connect your account to Gym Book Training.') }
       }
       if (!authSession) {
         try {
@@ -339,7 +339,7 @@ export const useStore = create((set, get) => {
               initialStateFetched = Object.hasOwn(result, 'state')
               clearPendingRecoveryCode()
             }
-          } catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not connect your account to gymbook.') }
+          } catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not connect your account to Gym Book Training.') }
         }
       }
       if (appUser) {

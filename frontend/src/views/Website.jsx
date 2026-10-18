@@ -51,6 +51,7 @@ export default function Website() {
         <a href="#funciones">{copy.nav[0]}</a>
         <a href="#legal">{copy.nav[1]}</a>
         <a href="#contacto">{copy.nav[2]}</a>
+        <a className="site-account-link" href="/#/account">{language === 'es' ? 'Iniciar sesión' : 'Sign in'}</a>
       </nav>
       <div className="site-nav-actions">
         <label className="site-language" aria-label="Language">
@@ -76,11 +77,11 @@ export default function Website() {
           </div>
           <div className="site-compat"><Icon name="info" /> {copy.hero[5]}</div>
         </div>
-        <div className="site-hero-art" aria-label="GYMBOOK app preview">
+        <div className="site-hero-art" aria-label="Gym Book Training app preview">
           <div className="site-orbit orbit-one" /><div className="site-orbit orbit-two" />
           <div className="site-phone">
             <div className="site-phone-camera" />
-            <div className="site-phone-head"><span>gymbook</span><Icon name="gear" /></div>
+            <div className="site-phone-head"><span>Gym Book Training</span><Icon name="gear" /></div>
             <div className="site-phone-date">{phone[0]}</div>
             <div className="site-phone-greeting">{phone[1]}<br /><strong>{phone[2]}</strong></div>
             <div className="site-phone-routine"><div className="site-routine-icon"><Icon name="arm" /></div><div><small>{phone[3]}</small><strong>{phone[4]}</strong><span>{phone[5]}</span></div><Icon name="chevronRight" /></div>
