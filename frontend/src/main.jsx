@@ -1,14 +1,16 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App.jsx'
 import { MOBILE } from './lib/mobile.js'
 import './index.css'
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode><App /></StrictMode>
-)
+const appEntry = MOBILE ? import('./App.jsx') : import('./views/WebsiteApp.jsx')
+appEntry.then(({ default: App }) => {
+  createRoot(document.getElementById('root')).render(<StrictMode><App /></StrictMode>)
+})
 
-// Not in the mobile build: the native shell already serves everything from disk.
-if (!MOBILE && 'serviceWorker' in navigator && location.protocol === 'https:') {
-  navigator.serviceWorker.register('sw.js').catch(() => {})
+// The web deployment is an informational site, not an offline app. Remove any old
+// gymbook app worker/cache left by a previous web version so it cannot serve the app UI.
+if (!MOBILE && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => registrations.forEach(registration => registration.unregister())).catch(() => {})
+  if ('caches' in window) caches.keys().then(keys => keys.filter(key => key.startsWith('gymbook-rt-')).forEach(key => caches.delete(key))).catch(() => {})
 }
