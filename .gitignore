@@ -23,3 +23,5 @@ frontend/android/app/*.keystore
 **/.idea/
 supabase/.temp/
 .DS_Store
+
+data/vapid.json
