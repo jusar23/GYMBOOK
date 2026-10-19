@@ -5,6 +5,7 @@ import { localTZ } from '../lib/format.js'
 import { registerCustom } from '../lib/exercises.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
 import { MOBILE, nativeLoad, nativeSave, nativeClear, syncReminder } from '../lib/mobile.js'
+import { getCloudBackupConsent } from '../lib/supabaseBackup.js'
 import { needsLegalSetup } from '../lib/legalConsent.js'
 
 const KEY = 'gym_state_v1'
@@ -84,7 +85,7 @@ export const useStore = create((set, get) => {
       nativePersist()
       if (reminderChanged) nativeReminderPersist()
     }
-    if (push && get().user && !MOBILE) {
+    if (push && get().user?.trainingDataConsent === true && !MOBILE) {
       stateRevision++
       localStorage.setItem('gym_dirty', '1')
       clearTimeout(pushTm)
@@ -155,7 +156,7 @@ export const useStore = create((set, get) => {
     setSigningIn(value) { set({ signingIn: !!value }) },
 
     async pushState(force = false) {
-      if (!get().user) return
+      if (!get().user || get().user.trainingDataConsent !== true) return
       clearTimeout(pushTm)
       if (!force && localStorage.getItem('gym_dirty') !== '1') return
       const revision = stateRevision
@@ -273,11 +274,15 @@ export const useStore = create((set, get) => {
         catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Sign-in failed. Please try again.') }
         if (authSession?.user) {
           const authUser = authSession.user
+          let trainingDataConsent = false
+          try { trainingDataConsent = (await getCloudBackupConsent(authSession)).accepted === true }
+          catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not check backup authorization.') }
           get().setUser({
             id: authUser.id,
             email: authUser.email,
             name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
             needsLegalSetup: needsLegalSetup(authUser),
+            trainingDataConsent,
           })
         } else {
           get().setUser(null)

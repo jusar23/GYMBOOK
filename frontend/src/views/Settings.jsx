@@ -12,8 +12,9 @@ import { effortOf } from '../lib/history.js'
 
 import { api, createAppSessionWithSupabase, webauthnOK, passkeyLogin, passkeyRegister, IS_ANDROID } from '../lib/api.js'
 
-import { deleteSupabaseAccount, getAuthSession } from '../lib/supabaseAuth.js'
-import { loadCloudBackup, saveCloudBackup } from '../lib/supabaseBackup.js'
+import { deleteSupabaseAccount, getAuthSession, updateAuthUserMetadata } from '../lib/supabaseAuth.js'
+import { loadCloudBackup, saveCloudBackup, setCloudBackupConsent } from '../lib/supabaseBackup.js'
+import { LEGAL_VERSION } from '../lib/legalConsent.js'
 import { mergePlan } from '../lib/plan-share.js'
 import { parseTrainingFile, trainingFileText } from '../lib/training-file.js'
 import { openSubscriptionManagement } from '../lib/subscription.js'
@@ -81,6 +82,60 @@ export default function Settings() {
   const wakeOK = wakeLockSupported()
   const [cloudBusy, setCloudBusy] = useState(false)
   const [accountDeleting, setAccountDeleting] = useState(false)
+  const [trainingConsentBusy, setTrainingConsentBusy] = useState(false)
+
+  const updateTrainingConsent = async accepted => {
+    setTrainingConsentBusy(true)
+    try {
+      if (MOBILE) {
+        if (!accepted) {
+          confirmSheet({
+            title: t('Turn off server backup?'),
+            message: t('New uploads and access to the server copy will stop. The existing copy remains stored in Supabase until you request deletion or delete your account. Your data on this phone will stay here.'),
+            confirmText: t('Turn off backup'), danger: true,
+            onConfirm: async () => {
+              setTrainingConsentBusy(true)
+              try {
+                await setCloudBackupConsent(false)
+                const session = await getAuthSession()
+                const metadata = session?.user?.user_metadata || {}
+                const updated = await updateAuthUserMetadata({ ...metadata,
+                  gymbook_sensitive_training_consent: false,
+                  gymbook_sensitive_training_consent_version: LEGAL_VERSION,
+                  gymbook_sensitive_training_consent_text_version: LEGAL_VERSION,
+                  gymbook_sensitive_training_consent_revoked_at: new Date().toISOString(),
+                })
+                setUser({ ...user, email: updated.email, trainingDataConsent: false })
+                toast(t('Server workout sync disabled'))
+              } catch (e) { toast(e.message || t('Could not update server-sync consent')) }
+              finally { setTrainingConsentBusy(false) }
+            },
+          })
+          return
+        }
+        const session = await getAuthSession()
+        const metadata = session?.user?.user_metadata || {}
+        const updated = await updateAuthUserMetadata({ ...metadata,
+          gymbook_sensitive_training_consent: true,
+          gymbook_sensitive_training_consent_version: LEGAL_VERSION,
+          gymbook_sensitive_training_consent_text_version: LEGAL_VERSION,
+          gymbook_sensitive_training_consent_at: new Date().toISOString(),
+        })
+        await setCloudBackupConsent(true)
+        setUser({ ...user, email: updated.email, trainingDataConsent: true })
+        toast(t('Server workout sync enabled'))
+        return
+      }
+      const result = await api('/api/consent/training-data', {
+        method: 'PUT', body: JSON.stringify({ accepted }),
+      })
+      setUser({ ...user, trainingDataConsent: result.accepted })
+      if (result.accepted) await pullState(undefined, false, true)
+      toast(result.accepted ? t('Server workout sync enabled') : t('Server workout sync disabled'))
+    } catch (e) {
+      toast(e.message || t('Could not update server-sync consent'))
+    } finally { setTrainingConsentBusy(false) }
+  }
 
   const showAccountNotice = (title, message, success = false) => useUI.getState().openSheet(close => (
     <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', padding: 'max(24px, env(safe-area-inset-top)) 22px max(24px, env(safe-area-inset-bottom))' }}>
@@ -479,9 +534,14 @@ export default function Settings() {
 
       {MOBILE ? <>
 
-        <Row icon="lock" iconTint="var(--acc)" title={user ? user.name : t('Local data on this phone')} subtitle={t('Workout data is stored on this phone. Cloud backup runs only when you start it here.')} />
+        <Row icon="lock" iconTint="var(--acc)" title={user ? user.name : t('Local data on this phone')} subtitle={t('Workout data is stored on this phone. Finished workouts update an authorized server backup automatically.')} />
         {user
           ? <>
+            <Row icon="shield" iconTint="var(--blue)" title={t('Server backup of workout data')}
+              subtitle={t('Turning this off stops future uploads and blocks access to the existing server copy. The copy remains stored until you request deletion or delete your account.') }>
+              <Switch checked={user.trainingDataConsent === true} disabled={trainingConsentBusy}
+                onChange={updateTrainingConsent} />
+            </Row>
             <Row icon="shield" iconTint="var(--acc)" title={t('Manage subscription')} subtitle={t('View your plan, renewal date, payment method or cancellation options.')} accessory="chevron" onClick={manageSubscription} />
             <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your progress stays on this phone. Cloud backup is not changed.'), confirmText: t('Sign out'), danger: true, onConfirm: async () => { await signOut(); nav('/home') } })} />
             <Row icon="trash" iconTint="var(--red)" title={t('Delete account')} subtitle={t('Permanently delete your account and its data.')} danger onClick={deleteAccount} />
@@ -498,7 +558,16 @@ export default function Settings() {
 
       </> : user ? <>
 
-        <Row icon="personCircle" iconTint="var(--grey)" title={user.name} subtitle={t('Your profile and workout progress sync across devices.')} />
+        <Row icon="personCircle" iconTint="var(--grey)" title={user.name}
+          subtitle={user.trainingDataConsent === true
+            ? t('Your profile and workout progress sync across devices.')
+            : t('Workout data stays on this device until you enable server sync.')} />
+
+        <Row icon="shield" iconTint="var(--blue)" title={t('Server sync of workout data')}
+          subtitle={t('Authorize workout and body-weight data to sync with your Gymbook server. Turning this off stops sync and server restore.') }>
+          <Switch checked={user.trainingDataConsent === true} disabled={trainingConsentBusy}
+            onChange={updateTrainingConsent} />
+        </Row>
 
         {user.admin && <Row icon="wrench" iconTint="var(--indigo)" title={t('Admin dashboard')} accessory="chevron" onClick={() => nav('/admin')} />}
 

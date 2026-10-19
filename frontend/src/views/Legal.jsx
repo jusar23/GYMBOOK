@@ -20,7 +20,7 @@ const ADDRESS = 'El Carmen de Viboral, Antioquia, Colombia'
 // Teléfono de contacto (recomendado por la normativa colombiana). Si lo dejas vacío no se muestra.
 const PHONE = '' // Completa este dato antes de publicar si corresponde a tu canal de contacto
 
-const VERSION = '1.6'
+const VERSION = '1.7'
 
 const UPDATED_EN = '18 October 2026'
 
@@ -102,13 +102,13 @@ const COPY = {
 
         'Where authorization is required, we retain evidence of the specific consent given, including its wording, date/time, policy version and the account or session associated with it. A general acceptance of the terms is not a substitute for separate sensitive-data consent.',
 
-        `You can withdraw this authorization or request deletion through ${CONTACT}. Withdrawal stops future server backups of workout data; it does not make prior lawful processing retroactively unlawful. Your account can continue with workout data stored on this device, without server backup or restoration.`,
+        `You can withdraw this authorization in Settings or request deletion through ${CONTACT}. Withdrawal stops future uploads and blocks access to the server copy while authorization is off. The existing copy remains stored in Supabase until you request its deletion or delete your account; reauthorizing makes it available again. Withdrawal does not delete workout data stored on this device.`,
 
       ]],
 
       ['Who receives your data', [
 
-        'Supabase Auth stores account identifiers and the registration details and consent versions you submit. Supabase Postgres stores a server backup of workout data after each completed workout when you have separately authorized it. Supabase processes these data under its applicable service terms; the project region is the one configured by the operator.',
+        'Supabase Auth stores account identifiers and the registration details and consent versions you submit. Supabase Postgres stores a server backup of workout data after each completed workout when you have separately authorized it. Withdrawing authorization stops future uploads but retains the existing copy until you request deletion or delete your account. Supabase processes these data under its applicable service terms; the project region is the one configured by the operator.',
 
         'The web/server hosting provider actually used for the published instance. If Gym Book Training is self-hosted, this is the person or organization operating the server and its infrastructure provider, if any.',
 
@@ -130,7 +130,7 @@ const COPY = {
 
       ['International transfers and transmissions', 'If the deployed version uses providers or servers outside Colombia, some account or technical data may be processed in those countries. Before publication, we will identify the actual providers, countries and purposes and apply the mechanism required by Colombian law for each transfer or transmission; general acceptance of this policy does not replace any consent or safeguards required by law. If the service is hosted exclusively in Colombia, this clause must be adjusted to reflect that fact.'],
 
-      ['Local storage and server backups', 'Workout history and settings are stored on your device. If you separately authorize processing of workout data, the app sends one updated backup to Supabase after each completed workout; restoration is started manually. Without that optional authorization, workout data stays on this device and server backup and restoration are unavailable. Clearing app data or uninstalling may erase the local copy.'],
+      ['Local storage and server backups', 'Workout history and settings are stored on your device. If you separately authorize processing of workout data, the app sends one updated backup to Supabase after each completed workout; restoration is started manually. Withdrawing authorization stops future uploads and blocks access to the existing server copy while authorization is off; that copy remains until you request deletion or delete your account. Clearing app data or uninstalling may erase the local copy.'],
 
       ['Minors', 'Gym Book Training is intended for people over 18 and is not directed at children or teenagers. We do not knowingly collect data from minors. If we learn that a minor has created an account, we will delete the account and its data. If you believe a minor is using the app, write to us at the email above.'],
 
@@ -230,13 +230,13 @@ const COPY = {
 
         'Cuando se requiera autorización, conservaremos evidencia del consentimiento específico, incluido el texto mostrado, fecha y hora, versión de la política y cuenta o sesión asociada. La aceptación general de los términos no sustituye la autorización separada para datos sensibles.',
 
-        `Puedes revocar esta autorización o solicitar la supresión escribiendo a ${CONTACT}. La revocatoria detiene futuras copias de entrenamiento en el servidor; no vuelve ilícito retroactivamente el tratamiento previo que haya sido lícito. Tu cuenta puede continuar con los datos de entrenamiento almacenados en este dispositivo, sin copias ni restauración desde el servidor.`,
+        `Puedes revocar esta autorización desde Ajustes o solicitar la supresión escribiendo a ${CONTACT}. La revocatoria detiene nuevas subidas y bloquea el acceso a la copia del servidor mientras la autorización esté desactivada. La copia existente permanece en Supabase hasta que solicites su eliminación o elimines tu cuenta; si vuelves a autorizar, estará disponible otra vez. Revocar no elimina los datos guardados en este dispositivo.`,
 
       ]],
 
       ['Quiénes reciben tus datos', [
 
-        'Supabase Auth guarda identificadores de cuenta y los datos de registro y versiones de consentimiento que envías. Supabase Postgres guarda una copia de entrenamiento al terminar cada sesión si autorizaste por separado ese tratamiento. Supabase trata estos datos conforme a las condiciones aplicables del servicio; el proyecto usa la región configurada por el operador.',
+        'Supabase Auth guarda identificadores de cuenta y los datos de registro y versiones de consentimiento que envías. Supabase Postgres guarda una copia de entrenamiento al terminar cada sesión si autorizaste por separado ese tratamiento. Revocar la autorización detiene futuras subidas, pero conserva la copia existente hasta que solicites su eliminación o elimines tu cuenta. Supabase trata estos datos conforme a las condiciones aplicables del servicio; el proyecto usa la región configurada por el operador.',
 
         'Proveedor de infraestructura: el proveedor real del servidor o alojamiento puede procesar registros técnicos. Debe identificarse según el despliegue publicado.',
 
@@ -258,7 +258,7 @@ const COPY = {
 
       ['Transferencias y transmisiones internacionales', 'Si la versión desplegada utiliza proveedores o servidores fuera de Colombia, algunos datos técnicos o de cuenta podrían tratarse en esos países. Antes de publicar, identificaremos los proveedores, países y finalidades reales y aplicaremos el mecanismo exigido por la normativa colombiana para cada transferencia o transmisión; una aceptación genérica de esta política no reemplaza las autorizaciones o garantías que legalmente se requieran. Si el servicio está alojado exclusivamente en Colombia, esta cláusula deberá ajustarse a esa realidad.'],
 
-      ['Almacenamiento local y copias en el servidor', 'El historial de entrenamiento y la configuración se guardan en tu dispositivo. Si autorizas por separado el tratamiento de datos de entrenamiento, la app envía una copia actualizada a Supabase al terminar cada entrenamiento; la restauración se inicia manualmente. Sin esa autorización, los entrenamientos permanecen en este dispositivo y no se habilitan las copias ni la restauración desde el servidor. Borrar los datos de la app o desinstalarla puede eliminar la copia local.'],
+      ['Almacenamiento local y copias en el servidor', 'El historial de entrenamiento y la configuración se guardan en tu dispositivo. Si autorizas por separado el tratamiento de datos de entrenamiento, la app envía una copia actualizada a Supabase al terminar cada entrenamiento; la restauración se inicia manualmente. Revocar la autorización detiene futuras subidas y bloquea el acceso a la copia existente mientras esté desactivada; la copia permanece hasta que solicites su eliminación o elimines tu cuenta. Borrar los datos de la app o desinstalarla puede eliminar la copia local.'],
 
       ['Menores de edad', 'Gym Book Training está dirigida a personas mayores de 18 años y no a niños, niñas o adolescentes. No recopilamos a sabiendas datos de menores. Si detectamos que un menor creó una cuenta, la eliminaremos junto con sus datos. Si crees que un menor usa la app, escríbenos al correo indicado.'],
 
