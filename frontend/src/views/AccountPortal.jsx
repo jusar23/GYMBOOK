@@ -5,7 +5,7 @@ import { getLang, LANGS, setLang, t, useLang } from '../lib/i18n.js'
 import { DEF } from '../store/useStore.js'
 import { getAuthSession, processOAuthCallback, signInWithEmail, signInWithGoogle, signOutSupabase, updateAuthUserMetadata } from '../lib/supabaseAuth.js'
 import { LEGAL_VERSION, legalConsentMetadata, needsLegalSetup } from '../lib/legalConsent.js'
-import { loadCloudBackup, saveCloudBackup } from '../lib/supabaseBackup.js'
+import { loadCloudBackup, saveCloudBackup, setCloudBackupConsent } from '../lib/supabaseBackup.js'
 import { mergePlan } from '../lib/plan-share.js'
 import { createTrainingFile, parseTrainingFile, trainingFileText, TRAINING_FILE_MAX_BYTES } from '../lib/training-file.js'
 import { DOCS } from './Legal.jsx'
@@ -104,6 +104,7 @@ export default function AccountPortal() {
         trainingDataAccepted: acceptTrainingData,
       }))
       const next = await getAuthSession()
+      await setCloudBackupConsent(acceptTrainingData, next)
       setAcceptTerms(false); setAcceptTrainingData(false)
       await refreshBackup({ ...next, user: updated })
     } catch (error) { setMessage(error.message || 'Could not save your consent.') }
@@ -121,6 +122,7 @@ export default function AccountPortal() {
         gymbook_sensitive_training_consent_text_version: LEGAL_VERSION,
         gymbook_sensitive_training_consent_at: new Date().toISOString(),
       })
+      await setCloudBackupConsent(true)
       setSession({ ...session, user: updated })
       setAcceptTrainingData(false)
       await refreshBackup({ ...session, user: updated })

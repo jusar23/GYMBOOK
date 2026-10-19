@@ -29,6 +29,7 @@ const INVITE_ONLY = /^(1|true|yes|on)$/i.test(process.env.INVITE_ONLY || '');
 // baked into each cookie when it's issued, so lowering this never cuts an existing session short.
 const SESSION_DAYS = Math.max(1, +(process.env.SESSION_DAYS || 90) || 90);
 const MAX_BODY = 5 * 1024 * 1024;
+const TRAINING_CONSENT_VERSION = '1.7';
 // Secure cookies require HTTPS; over plain http://localhost the flag would drop the cookie
 const SECURE = /^https:/i.test(ORIGIN) ? ' Secure;' : '';
 
@@ -290,7 +291,12 @@ const routes = {
   'GET /api/me': async (req, res) => {
     const user = readSession(req);
     if (!user) return json(res, 401, { error: 'not signed in' });
-    json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) }, state: readState(user.id) });
+    const trainingDataConsent = user.trainingDataConsent?.accepted === true
+      && user.trainingDataConsent?.version === TRAINING_CONSENT_VERSION;
+    json(res, 200, {
+      user: { id: user.id, name: user.name, admin: isAdmin(user), trainingDataConsent },
+      state: trainingDataConsent ? readState(user.id) : null,
+    });
   },
 
   // Exchange a Supabase Auth access token for the app's existing HttpOnly session cookie.
@@ -345,8 +351,26 @@ const routes = {
       db.users.push(user);
       db.authUsers[authId] = authId;
     }
+    // Preserve the explicit optional choice already recorded during sign-up, including
+    // accounts that had to confirm their email before the app could create a server session.
+    const acceptedAt = metadata.gymbook_sensitive_training_consent_at;
+    if (!user.trainingDataConsent && metadata.gymbook_sensitive_training_consent === true
+        && metadata.gymbook_sensitive_training_consent_version === TRAINING_CONSENT_VERSION
+        && metadata.gymbook_sensitive_training_consent_text_version === TRAINING_CONSENT_VERSION
+        && typeof acceptedAt === 'string' && Number.isFinite(Date.parse(acceptedAt))) {
+      user.trainingDataConsent = {
+        accepted: true,
+        version: TRAINING_CONSENT_VERSION,
+        acceptedAt: new Date(acceptedAt).toISOString(),
+      };
+    }
     saveDb();
-    json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) }, state: readState(user.id) }, { 'Set-Cookie': sessionCookie(user) });
+    const trainingDataConsent = user.trainingDataConsent?.accepted === true
+      && user.trainingDataConsent?.version === TRAINING_CONSENT_VERSION;
+    json(res, 200, {
+      user: { id: user.id, name: user.name, admin: isAdmin(user), trainingDataConsent },
+      state: trainingDataConsent ? readState(user.id) : null,
+    }, { 'Set-Cookie': sessionCookie(user) });
   },
 
   'POST /api/register/options': async (req, res) => {
@@ -416,7 +440,11 @@ const routes = {
       transports: body.credential?.response?.transports || []
     });
     saveDb();
-    json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) } }, { 'Set-Cookie': sessionCookie(user) });
+    json(res, 200, { user: {
+      id: user.id, name: user.name, admin: isAdmin(user),
+      trainingDataConsent: user.trainingDataConsent?.accepted === true
+        && user.trainingDataConsent?.version === TRAINING_CONSENT_VERSION,
+    } }, { 'Set-Cookie': sessionCookie(user) });
   },
 
   'POST /api/login/options': async (req, res) => {
@@ -455,7 +483,11 @@ const routes = {
     const user = db.users.find(u => u.id === cred.userId);
     if (!user) return json(res, 500, { error: 'user missing' });
     if (user.disabled) return json(res, 403, { error: 'this account has been disabled' });
-    json(res, 200, { user: { id: user.id, name: user.name, admin: isAdmin(user) } }, { 'Set-Cookie': sessionCookie(user) });
+    json(res, 200, { user: {
+      id: user.id, name: user.name, admin: isAdmin(user),
+      trainingDataConsent: user.trainingDataConsent?.accepted === true
+        && user.trainingDataConsent?.version === TRAINING_CONSENT_VERSION,
+    } }, { 'Set-Cookie': sessionCookie(user) });
   },
 
   'POST /api/logout': async (req, res) => json(res, 200, { ok: true }, { 'Set-Cookie': clearCookie }),
@@ -475,7 +507,21 @@ const routes = {
   'GET /api/data': async (req, res) => {
     const user = readSession(req);
     if (!user) return json(res, 401, { error: 'not signed in' });
-    json(res, 200, { state: readState(user.id) });
+    const hasConsent = user.trainingDataConsent?.accepted === true
+      && user.trainingDataConsent?.version === TRAINING_CONSENT_VERSION;
+    json(res, 200, { state: hasConsent ? readState(user.id) : null });
+  },
+
+  'PUT /api/consent/training-data': async (req, res) => {
+    const user = readSession(req);
+    if (!user) return json(res, 401, { error: 'not signed in' });
+    const body = await readBody(req);
+    if (typeof body.accepted !== 'boolean') return json(res, 400, { error: 'accepted must be boolean' });
+    user.trainingDataConsent = body.accepted
+      ? { accepted: true, version: TRAINING_CONSENT_VERSION, acceptedAt: new Date().toISOString() }
+      : { accepted: false, version: TRAINING_CONSENT_VERSION, revokedAt: new Date().toISOString() };
+    saveDb();
+    json(res, 200, { accepted: user.trainingDataConsent.accepted });
   },
 
   'PUT /api/data': async (req, res) => {
@@ -483,6 +529,10 @@ const routes = {
     if (!user) return json(res, 401, { error: 'not signed in' });
     const body = await readBody(req);
     if (!body.state || typeof body.state !== 'object') return json(res, 400, { error: 'state required' });
+    if (user.trainingDataConsent?.accepted !== true
+        || user.trainingDataConsent?.version !== TRAINING_CONSENT_VERSION) {
+      return json(res, 403, { error: 'training-data consent required' });
+    }
     delete body.state.active;              // in-progress workouts stay device-local
     writeState(user.id, body.state);
     json(res, 200, { ok: true, ts: body.state._ts || null });
