@@ -25,3 +25,12 @@ supabase/.temp/
 .DS_Store
 
 data/vapid.json
+coverage/
+**/coverage/
+**/.vercel/
+*.log
+
+# Local Codex tooling and worktrees
+.agents/
+.codex-worktrees/
+skills-lock.json
