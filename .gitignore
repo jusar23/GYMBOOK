@@ -17,6 +17,8 @@ frontend/android/app/build/
 frontend/android/app/keystore.properties
 frontend/android/app/*.jks
 frontend/android/app/*.keystore
+**/dist/
+**/build/
 
 # Local tooling and Supabase state
 .idea/
