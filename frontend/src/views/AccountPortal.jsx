@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
-import { getLang, LANGS, setLang, useLang } from '../lib/i18n.js'
+import { getLang, LANGS, setLang, t, useLang } from '../lib/i18n.js'
 import { DEF } from '../store/useStore.js'
 import { getAuthSession, processOAuthCallback, signInWithEmail, signInWithGoogle, signOutSupabase, updateAuthUserMetadata } from '../lib/supabaseAuth.js'
 import { LEGAL_VERSION, legalConsentMetadata, needsLegalSetup } from '../lib/legalConsent.js'
-import { loadCloudBackup, saveCloudBackup } from '../lib/supabaseBackup.js'
+import { loadCloudBackup, saveCloudBackup, setCloudBackupConsent } from '../lib/supabaseBackup.js'
 import { mergePlan } from '../lib/plan-share.js'
 import { createTrainingFile, parseTrainingFile, trainingFileText, TRAINING_FILE_MAX_BYTES } from '../lib/training-file.js'
 import { DOCS } from './Legal.jsx'
@@ -27,7 +27,7 @@ export default function AccountPortal() {
   const navigate = useNavigate()
   const languageVersion = useLang()
   const language = getLang()
-  const L = (en, es) => language === 'es' ? es : en
+  const L = (en, es) => language === 'es' ? es : t(en)
   const inputRef = useRef(null)
   const [session, setSession] = useState(null)
   const [state, setState] = useState(null)
@@ -104,6 +104,7 @@ export default function AccountPortal() {
         trainingDataAccepted: acceptTrainingData,
       }))
       const next = await getAuthSession()
+      await setCloudBackupConsent(acceptTrainingData, next)
       setAcceptTerms(false); setAcceptTrainingData(false)
       await refreshBackup({ ...next, user: updated })
     } catch (error) { setMessage(error.message || 'Could not save your consent.') }
@@ -121,6 +122,7 @@ export default function AccountPortal() {
         gymbook_sensitive_training_consent_text_version: LEGAL_VERSION,
         gymbook_sensitive_training_consent_at: new Date().toISOString(),
       })
+      await setCloudBackupConsent(true)
       setSession({ ...session, user: updated })
       setAcceptTrainingData(false)
       await refreshBackup({ ...session, user: updated })
@@ -240,7 +242,7 @@ export default function AccountPortal() {
           <button className="site-button primary" onClick={acceptBackupConsent} disabled={busy}>{L('Authorize server copy', 'Autorizar copia del servidor')}</button>
         </div>}
         {currentTerms && hasBackupConsent && <>
-          {state === null ? <div className="account-status" role="alert">{message}<div style={{ marginTop: 12 }}><button className="site-button primary" onClick={() => window.location.reload()}>Retry</button></div></div> : <>
+          {state === null ? <div className="account-status" role="alert">{message}<div style={{ marginTop: 12 }}><button className="site-button primary" onClick={() => window.location.reload()}>{L('Check again', 'Reintentar')}</button></div></div> : <>
           <div className="account-status">{message || L('Your private server copy is ready.', 'Tu copia privada en el servidor está lista.')}</div>
           <div className="account-tools">
             <button className="account-tool" onClick={() => exportFile('routines')}><Icon name="download" /><span><strong>{L('Export routines only', 'Exportar solo rutinas')}</strong><small>{L('A small file with routines and the weekly plan.', 'Un archivo pequeño con rutinas y el plan semanal.')}</small></span></button>

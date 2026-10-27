@@ -11,7 +11,7 @@
 // web bundles; the Capacitor plugins are only ever imported behind it.
 import { t } from './i18n.js'
 
-export const MOBILE = import.meta.env.VITE_MOBILE === '1'
+export const MOBILE = import.meta.env.MODE === 'mobile' || import.meta.env.VITE_MOBILE === '1'
 
 const FILE = 'opengym-state.json'
 
@@ -42,9 +42,9 @@ export async function nativeClear() {
 }
 
 // (Re)schedule the workout-day reminder: one repeating notification per weekday that has a
-// routine in the weekly plan. Cheap enough to run after any state change — the plan or the
-// reminder time may just have been edited. `interactive` gates the OS permission prompt to
-// the Settings toggle; a background resync never pops a dialog.
+// routine in the weekly plan. The store calls this only when its schedule inputs change.
+// `interactive` gates the OS permission prompt to the Settings toggle; a background resync
+// never pops a dialog.
 export async function syncReminder(S, interactive = false) {
   try {
     const { LocalNotifications } = await import('@capacitor/local-notifications')
@@ -74,6 +74,12 @@ export async function syncReminder(S, interactive = false) {
 export async function shareExport(json, filename) {
   const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem')
   const { Share } = await import('@capacitor/share')
-  const w = await Filesystem.writeFile({ path: filename, directory: Directory.Cache, data: json, encoding: Encoding.UTF8 })
+  const w = await Filesystem.writeFile({
+    path: `shared-exports/${filename}`,
+    directory: Directory.Cache,
+    data: json,
+    encoding: Encoding.UTF8,
+    recursive: true,
+  })
   await Share.share({ title: filename, url: w.uri })
 }

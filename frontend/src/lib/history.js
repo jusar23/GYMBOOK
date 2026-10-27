@@ -18,27 +18,26 @@ export function modeOf(cfg) {
 }
 export const isTimed = cfg => modeOf(cfg) === 'time'
 
-// Two flags that ride on top of a mode rather than making new ones (issues #31/#32), because
-// "bodyweight" and "per side" are true of a rep set and of a timed hold alike:
+// Logging flags ride on top of a mode rather than making new modes:
 //   bodyweight — the exercise carries no load of its own, so `w` means *added* weight and is
 //                asked for only once you say there is some. Seeded from the equipment field.
 //                Spelled out rather than `bw`, which a workout already uses for the weigh-in
 //                it was logged at — two different things one letter apart is a bug waiting.
-//   side       — the exercise is unilateral. You still log what you did: 16, the total across
-//                both sides. The split is derived for planning ("8 per side"), never entered
-//                — a number that sometimes means one side and sometimes both is the thing
-//                that made this ambiguous in the first place, and one rep count that always
-//                means the same thing beats two that need a legend.
-// Both are absent on every plan, workout and backup written before they existed, and absent
-// reads as false, so nothing needs migrating.
+//   side       — legacy boolean targets log both limbs as one total; the paired format stores
+//                per-limb reps in separate left/right sets. The marker keeps old history
+//                interpretable while new routines use unambiguous per-limb entries.
+// Old plans without these flags retain their existing behavior.
 export const isBw = cfg => (cfg && cfg.bodyweight != null ? !!cfg.bodyweight : isBodyweightEq(cfg && cfg.id))
 export const isPerSide = cfg => !!(cfg && cfg.side)
-// What one side did, for display only. Half of an odd total is shown as it falls (8.5) rather
-// than rounded away: it means the sides were not even, which is worth seeing.
+// New per-side plans store reps per limb and expand every planned round into two logged sets.
+// Legacy boolean `side: true` is kept on old workout targets and history, where reps are still
+// the total for both limbs.
+export const usesPairedSides = cfg => cfg?.side === 'paired'
+// What one side did in legacy total-rep records. Half of an odd total is shown as it falls
+// rather than rounded away: it means the sides were not even, which is worth seeing.
 export const sideReps = reps => (reps || 0) / 2
-// Unilateral work moves in pairs, so its rep target steps by two — 16, 18, 20 — and a total
-// that stayed odd would put a rep on one side and not the other.
-export const repStep = cfg => (isPerSide(cfg) ? 2 : 1)
+// Legacy totals moved by two; new per-limb targets move by one.
+export const repStep = cfg => (cfg?.side === true ? 2 : 1)
 
 // mm:ss for a work duration — seconds alone read badly past a minute ("90 s" vs "1:30").
 export function fmtSec(sec) {
@@ -98,14 +97,13 @@ export function setLabel(id, s, cfg) {
   if (mode === 'time') return fmtSec(s.sec) + (s.w > 0 ? ` · ${fmtNum(s.w)}` : '')
   // Bodyweight reads as what you did — "12", or "+10 × 12" once there is a belt involved —
   // rather than "0×12", which says a set was performed with no weight and means nothing.
-  // A per-side set needs no mark here: the number logged is the total, the same as every
-  // other set in the app.
+  const limb = usesPairedSides(c) && s.side ? ` · ${t(s.side === 'left' ? 'Left' : 'Right')}` : ''
   const reps = s.r || 0
   if (isBw({ ...c, id: c.id ?? id })) {
     const load = s.w > 0 ? `+${fmtNum(s.w)} × ` : ''
-    return `${load}${reps}` + effortTail(s)
+    return `${load}${reps}${limb}` + effortTail(s)
   }
-  return `${fmtNum(s.w || 0)}×${reps}` + effortTail(s)
+  return `${fmtNum(s.w || 0)}×${reps}${limb}` + effortTail(s)
 }
 // Default config for a freshly added exercise.
 export function defaultConfig(id, mode) {
@@ -126,7 +124,8 @@ export function exLine(cfg, unit) {
   const load = cfg.weight ? ' · ' + (isBw(cfg) ? '+' : '') + fmtNum(cfg.weight) + ' ' + unit : ''
   if (mode === 'cardio') return `${n} × ${cfg.min || 20} min @ ${fmtNum(cfg.speed || 8)} km/h`
   if (mode === 'time') return `${n} × ${fmtSec(cfg.sec || 45)}${load}`
-  // This is the line with room for it, so the split is spelled out: "3 × 16 · 8/side".
+  if (usesPairedSides(cfg)) return `${n * 2} × ${cfg.reps} ${t('per side')}${load}`
+  // Legacy plans stored a total across both sides; keep their old summary readable.
   const split = isPerSide(cfg) ? ' · ' + t('{0}/side', fmtNum(sideReps(cfg.reps))) : ''
   return `${n} × ${cfg.reps}${load}${split}`
 }
@@ -195,18 +194,32 @@ export function buildSets(S, cfg) {
     return sets
   }
   const conf = S.exWeights[cfg.id]
-  for (let i = 0; i < n; i++) {
-    const prev = prevAt(i)
+  const pairedSides = usesPairedSides(cfg)
+  const plannedRows = n * (pairedSides ? 2 : 1)
+  for (let i = 0; i < plannedRows; i++) {
+    const side = i % 2 === 0 ? 'right' : 'left'
+    const prev = pairedSides
+      ? ([...(last?.sets || [])].reverse().find(s => s.side === side) || prevAt(Math.floor(i / 2)))
+      : prevAt(i)
     const usable = prev && prev.r > 0 ? prev : null
     const w = conf && conf.w > 0 ? conf.w : (usable ? usable.w : cfg.weight)
-    sets.push({ w, r: usable ? usable.r : cfg.reps, done: false })
+    // A legacy unilateral workout logged both limbs as one rep total. Convert only the seed
+    // used for the next workout; the historical workout remains unchanged.
+    const legacyTotal = pairedSides && (last?.target?.side === true || !last?.target)
+    const reps = usable ? (legacyTotal ? sideReps(usable.r) : usable.r) : cfg.reps
+    sets.push({
+      w, r: reps,
+      ...(pairedSides ? { side } : {}),
+      ...(usable?.rir != null ? { rir: usable.rir } : {}),
+      ...(usable?.rpe != null ? { rpe: usable.rpe } : {}),
+      done: false
+    })
   }
   return sets
 }
 export function workoutVolume(w) {
   let v = 0
-  // No special case for unilateral work: a per-side set logs its total, so both sides are
-  // already in the rep count that arrives here.
+  // Paired-side work logs each limb independently, so both rows contribute to volume.
   w.entries.forEach(e => e.sets.forEach(s => { if (s.done) v += (s.w || 0) * (s.r || 0) }))
   return v
 }

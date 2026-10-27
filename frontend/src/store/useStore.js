@@ -5,6 +5,7 @@ import { localTZ } from '../lib/format.js'
 import { registerCustom } from '../lib/exercises.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
 import { MOBILE, nativeLoad, nativeSave, nativeClear, syncReminder } from '../lib/mobile.js'
+import { getCloudBackupConsent } from '../lib/supabaseBackup.js'
 import { needsLegalSetup } from '../lib/legalConsent.js'
 
 const KEY = 'gym_state_v1'
@@ -12,7 +13,7 @@ const SIGNED_OUT_KEY = 'gym_signed_out_v1'
 const timeoutSignal = ms => typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
   ? AbortSignal.timeout(ms) : undefined
 export const DEF = {
-  unit: 'kg', restSec: 90, sound: true, keepAwake: true, lang: 'en',
+  unit: 'kg', restSec: 90, sideRestSec: 30, sound: true, keepAwake: true, lockOrientation: false, lang: 'en',
   theme: 'dark', accent: 'lime', body: 'male', targetW: null,
   bodyweight: [], routines: [], week: {}, dayPlan: {},
   exWeights: {}, workouts: [], active: null, customEx: [], favoriteEx: [], favoritesMigrated: false, gifSize: 'full',
@@ -27,9 +28,23 @@ const clone = o => JSON.parse(JSON.stringify(o))
 function loadState() {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return migrateChosenExercises(Object.assign(clone(DEF), JSON.parse(raw)))
+    if (raw) return migratePerSideRoutines(migrateChosenExercises(Object.assign(clone(DEF), JSON.parse(raw))))
   } catch (e) { /* ignore */ }
-  return migrateChosenExercises(clone(DEF))
+  return migratePerSideRoutines(migrateChosenExercises(clone(DEF)))
+}
+
+// Older routines stored both limbs' reps as one even total (`side: true`). Convert only
+// reusable routine targets to per-limb reps and mark the new paired-set format. Completed
+// workouts and an in-progress session retain their original values for accurate history.
+function migratePerSideRoutines(state) {
+  ;(state.routines || []).forEach(routine => (routine.ex || []).forEach(ex => {
+    if (ex.side !== true) return
+    for (const field of ['reps', 'repsMin', 'repsMax']) {
+      if (Number.isFinite(ex[field]) && ex[field] > 0) ex[field] = Math.max(1, Math.ceil(ex[field] / 2))
+    }
+    ex.side = 'paired'
+  }))
+  return state
 }
 
 // Preserve exercises already selected in routines or workouts when unifying "Chosen" with favorites.
@@ -49,23 +64,43 @@ const hasData = st => !!((st.workouts || []).length || (st.routines || []).lengt
 export const useStore = create((set, get) => {
   let pushTm = null
   let saveTm = null
+  let reminderTm = null
   let stateRevision = 0
 
-  // Mobile build: mirror the state into a file in the app's data directory (survives WebView
-  // storage eviction) and keep the native reminder schedule in step with the weekly plan.
+  // Mobile build: mirror state locally. Reminders are synced separately only when their
+  // inputs change, so recording sets does not cancel and recreate OS notifications.
   const nativePersist = () => {
     clearTimeout(saveTm)
-    saveTm = setTimeout(() => { saveTm = null; nativeSave(get().S); syncReminder(get().S) }, 800)
+    saveTm = setTimeout(() => { saveTm = null; nativeSave(get().S) }, 800)
+  }
+
+  const reminderConfig = S => JSON.stringify([
+    S.reminder || null,
+    S.week || {},
+    (S.routines || []).map(({ id, name }) => [id, name]),
+  ])
+
+  const nativeReminderPersist = () => {
+    clearTimeout(reminderTm)
+    reminderTm = setTimeout(() => {
+      reminderTm = null
+      syncReminder(get().S)
+    }, 800)
   }
 
   const persist = (S, push = true) => {
+    const reminderChanged = MOBILE && reminderConfig(get().S) !== reminderConfig(S)
     migrateChosenExercises(S)
+    migratePerSideRoutines(S)
     S._ts = Date.now()
     registerCustom(S.customEx)
     localStorage.setItem(KEY, JSON.stringify(S))
     set({ S })
-    if (MOBILE) nativePersist()
-    if (push && get().user && !MOBILE) {
+    if (MOBILE) {
+      nativePersist()
+      if (reminderChanged) nativeReminderPersist()
+    }
+    if (push && get().user?.trainingDataConsent === true && !MOBILE) {
       stateRevision++
       localStorage.setItem('gym_dirty', '1')
       clearTimeout(pushTm)
@@ -83,6 +118,11 @@ export const useStore = create((set, get) => {
       clearTimeout(saveTm)
       saveTm = null
       nativeSave(get().S)
+    }
+    if (MOBILE && reminderTm) {
+      clearTimeout(reminderTm)
+      reminderTm = null
+      syncReminder(get().S)
     }
     if (pushTm) {
       clearTimeout(pushTm)
@@ -131,7 +171,7 @@ export const useStore = create((set, get) => {
     setSigningIn(value) { set({ signingIn: !!value }) },
 
     async pushState(force = false) {
-      if (!get().user) return
+      if (!get().user || get().user.trainingDataConsent !== true) return
       clearTimeout(pushTm)
       if (!force && localStorage.getItem('gym_dirty') !== '1') return
       const revision = stateRevision
@@ -206,6 +246,8 @@ export const useStore = create((set, get) => {
       // Android private state file without attempting to push anything to the deleted account.
       clearTimeout(saveTm)
       saveTm = null
+      clearTimeout(reminderTm)
+      reminderTm = null
       clearTimeout(pushTm)
       pushTm = null
       await signOutSupabase(false).catch(() => {})
@@ -247,15 +289,21 @@ export const useStore = create((set, get) => {
         catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Sign-in failed. Please try again.') }
         if (authSession?.user) {
           const authUser = authSession.user
+          let trainingDataConsent = false
+          try { trainingDataConsent = (await getCloudBackupConsent(authSession)).accepted === true }
+          catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not check backup authorization.') }
           get().setUser({
             id: authUser.id,
             email: authUser.email,
             name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
             needsLegalSetup: needsLegalSetup(authUser),
+            trainingDataConsent,
           })
         } else {
           get().setUser(null)
         }
+        clearTimeout(reminderTm)
+        reminderTm = null
         syncReminder(get().S)
         set({ ready: true, signingIn: false })
         return

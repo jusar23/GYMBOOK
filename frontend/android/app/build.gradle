@@ -1,5 +1,21 @@
 apply plugin: 'com.android.application'
 
+def releaseSigningFile = rootProject.file('app/keystore.properties')
+def releaseSigningProperties = new Properties()
+if (releaseSigningFile.exists()) {
+    releaseSigningFile.withInputStream { releaseSigningProperties.load(it) }
+}
+def releaseSigningFields = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword']
+def hasReleaseSigning = releaseSigningFields.every {
+    releaseSigningProperties.getProperty(it)?.trim()
+}
+if (releaseSigningFile.exists() && !hasReleaseSigning) {
+    throw new GradleException('app/keystore.properties is incomplete. Fill all four signing fields or remove the file to build an unsigned release.')
+}
+if (hasReleaseSigning && !file(releaseSigningProperties.getProperty('storeFile')).exists()) {
+    throw new GradleException('The upload keystore configured in app/keystore.properties was not found.')
+}
+
 android {
     namespace "com.jusar23.gymbook"
     compileSdk rootProject.ext.compileSdkVersion
@@ -16,9 +32,21 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    if (hasReleaseSigning) {
+        signingConfigs {
+            release {
+                storeFile file(releaseSigningProperties.getProperty('storeFile'))
+                storePassword releaseSigningProperties.getProperty('storePassword')
+                keyAlias releaseSigningProperties.getProperty('keyAlias')
+                keyPassword releaseSigningProperties.getProperty('keyPassword')
+            }
+        }
+    }
     buildTypes {
         release {
-            minifyEnabled false
+            if (hasReleaseSigning) signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }

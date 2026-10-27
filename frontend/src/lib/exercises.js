@@ -1,5 +1,6 @@
 import { EXDB } from './exercises-data.js'
 import { t } from './i18n.js'
+import { MOBILE } from './mobile.js'
 
 export { EXDB }
 export const EXIDX = {}
@@ -31,8 +32,8 @@ export const allExercises = st => [...(st.customEx || []), ...EXDB]
 // shipping ~140 MB of images into the deployment.
 const IMG_BASE = import.meta.env.VITE_IMG_BASE || 'img/'
 const GIF_BASE = import.meta.env.VITE_GIF_BASE || 'gif/'
-export const imgSrc = ex => IMG_BASE + ex.img
-export const gifSrc = ex => GIF_BASE + ex.gif
+export const imgSrc = ex => IMG_BASE + (MOBILE ? ex.img.replace(/\.jpe?g$/i, '.webp') : ex.img)
+export const gifSrc = ex => GIF_BASE + (MOBILE ? ex.gif.replace(/\.gif$/i, '.webp') : ex.gif)
 
 // Cardio exercises log time + speed instead of weight × reps.
 export const isCardio = idOrEx => (typeof idOrEx === 'string' ? EXIDX[idOrEx] : idOrEx)?.bp === 'cardio'

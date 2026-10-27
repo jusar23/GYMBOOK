@@ -3,12 +3,13 @@ import { uid } from '../lib/format.js'
 import { beep, vibrate } from '../lib/sound.js'
 import { api } from '../lib/api.js'
 import { t } from '../lib/i18n.js'
+import { MOBILE } from '../lib/mobile.js'
 import { useStore } from './useStore.js'
 
 // Fire-and-forget: lets the server push a "rest over" alert if this tab gets suspended
 // before the local timer completes. No-ops for guests / offline.
-const pushRestTimer = sec => { if (useStore.getState().user) api('/api/push/rest-timer', { method: 'POST', body: JSON.stringify({ seconds: sec }) }).catch(() => {}) }
-const cancelPushRestTimer = () => { if (useStore.getState().user) api('/api/push/rest-timer/cancel', { method: 'POST', body: '{}' }).catch(() => {}) }
+const pushRestTimer = sec => { if (!MOBILE && useStore.getState().user) api('/api/push/rest-timer', { method: 'POST', body: JSON.stringify({ seconds: sec }) }).catch(() => {}) }
+const cancelPushRestTimer = () => { if (!MOBILE && useStore.getState().user) api('/api/push/rest-timer/cancel', { method: 'POST', body: '{}' }).catch(() => {}) }
 
 let toastTm = null
 let timerInt = null
@@ -40,9 +41,10 @@ export const useUI = create((set, get) => ({
 
   startRest(sec) {
     get().stopRest()
-    const endsAt = Date.now() + sec * 1000
-    set({ timer: { left: sec, total: sec, endsAt } })
-    pushRestTimer(sec)
+    const duration = Math.min(360, Math.max(1, Math.round(Number(sec) || 1)))
+    const endsAt = Date.now() + duration * 1000
+    set({ timer: { left: duration, total: duration, endsAt } })
+    pushRestTimer(duration)
     timerTick = () => {
       const tm = get().timer
       if (!tm) return
@@ -62,11 +64,12 @@ export const useUI = create((set, get) => ({
   addRest(sec) {
     const tm = get().timer
     if (!tm) return
-    const left = tm.left + sec
+    const left = Math.min(360, tm.left + sec)
     // taking off more than is left means "I'm ready now" — same as skipping, and it keeps a
     // negative duration out of both the progress bar and the server-side push schedule
     if (left <= 0) { get().stopRest(); return }
-    set({ timer: { ...tm, left, total: tm.total + sec, endsAt: tm.endsAt + sec * 1000 } })
+    const added = left - tm.left
+    set({ timer: { ...tm, left, total: Math.min(360, tm.total + added), endsAt: tm.endsAt + added * 1000 } })
     pushRestTimer(left)
   },
   stopRest() {

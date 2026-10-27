@@ -16,7 +16,7 @@
 //   · fewer sets than prescribed                       → miss
 // So a session that fell apart can never advance the load as though it had succeeded.
 
-import { modeOf, repStep } from './history.js'
+import { modeOf, repStep, usesPairedSides } from './history.js'
 import { EXIDX } from './exercises.js'
 
 export const POLICIES = ['off', 'linear', 'greyskull', 'double', 'time']
@@ -103,7 +103,10 @@ export function readSession(entry, fallback) {
   const mode = modeOf({ ...target, id: entry && entry.id })
   const sets = (entry && entry.sets) || []
   const planned = target.sets || sets.length
-  const enough = sets.length >= planned
+  // Very old workouts have no saved target. If their set count matches the legacy single
+  // entry per round, judge them as legacy rather than treating the missing limb rows as misses.
+  const pairedSides = usesPairedSides(target) && (entry?.target ? usesPairedSides(entry.target) : sets.length >= planned * 2)
+  const enough = sets.length >= planned * (pairedSides ? 2 : 1)
 
   if (mode === 'time') {
     const goal = target.sec || 0
@@ -120,7 +123,7 @@ export function readSession(entry, fallback) {
   return {
     mode, goal, reps,
     weight: Math.max(0, ...sets.filter(s => s.done).map(s => s.w || 0)),
-    count: reps.length,                                   // the dimension bodyweight work grows (#33)
+    count: pairedSides ? Math.floor(reps.length / 2) : reps.length, // bodyweight progression counts full rounds
     low: reps.length ? Math.min(...reps) : 0,
     amrap: reps.length ? reps[reps.length - 1] : 0,       // Greyskull's final set
     ok: goal > 0 && enough && reps.length > 0 && reps.every(r => r >= goal)
@@ -260,9 +263,16 @@ export function applyPrescription(sets, p) {
   // A policy that decided on a set count gets to grow the list — bodyweight progression adds
   // a set where a barbell would have added a plate. Only ever upwards, and only by copying a
   // row that is already there: a session in progress must not lose a set it has logged.
-  if (p.sets > out.length) {
+  const pairedSides = out.some(s => s.side === 'left' || s.side === 'right')
+  let rounds = pairedSides ? Math.floor(out.length / 2) : out.length
+  while (p.sets > rounds) {
     const seed = out[out.length - 1]
-    while (out.length < p.sets) out.push({ ...seed, done: false })
+    if (pairedSides) {
+      const rightSeed = [...out].reverse().find(s => s.side === 'right') || seed
+      const leftSeed = [...out].reverse().find(s => s.side === 'left') || seed
+      out.push({ ...rightSeed, side: 'right', done: false }, { ...leftSeed, side: 'left', done: false })
+    } else out.push({ ...seed, done: false })
+    rounds++
   }
   return out
 }

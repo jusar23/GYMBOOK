@@ -9,6 +9,7 @@ import { setNav } from './lib/nav.js'
 import { useWakeLock } from './lib/wakelock.js'
 import { startFlow } from './sheets.jsx'
 import Icon from './components/Icon.jsx'
+import Brand from './components/Brand.jsx'
 import TabBar from './components/TabBar.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import Modals from './components/Modals.jsx'
@@ -21,6 +22,7 @@ import { needsLegalSetup } from './lib/legalConsent.js'
 import { openTutorial, tutorialSeenKey } from './components/Tutorial.jsx'
 import SubscriptionGate from './views/SubscriptionGate.jsx'
 import { refreshNativeSubscription } from './lib/subscription.js'
+import { setWorkoutOrientationLocked } from './lib/workout-orientation.js'
 
 const Home = lazy(() => import('./views/Home.jsx'))
 const Plan = lazy(() => import('./views/Plan.jsx'))
@@ -36,15 +38,22 @@ const Legal = lazy(() => import('./views/Legal.jsx'))
 bindUI(useUI)
 const MAIN_TABS = new Set(['/home', '/plan', '/workout', '/stats', '/library'])
 
+function accentTextColor(hex) {
+  const channels = hex.match(/[\da-f]{2}/gi).map(value => parseInt(value, 16) / 255)
+  const [r, g, b] = channels.map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+  return luminance > 0.179 ? '#000000' : '#ffffff'
+}
+
 function applyPrefs(theme, accent) {
   const de = document.documentElement
   de.dataset.theme = theme === 'light' ? 'light' : 'dark'
   const accentKey = ACCENTS[accent] ? accent : 'lime'
   const colors = ACCENTS[accentKey]
   de.dataset.accent = accentKey
-  de.style.setProperty('--acc', de.dataset.theme === 'light' ? colors.light : colors.dark)
-  de.style.setProperty('--acc-2', de.dataset.theme === 'light' ? colors.light : colors.dark)
-  de.style.setProperty('--on-acc', de.dataset.theme === 'light' ? '#fff' : '#000')
+  de.style.setProperty('--acc', colors.color)
+  de.style.setProperty('--acc-2', colors.color)
+  de.style.setProperty('--on-acc', accentTextColor(colors.color))
   const meta = document.querySelector('meta[name="theme-color"]')
   if (meta) meta.content = de.dataset.theme === 'light' ? '#f2f2f7' : '#000000'
 }
@@ -52,7 +61,17 @@ function applyPrefs(theme, accent) {
 function Shell() {
   const navigate = useNavigate()
   const loc = useLocation()
-  const { S, user, ready, signingOut, signingIn } = useStore()
+  const user = useStore(s => s.user)
+  const ready = useStore(s => s.ready)
+  const signingOut = useStore(s => s.signingOut)
+  const signingIn = useStore(s => s.signingIn)
+  const theme = useStore(s => s.S.theme)
+  const accent = useStore(s => s.S.accent)
+  const lang = useStore(s => s.S.lang)
+  const workoutActive = useStore(s => !!s.S.active)
+  const keepAwake = useStore(s => s.S.keepAwake)
+  const lockOrientation = useStore(s => s.S.lockOrientation)
+  const hasTrainingHistory = useStore(s => !!(s.S.workouts?.length || s.S.routines?.length || s.S.active))
   const [subscription, setSubscription] = useState(() => MOBILE && useStore.getState().user?.id
     ? { configured: true, status: 'loading', granted: false, packages: [] }
     : { configured: false, status: 'unconfigured', granted: true, packages: [] })
@@ -78,7 +97,12 @@ function Shell() {
   }, [ready, checkSubscription])
   useEffect(() => {
     if (!MOBILE || !ready || !user?.id || user.needsLegalSetup) return
-    const recheck = () => { if (document.visibilityState === 'visible') void checkSubscription() }
+    let resumeTimer
+    const recheck = () => {
+      if (document.visibilityState !== 'visible') return
+      clearTimeout(resumeTimer)
+      resumeTimer = setTimeout(() => void checkSubscription(), 250)
+    }
     window.addEventListener('focus', recheck)
     document.addEventListener('visibilitychange', recheck)
     let expiryTimer
@@ -90,30 +114,35 @@ function Shell() {
     return () => {
       window.removeEventListener('focus', recheck)
       document.removeEventListener('visibilitychange', recheck)
+      clearTimeout(resumeTimer)
       clearTimeout(expiryTimer)
     }
   }, [ready, user?.id, user?.needsLegalSetup, subscription.granted, subscription.expiresAt, checkSubscription])
-  useEffect(() => { applyPrefs(S.theme, S.accent) }, [S.theme, S.accent])
-  useEffect(() => { setLang(S.lang || 'en') }, [S.lang])
-  useEffect(() => { document.documentElement.lang = S.lang || 'en' }, [langV, S.lang])
+  useEffect(() => { applyPrefs(theme, accent) }, [theme, accent])
+  useEffect(() => { setLang(lang || 'en') }, [lang])
+  useEffect(() => { document.documentElement.lang = lang || 'en' }, [langV, lang])
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
-  useWakeLock(!!S.active && S.keepAwake !== false)
+  useWakeLock(workoutActive && keepAwake !== false)
+  useEffect(() => {
+    const locked = workoutActive && lockOrientation === true
+    void setWorkoutOrientationLocked(locked)
+    return () => { void setWorkoutOrientationLocked(false) }
+  }, [workoutActive, lockOrientation])
 
   useEffect(() => {
     if (!MOBILE || !ready || !user?.id || user.needsLegalSetup) return
-    const hasTrainingHistory = !!(S.workouts?.length || S.routines?.length || S.active)
     if (hasTrainingHistory) return
     const key = tutorialSeenKey(user.id)
     if (tutorialOpenedFor.current === user.id || localStorage.getItem(key) === '1') return
     tutorialOpenedFor.current = user.id
     localStorage.setItem(key, '1')
     openTutorial()
-  }, [ready, user?.id, user?.needsLegalSetup, S.workouts?.length, S.routines?.length, !!S.active])
+  }, [ready, user?.id, user?.needsLegalSetup, hasTrainingHistory])
 
   if (signingOut) return (
     <div id="app">
-      <div className="loading-mark" role="status" aria-label="Signing out of Gym Book Training">
-        <Icon name="bookTraining" />
+      <div className="loading-mark" role="status" aria-label="Signing out of GYMBOOK training">
+        <Icon name="dumbbell" />
         <div className="loading-label">Signing out…</div>
       </div>
     </div>
@@ -121,8 +150,8 @@ function Shell() {
 
   if (!ready) return (
     <div id="app">
-      <div className="loading-mark" role="status" aria-label="Signing in to Gym Book Training">
-        <Icon name="bookTraining" />
+      <div className="loading-mark" role="status" aria-label="Signing in to GYMBOOK training">
+        <Icon name="dumbbell" />
         <div className="loading-label">{signingIn ? 'Signing in…' : t('Loading data...')}</div>
       </div>
     </div>
@@ -130,7 +159,7 @@ function Shell() {
 
   if (loc.pathname === '/legal' || loc.pathname.startsWith('/legal/')) return (
     <div id="app" className="vfade">
-      <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading legal information"><Icon name="bookTraining" /><div className="loading-label">Loading…</div></div>}>
+      <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading legal information"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
         <Legal />
       </Suspense>
     </div>
@@ -139,15 +168,15 @@ function Shell() {
   return (
     <>
       {signingIn && <div className="app-loading-overlay">
-        <div className="loading-mark" role="status" aria-label="Signing in to Gym Book Training">
-          <Icon name="bookTraining" />
+        <div className="loading-mark" role="status" aria-label="Signing in to GYMBOOK training">
+          <Icon name="dumbbell" />
           <div className="loading-label">Signing in…</div>
         </div>
       </div>}
 
       <div id="app" className="vfade" key={loc.pathname}>
         {authed && !loginRoute && !user?.needsLegalSetup && <div className="app-topbar">
-          <div className="app-brand">Gym Book Training</div>
+          <Brand className="app-brand" />
           {MAIN_TABS.has(loc.pathname) && <button className="iconbtn" onClick={() => navigate('/settings')} aria-label={t('Settings')} title={t('Settings')}><Icon name="gear" /></button>}
         </div>}
 
@@ -161,7 +190,7 @@ function Shell() {
             : !authed
               ? <Login />
               : (
-                <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading Gym Book Training"><Icon name="bookTraining" /><div className="loading-label">Loading…</div></div>}>
+                <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading GYMBOOK training"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
                   <Routes>
                     <Route path="/home" element={<Home />} />
                     <Route path="/plan" element={<Plan />} />

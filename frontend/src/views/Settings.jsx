@@ -8,12 +8,13 @@ import { useUI } from '../store/useUI.js'
 
 import { ACCENTS, todayISO, localTZ } from '../lib/format.js'
 
-import { effortOf } from '../lib/history.js'
+import { effortOf, fmtSec } from '../lib/history.js'
 
 import { api, createAppSessionWithSupabase, webauthnOK, passkeyLogin, passkeyRegister, IS_ANDROID } from '../lib/api.js'
 
-import { deleteSupabaseAccount, getAuthSession } from '../lib/supabaseAuth.js'
-import { loadCloudBackup, saveCloudBackup } from '../lib/supabaseBackup.js'
+import { deleteSupabaseAccount, getAuthSession, updateAuthUserMetadata } from '../lib/supabaseAuth.js'
+import { loadCloudBackup, saveCloudBackup, setCloudBackupConsent } from '../lib/supabaseBackup.js'
+import { LEGAL_VERSION } from '../lib/legalConsent.js'
 import { mergePlan } from '../lib/plan-share.js'
 import { parseTrainingFile, trainingFileText } from '../lib/training-file.js'
 import { openSubscriptionManagement } from '../lib/subscription.js'
@@ -29,13 +30,31 @@ import { DEMO } from '../lib/demo.js'
 import { MOBILE, shareExport, syncReminder } from '../lib/mobile.js'
 
 import { loadStarterPlan, confirmSheet, importFromApp } from '../sheets.jsx'
-
 import Icon from '../components/Icon.jsx'
 import { openTutorial } from '../components/Tutorial.jsx'
+
+const ACCENT_TONES = [
+  { id: 'vivid', label: 'Vivid' },
+  { id: 'light-intense', label: 'Light intense' },
+]
 
 import { Section, Row, SelectRow, Switch, Segmented, Button, TextField } from '../components/ui.jsx'
 
 import { DOCS } from './Legal.jsx'
+
+const SOCIAL_LINKS = [
+  { name: 'Facebook', icon: 'facebook', url: import.meta.env.VITE_SOCIAL_FACEBOOK_URL || '' },
+  { name: 'X', icon: 'xSocial', url: import.meta.env.VITE_SOCIAL_X_URL || '' },
+  { name: 'Instagram', icon: 'instagram', url: import.meta.env.VITE_SOCIAL_INSTAGRAM_URL || '' },
+  { name: 'Website', icon: 'globe', url: import.meta.env.VITE_PUBLIC_WEBSITE_URL || 'https://gymbooktraining.com/' },
+]
+
+function openSocialLink(rawUrl) {
+  try {
+    const url = new URL(rawUrl)
+    if (url.protocol === 'https:' || url.protocol === 'http:') window.open(url.href, '_blank', 'noopener,noreferrer')
+  } catch { /* Ignore invalid public links rather than opening an unsafe URL. */ }
+}
 
 
 
@@ -47,7 +66,16 @@ export default function Settings() {
 
   const user = useStore(s => s.user)
 
-  const { update, replaceState, setUser, setSigningIn, pullState, pushState, signOut, signOutAll, completeAccountDeletion, resetDemo } = useStore()
+  const update = useStore(s => s.update)
+  const replaceState = useStore(s => s.replaceState)
+  const setUser = useStore(s => s.setUser)
+  const setSigningIn = useStore(s => s.setSigningIn)
+  const pullState = useStore(s => s.pullState)
+  const pushState = useStore(s => s.pushState)
+  const signOut = useStore(s => s.signOut)
+  const signOutAll = useStore(s => s.signOutAll)
+  const completeAccountDeletion = useStore(s => s.completeAccountDeletion)
+  const resetDemo = useStore(s => s.resetDemo)
 
   const toast = useUI(s => s.toast)
 
@@ -58,6 +86,60 @@ export default function Settings() {
   const wakeOK = wakeLockSupported()
   const [cloudBusy, setCloudBusy] = useState(false)
   const [accountDeleting, setAccountDeleting] = useState(false)
+  const [trainingConsentBusy, setTrainingConsentBusy] = useState(false)
+
+  const updateTrainingConsent = async accepted => {
+    setTrainingConsentBusy(true)
+    try {
+      if (MOBILE) {
+        if (!accepted) {
+          confirmSheet({
+            title: t('Turn off server backup?'),
+            message: t('New uploads and access to the server copy will stop. The existing copy remains stored in Supabase until you request deletion or delete your account. Your data on this phone will stay here.'),
+            confirmText: t('Turn off backup'), danger: true,
+            onConfirm: async () => {
+              setTrainingConsentBusy(true)
+              try {
+                await setCloudBackupConsent(false)
+                const session = await getAuthSession()
+                const metadata = session?.user?.user_metadata || {}
+                const updated = await updateAuthUserMetadata({ ...metadata,
+                  gymbook_sensitive_training_consent: false,
+                  gymbook_sensitive_training_consent_version: LEGAL_VERSION,
+                  gymbook_sensitive_training_consent_text_version: LEGAL_VERSION,
+                  gymbook_sensitive_training_consent_revoked_at: new Date().toISOString(),
+                })
+                setUser({ ...user, email: updated.email, trainingDataConsent: false })
+                toast(t('Server workout sync disabled'))
+              } catch (e) { toast(e.message || t('Could not update server-sync consent')) }
+              finally { setTrainingConsentBusy(false) }
+            },
+          })
+          return
+        }
+        const session = await getAuthSession()
+        const metadata = session?.user?.user_metadata || {}
+        const updated = await updateAuthUserMetadata({ ...metadata,
+          gymbook_sensitive_training_consent: true,
+          gymbook_sensitive_training_consent_version: LEGAL_VERSION,
+          gymbook_sensitive_training_consent_text_version: LEGAL_VERSION,
+          gymbook_sensitive_training_consent_at: new Date().toISOString(),
+        })
+        await setCloudBackupConsent(true)
+        setUser({ ...user, email: updated.email, trainingDataConsent: true })
+        toast(t('Server workout sync enabled'))
+        return
+      }
+      const result = await api('/api/consent/training-data', {
+        method: 'PUT', body: JSON.stringify({ accepted }),
+      })
+      setUser({ ...user, trainingDataConsent: result.accepted })
+      if (result.accepted) await pullState(undefined, false, true)
+      toast(result.accepted ? t('Server workout sync enabled') : t('Server workout sync disabled'))
+    } catch (e) {
+      toast(e.message || t('Could not update server-sync consent'))
+    } finally { setTrainingConsentBusy(false) }
+  }
 
   const showAccountNotice = (title, message, success = false) => useUI.getState().openSheet(close => (
     <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', padding: 'max(24px, env(safe-area-inset-top)) 22px max(24px, env(safe-area-inset-bottom))' }}>
@@ -266,7 +348,7 @@ export default function Settings() {
 
   const confirmTutorial = () => confirmSheet({
     title: t('Open the tutorial?'),
-    message: t('The chalkboard guide will open so you can review the main parts of Gym Book Training.'),
+    message: t('The usage guide will open so you can review the main parts of Gym Book Training.'),
     confirmText: t('Open tutorial'),
     onConfirm: openTutorial,
   })
@@ -332,7 +414,7 @@ export default function Settings() {
       </Row>
 
       <Row icon="lightbulb" iconTint="var(--yellow)" title={t('Tutorial')}
-        subtitle={t('Review the chalkboard guide to using Gym Book Training.')}
+        subtitle={t('Review the usage guide for Gym Book Training.')}
         accessory="chevron" onClick={confirmTutorial} />
 
     </Section>
@@ -341,13 +423,17 @@ export default function Settings() {
 
     {/* ---------- during a workout ---------- */}
 
-    <Section title={t('During a workout')} footer={wakeOK ? t('The screen stays on while a workout is running, so you don’t have to unlock your phone between sets.') : null}>
+    <Section title={t('During a workout')} footer={wakeOK && S.keepAwake !== false ? t('The screen stays on while a workout is running, so you don’t have to unlock your phone between sets.') : null}>
 
       <SelectRow icon="timer" iconTint="var(--orange)" title={t('Rest timer')}
 
         value={S.restSec} onChange={v => update(s => { s.restSec = v })}
 
-        options={[60, 90, 120, 150, 180].map(v => ({ value: v, label: v + 's' }))} />
+        options={Array.from({ length: 12 }, (_, i) => (i + 1) * 30).map(v => ({ value: v, label: fmtSec(v) }))} />
+
+      <SelectRow icon="timer" iconTint="var(--blue)" title={t('Double-set rest')}
+        value={S.sideRestSec ?? 30} onChange={v => update(s => { s.sideRestSec = v })}
+        options={Array.from({ length: 6 }, (_, i) => (i + 1) * 30).map(v => ({ value: v, label: fmtSec(v) }))} />
 
       {(wakeOK || !MOBILE) && (
 
@@ -362,6 +448,11 @@ export default function Settings() {
         </Row>
 
       )}
+
+      {MOBILE && <Row icon="expand" iconTint="var(--purple)" title={t('Lock screen orientation')}
+        subtitle={t('Keep the current screen direction while a workout is active.') }>
+        <Switch checked={!!S.lockOrientation} onChange={v => update(s => { s.lockOrientation = v })} />
+      </Row>}
 
       <Row icon="bell" iconTint="var(--pink)" title={t('Sounds')}>
 
@@ -419,19 +510,20 @@ export default function Settings() {
 
         <span className="lrow-t">{t('Accent color')}</span>
 
-        {['dark', 'light'].map(tone => <div key={tone} style={{ marginBottom: 10 }}>
+        {ACCENT_TONES.map(({ id, label }) => <div key={id} style={{ marginBottom: 10 }}>
 
-          <div className="small dim" style={{ marginBottom: 8 }}>{t(tone === 'dark' ? 'Dark-theme tones (also available in Light)' : 'Light-theme tones (also available in Dark)')}</div>
+          <div className="small dim" style={{ marginBottom: 8 }}>{t(label)}</div>
 
           <div className="swatches">
 
-            {Object.entries(ACCENTS).filter(([k]) => k.endsWith('-light') === (tone === 'light')).map(([k, colors]) => {
+            {Object.entries(ACCENTS).filter(([, colors]) => colors.selectable !== false && colors.tone === id).map(([k, colors]) => {
 
-              const hue = k.replace(/-light$/, '')
+              const selectedAccent = ACCENTS[S.accent]?.alias || (ACCENTS[S.accent] ? S.accent : 'lime')
+              const labelText = `${t(colors.label)} · ${t(label)} · ${colors.color}`
 
-              return <button key={k} className={'swatch' + ((S.accent || 'lime') === k ? ' on' : '')}
+              return <button key={k} className={'swatch' + (selectedAccent === k ? ' on' : '')}
 
-                style={{ background: colors.swatch }} onClick={() => update(s => { s.accent = k })} aria-label={`${t(hue)} · ${t(tone === 'dark' ? 'Dark' : 'Light')}`} title={`${t(hue)} · ${t(tone === 'dark' ? 'Dark' : 'Light')}`} />
+                style={{ background: colors.swatch }} onClick={() => update(s => { s.accent = k })} aria-label={labelText} title={labelText} />
 
             })}
 
@@ -451,9 +543,14 @@ export default function Settings() {
 
       {MOBILE ? <>
 
-        <Row icon="lock" iconTint="var(--acc)" title={user ? user.name : t('Local data on this phone')} subtitle={t('Workout data is stored on this phone. Cloud backup runs only when you start it here.')} />
+        <Row icon="lock" iconTint="var(--acc)" title={user ? user.name : t('Local data on this phone')} subtitle={t('Workout data is stored on this phone. Finished workouts update an authorized server backup automatically.')} />
         {user
           ? <>
+            <Row icon="shield" iconTint="var(--blue)" title={t('Server backup of workout data')}
+              subtitle={t('Turning this off stops future uploads and blocks access to the existing server copy. The copy remains stored until you request deletion or delete your account.') }>
+              <Switch checked={user.trainingDataConsent === true} disabled={trainingConsentBusy}
+                onChange={updateTrainingConsent} />
+            </Row>
             <Row icon="shield" iconTint="var(--acc)" title={t('Manage subscription')} subtitle={t('View your plan, renewal date, payment method or cancellation options.')} accessory="chevron" onClick={manageSubscription} />
             <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your progress stays on this phone. Cloud backup is not changed.'), confirmText: t('Sign out'), danger: true, onConfirm: async () => { await signOut(); nav('/home') } })} />
             <Row icon="trash" iconTint="var(--red)" title={t('Delete account')} subtitle={t('Permanently delete your account and its data.')} danger onClick={deleteAccount} />
@@ -470,7 +567,16 @@ export default function Settings() {
 
       </> : user ? <>
 
-        <Row icon="personCircle" iconTint="var(--grey)" title={user.name} subtitle={t('Your profile and workout progress sync across devices.')} />
+        <Row icon="personCircle" iconTint="var(--grey)" title={user.name}
+          subtitle={user.trainingDataConsent === true
+            ? t('Your profile and workout progress sync across devices.')
+            : t('Workout data stays on this device until you enable server sync.')} />
+
+        <Row icon="shield" iconTint="var(--blue)" title={t('Server sync of workout data')}
+          subtitle={t('Authorize workout and body-weight data to sync with your Gymbook server. Turning this off stops sync and server restore.') }>
+          <Switch checked={user.trainingDataConsent === true} disabled={trainingConsentBusy}
+            onChange={updateTrainingConsent} />
+        </Row>
 
         {user.admin && <Row icon="wrench" iconTint="var(--indigo)" title={t('Admin dashboard')} accessory="chevron" onClick={() => nav('/admin')} />}
 
@@ -538,6 +644,13 @@ export default function Settings() {
       {!MOBILE && <Row icon="trash" iconTint="var(--red)" title={t('Reset everything')} danger onClick={() => confirmSheet({ title: t('Reset everything?'), message: t('Deletes your plan, workouts and body weight on this device. This cannot be undone.'), confirmText: t('Delete everything'), danger: true, onConfirm: () => { replaceState(JSON.parse(JSON.stringify(DEF)), true); nav('/home'); toast(t('All data reset')) } })} />}
 
     </Section>
+
+    <Section title={t('Social')}>
+      {SOCIAL_LINKS.map(({ name, icon, url }) => <Row key={name} icon={icon}
+        iconTint="var(--acc)" title={t(name)}
+        subtitle={url || t('Coming soon')}
+        accessory={url ? 'chevron' : 'none'} onClick={url ? () => openSocialLink(url) : undefined} />)}
+    </Section>
 
     <Section title={t('Legal')}>
 
@@ -607,15 +720,15 @@ export default function Settings() {
 
 const EFFORT_ROWS = [
 
-  ['0', '10', 'Nothing left — went to failure'],
+  ['0', '10', 'No more reps possible with good form — muscular failure'],
 
-  ['1', '9', 'One more rep in the tank'],
+  ['1', '9', 'Could do 1 more rep'],
 
-  ['2', '8', 'Two more reps'],
+  ['2', '8', 'Could do 2 more reps'],
 
-  ['3', '7', 'Three more reps'],
+  ['3', '7', 'Could do 3 more reps'],
 
-  ['4+', '≤6', 'Easy — warm-up territory'],
+  ['4+', '≤6', 'Could do 4 or more reps; light effort'],
 
 ]
 
@@ -635,13 +748,13 @@ function effortHelpSheet() {
 
     <div className="muted small" style={{ lineHeight: 1.5 }}>
 
-      {t('How hard a set was, logged next to weight and reps. Two scales for the same judgement, counted from opposite ends.')}
+      {t('After a set, note how it ended: how many more reps you could do (RIR), or how hard it felt (RPE).')}
 
     </div>
 
     <div className="efftbl">
 
-      <div className="r hd"><span className="n">{t('RIR')}</span><span className="n">{t('RPE')}</span><span className="f">{t('How it felt')}</span></div>
+      <div className="r hd"><span className="n">{t('RIR')}</span><span className="n">{t('RPE')}</span><span className="f">{t('What it means')}</span></div>
 
       {EFFORT_ROWS.map(([rir, rpe, feel], i) => (
 
@@ -657,7 +770,7 @@ function effortHelpSheet() {
 
     <div className="dim small" style={{ lineHeight: 1.5, display: 'grid', gap: 8 }}>
 
-      <div>{t('RIR counts the reps you left; RPE reads the same effort off a 10-point scale — so RPE ≈ 10 − RIR. Pick the one you already think in.')}</div>
+      <div>{t('RIR (reps in reserve) estimates how many more reps you could do before muscular failure. RPE (rate of perceived exertion) rates how hard the set felt from 1 to 10: RPE 10 is maximum effort, and RPE 8 means you could do about 2 more reps. For example, that set can be logged as RIR 2 or RPE 8.')}</div>
 
       <div>{t('The highlighted row is where most working sets land. Sets you have already logged keep their own scale, and nothing else reads the value — progression and estimated 1RM are unaffected.')}</div>
 
@@ -683,7 +796,7 @@ function NotificationsCard({ S, update, toast }) {
 
 // Mobile build: the reminder is a native local notification scheduled on planned weekdays —
 
-// no push server involved. The schedule itself is (re)synced by the store on every persist;
+// no push server involved. The store resyncs only when schedule inputs change;
 
 // this card only owns the OS permission prompt when the switch turns on.
 
@@ -953,7 +1066,7 @@ function RegisterInline({ close, setUser, setSigningIn, pushState, pullState, to
 
   const [inviteOnly, setInviteOnly] = useState(false)
 
-  useEffect(() => { api('/api/config').then(c => setInviteOnly(!!c.invite_only)).catch(() => {}) }, [])
+  useEffect(() => { if (!MOBILE) api('/api/config').then(c => setInviteOnly(!!c.invite_only)).catch(() => {}) }, [])
 
   const go = async () => {
 

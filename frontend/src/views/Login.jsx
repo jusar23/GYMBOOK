@@ -1,7 +1,7 @@
 import { useStore, hasData } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { passkeyRegister, api, BIO, createAppSessionWithSupabase } from '../lib/api.js'
-import { cancelPasswordRecovery, clearPendingRecoveryCode, createEmailAccount, getPendingRecoveryCode, isPasswordRecovery, requestPasswordReset, signInWithEmail, signInWithGoogle, supabaseAuthConfigured, updateAuthUserMetadata, updateRecoveredPassword } from '../lib/supabaseAuth.js'
+import { cancelPasswordRecovery, clearPendingRecoveryCode, createEmailAccount, getAuthSession, getPendingRecoveryCode, isPasswordRecovery, requestPasswordReset, signInWithEmail, signInWithGoogle, supabaseAuthConfigured, updateAuthUserMetadata, updateRecoveredPassword } from '../lib/supabaseAuth.js'
 import { t } from '../lib/i18n.js'
 import { countryOptions } from '../lib/countries.js'
 import { legalConsentMetadata, needsLegalSetup } from '../lib/legalConsent.js'
@@ -11,6 +11,7 @@ import { MOBILE } from '../lib/mobile.js'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
+import Brand from '../components/Brand.jsx'
 import { Button, Check } from '../components/ui.jsx'
 
 function ofAdultAge(dateValue) {
@@ -55,13 +56,15 @@ function authErrorText(error) {
 }
 
 function RegisterSheet({ close }) {
-  const { setUser, pushState, pullState } = useStore()
+  const setUser = useStore(s => s.setUser)
+  const pushState = useStore(s => s.pushState)
+  const pullState = useStore(s => s.pullState)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [inviteOnly, setInviteOnly] = useState(false)
   const ref = useRef(null)
   useEffect(() => { setTimeout(() => ref.current?.focus(), 250) }, [])
-  useEffect(() => { api('/api/config').then(c => setInviteOnly(!!c.invite_only)).catch(() => {}) }, [])
+  useEffect(() => { if (!MOBILE) api('/api/config').then(c => setInviteOnly(!!c.invite_only)).catch(() => {}) }, [])
   const go = async () => {
     const n = name.trim()
     if (!n) { useUI.getState().toast(t('Enter a name')); return }
@@ -69,7 +72,8 @@ function RegisterSheet({ close }) {
     try {
       const u = await passkeyRegister(n, code.trim())
       setUser(u); close()
-      if (hasData(useStore.getState().S)) { await pushState(true); useUI.getState().toast(t('Profile created — data from this device moved into it')) }
+      if (hasData(useStore.getState().S) && u.trainingDataConsent === true) { await pushState(true); useUI.getState().toast(t('Profile created — data from this device moved into it')) }
+      else if (hasData(useStore.getState().S)) useUI.getState().toast(t('Profile created. Your workout data stays on this device until you authorize server sync in Settings.'))
       else { await pullState(); useUI.getState().toast(t('Welcome, {0}', u.name)) }
     } catch (e) { if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') useUI.getState().toast(e.message || t('Registration failed')) }
   }
@@ -90,7 +94,9 @@ function RegisterSheet({ close }) {
 
 export default function Login({ legalSetup = false }) {
   const navigate = useNavigate()
-  const { setUser, pullState, setSigningIn } = useStore()
+  const setUser = useStore(s => s.setUser)
+  const pullState = useStore(s => s.pullState)
+  const setSigningIn = useStore(s => s.setSigningIn)
   const [mode, setMode] = useState('signin')
   const [recoveryMode, setRecoveryMode] = useState(isPasswordRecovery)
   const [name, setName] = useState('')
@@ -118,7 +124,7 @@ export default function Login({ legalSetup = false }) {
     if (legalSetup) { setBusy(false); setSigningIn(false) }
   }, [legalSetup])
 
-  const finishLogin = async session => {
+  const finishLogin = async (session, trainingDataAccepted = false) => {
     if (!session?.access_token) throw new Error(t('Check your email to confirm your account, then sign in.'))
     if (MOBILE) {
       const authUser = session.user || {}
@@ -145,9 +151,13 @@ export default function Login({ legalSetup = false }) {
     }
     const result = await createAppSessionWithSupabase(session.access_token, getPendingRecoveryCode())
     clearPendingRecoveryCode()
-    const { user, state } = result
+    let { user, state } = result
+    if (trainingDataAccepted) {
+      await api('/api/consent/training-data', { method: 'PUT', body: JSON.stringify({ accepted: true }) })
+      user = { ...user, trainingDataConsent: true }
+    }
     setUser(user)
-    try { await pullState(state, Object.hasOwn(result, 'state'), true) }
+    try { await pullState(trainingDataAccepted ? undefined : state, trainingDataAccepted ? false : Object.hasOwn(result, 'state'), true) }
     catch (e) {
       setUser(null)
       localStorage.setItem('gym_auth_error', e.message || t('Could not load your profile data.'))
@@ -175,12 +185,24 @@ export default function Login({ legalSetup = false }) {
         const legalMetadata = validatedLegalMetadata()
         const result = await createEmailAccount({ name, email, password, legalMetadata })
         if (result.confirmationRequired) setNotice(t('Account created. Check your email for a confirmation link before signing in.'))
-        else await finishLogin(result)
+        else await finishLogin(result, trainingDataAccepted)
       } else if (legalSetup) {
         const legalMetadata = validatedLegalMetadata()
         const authUser = await updateAuthUserMetadata(legalMetadata)
-        const currentUser = useStore.getState().user
-        setUser({ ...currentUser, needsLegalSetup: needsLegalSetup(authUser) })
+        let currentUser = { ...useStore.getState().user, needsLegalSetup: needsLegalSetup(authUser) }
+        if (!MOBILE) {
+          const session = await getAuthSession()
+          if (!session?.access_token) throw new Error(t('Please sign in again to finish setting up your account.'))
+          const result = await createAppSessionWithSupabase(session.access_token, getPendingRecoveryCode())
+          if (trainingDataAccepted) {
+            await api('/api/consent/training-data', { method: 'PUT', body: JSON.stringify({ accepted: true }) })
+            result.user.trainingDataConsent = true
+          }
+          currentUser = { ...result.user, needsLegalSetup: false }
+          setUser(currentUser)
+          await pullState(trainingDataAccepted ? undefined : result.state, trainingDataAccepted ? false : Object.hasOwn(result, 'state'), true)
+        }
+        setUser(currentUser)
         navigate('/home', { replace: true })
       } else {
         await finishLogin(await signInWithEmail({ email, password }))
@@ -224,9 +246,8 @@ export default function Login({ legalSetup = false }) {
   }
 
   const head = <>
-    <div style={{ fontSize: 54, display: 'flex', justifyContent: 'center', color: 'var(--acc)' }}><Icon name="bookTraining" /></div>
-    <h1 style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-.035em', margin: '10px 0 4px' }}>Gym Book Training</h1>
-    <div style={{ color: 'var(--acc)', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Your training, in your pocket</div>
+    <h1 className="login-brand-heading"><Brand className="login-brand" /></h1>
+    <div className="login-brand-tagline">Your training, in your pocket</div>
   </>
   const wrap = { display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '78vh', textAlign: 'center' }
 

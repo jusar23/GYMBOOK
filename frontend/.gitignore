@@ -1,22 +1,23 @@
-@'
-# Dependencias
+# Dependencies
 node_modules/
 **/node_modules/
 
-# Archivos generados
-frontend/dist/
-frontend/android/.gradle/
-frontend/android/app/build/
+# Generated web and Android output
+dist/
+android/.gradle/
+android/app/build/
+android/app/keystore.properties
+android/app/*.jks
+android/app/*.keystore
 
-# Configuración local de IDE
+# Local IDE files
 .idea/
 **/.idea/
 
-# Variables de entorno
+# Local environment files
 .env
 .env.*
 !.env.example
 
-# Temporales de Supabase
+# Supabase CLI state
 supabase/.temp/
-'@ | Set-Content -Path .gitignore -Encoding utf8
