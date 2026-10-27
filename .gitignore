@@ -1,1 +1,36 @@
-# Dependenciesnode_modules/**/node_modules/# Local environment files.env.env.*!.env.example**/.env**/.env.*!**/.env.example# Generated web and Android build outputfrontend/dist/frontend/android/.gradle/frontend/android/app/build/frontend/android/app/keystore.propertiesfrontend/android/app/*.jksfrontend/android/app/*.keystore# Local tooling and Supabase state.idea/**/.idea/supabase/.temp/.DS_Storedata/vapid.jsoncoverage/**/coverage/**/.vercel/*.log# Local Codex tooling and worktrees.agents/.codex-worktrees/skills-lock.json
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Generated web and Android build output
+frontend/dist/
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/android/app/keystore.properties
+frontend/android/app/*.jks
+frontend/android/app/*.keystore
+
+# Local tooling and Supabase state
+.idea/
+**/.idea/
+supabase/.temp/
+.DS_Store
+
+data/vapid.json
+coverage/
+**/coverage/
+**/.vercel/
+*.log
+
+# Local Codex tooling and worktrees
+.agents/
+.codex-worktrees/
+skills-lock.json
