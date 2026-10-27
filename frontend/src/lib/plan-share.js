@@ -9,7 +9,7 @@
 //     a page break — each exercise, and each routine that fits, stays in one place.
 
 import { EXIDX, isBodyweightEq } from './exercises.js'
-import { modeOf, fmtSec, isBw, isPerSide, sideReps } from './history.js'
+import { modeOf, fmtSec, isBw, isPerSide, sideReps, usesPairedSides } from './history.js'
 import { uid, todayISO, DAYN, fmtNum, exCount } from './format.js'
 import { t } from './i18n.js'
 
@@ -37,7 +37,7 @@ function cleanEx(e) {
   // it disagrees with the catalogue, since agreeing is what the other end already assumes.
   if (e.bodyweight != null && e.bodyweight !== isBodyweightEq(e.id)) o.bodyweight = e.bodyweight
   // Only on reps work — `side` counts reps, and a timed hold has none to split.
-  if (e.side && mode !== 'time' && mode !== 'cardio') o.side = true
+  if (e.side && mode !== 'time' && mode !== 'cardio') o.side = e.side === 'paired' ? 'paired' : true
   // Progression settings travel with the plan — a shared Greyskull routine that arrives
   // without its rule is just a list of weights.
   if (e.prog) o.prog = e.prog
@@ -150,10 +150,12 @@ function scheme(e, unit) {
     const body = `${e.min || 20} min @ ${fmtNum(e.speed || 8)} km/h`
     return sets > 1 ? `${sets} × ${body}` : body
   }
-  let s = mode === 'time' ? `${sets} × ${fmtSec(e.sec || 45)}` : `${sets} × ${e.reps ?? 10}`
+  let s = mode === 'time' ? `${sets} × ${fmtSec(e.sec || 45)}`
+    : usesPairedSides(e) ? `${sets * 2} × ${e.reps ?? 10} ${t('per side')}`
+      : `${sets} × ${e.reps ?? 10}`
   if (e.weight) s += ` · ${isBw(e) ? '+' : ''}${fmtNum(e.weight)} ${unit}`
   // A printed plan is read at the rack, so the split earns its four characters.
-  if (mode !== 'time' && isPerSide(e)) s += ` · ${t('{0}/side', fmtNum(sideReps(e.reps ?? 10)))}`
+  if (mode !== 'time' && isPerSide(e) && !usesPairedSides(e)) s += ` · ${t('{0}/side', fmtNum(sideReps(e.reps ?? 10)))}`
   return s
 }
 

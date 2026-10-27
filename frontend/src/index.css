@@ -42,8 +42,8 @@
   --purple:#bf5af2; --mint:#63e6e2; --brown:#ac8e68; --grey:#8e8e93;
 
   /* accent (per-account, synced) */
-  --acc:  var(--green);
-  --acc-2:#248a3d;
+  --acc:  #B8F36B;
+  --acc-2:#B8F36B;
   --on-acc:#000000;
   --acc-soft: color-mix(in srgb, var(--acc) 16%, transparent);
   --acc-line: color-mix(in srgb, var(--acc) 38%, transparent);
@@ -79,11 +79,11 @@
   --blue:#007aff; --green:#34c759; --red:#ff3b30; --orange:#ff9500;
   --yellow:#ffcc00; --teal:#30b0c7; --indigo:#5856d6; --pink:#ff2d55;
   --purple:#af52de; --mint:#00c7be; --brown:#a2845e; --grey:#8e8e93;
-  --acc-2:#248a3d;
-  --on-acc:#ffffff;
+  --acc-2:#B8F36B;
+  --on-acc:#000000;
 }
 
-/* Accent values are selected by the profile, paired in App.jsx for both themes. */
+/* Accent values stay identical across themes; App.jsx only adjusts text contrast. */
 
 /* ---------------------------------------------------------------- reset -- */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -176,10 +176,19 @@ body.resting #app{padding-bottom:calc(250px + var(--sab))}
 
 /* App name and shared top-right settings shortcut */
 .app-topbar{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px}
+.brand-lockup{display:inline-flex;align-items:center;gap:.48em;white-space:nowrap;line-height:1}
+.brand-lockup-mark{display:grid;place-items:center;flex:none;width:1.55em;height:1.55em;border-radius:.34em;background:var(--brand-mark-bg,var(--acc));color:var(--brand-mark-fg,var(--on-acc));font-size:.95em}
+.brand-lockup-mark .icn{width:1em;height:1em}
+.brand-lockup-name{display:inline-flex;flex-direction:column;align-items:flex-start;gap:.08em;white-space:nowrap;letter-spacing:-.055em;line-height:.92}
+.brand-lockup-core{font-weight:800}
+.brand-lockup-training{color:var(--brand-accent,var(--acc));font-size:.5em;font-weight:700;letter-spacing:.12em}
 .app-brand{
-  color:var(--label);font-size:16px;font-weight:700;letter-spacing:.035em;
+  color:var(--label);font-size:16px;
   margin:0 4px;
 }
+.login-brand-heading{font-size:28px;font-weight:700;margin:10px 0 8px;text-align:center}
+.login-brand{font-size:28px;color:var(--label)}
+.login-brand-tagline{color:var(--acc);font-size:16px;font-weight:600;margin-bottom:6px}
 .hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:8px 0 18px}
 .hdr h1{font-size:34px;line-height:1.06;font-weight:700;letter-spacing:-.028em}
 .hdr .sub{color:var(--label-2);font-size:15px;letter-spacing:-.006em;margin-top:4px}
@@ -645,8 +654,12 @@ h4.sec{
 .sethead .eff-sp{text-align:center}
 .sethead .ck-sp{width:30px;flex:none}
 .setrow{display:flex;align-items:center;gap:8px;padding:7px 0;position:relative}
-.setrow+.setrow::before{
+.setrow:not(.paired)+.setrow:not(.paired)::before{
   content:'';position:absolute;left:32px;right:0;top:0;height:var(--hair);background:var(--sep);
+}
+.setrow.paired+.setrow.paired::before{display:none}
+.setrow.paired.pair-end::after{
+  content:'';position:absolute;left:32px;right:0;bottom:0;height:var(--hair);background:var(--sep);
 }
 .setrow .n{
   width:24px;height:24px;border-radius:50%;background:var(--surface-2);color:var(--label-2);

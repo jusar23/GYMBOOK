@@ -174,7 +174,7 @@ const subscriptionErrorKeys = [
 ]
 // The informational website never displays exercise instructions. Keep those large
 // exercise packs out of its deploy; the mobile app loads a pack only when it is needed.
-const instrPacks = import.meta.env.VITE_MOBILE === '1' ? import.meta.glob('../instr/*.js') : {}
+const instrPacks = import.meta.env.MODE === 'mobile' || import.meta.env.VITE_MOBILE === '1' ? import.meta.glob('../instr/*.js') : {}
 
 let lang = 'en'
 let dict = {}

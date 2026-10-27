@@ -257,7 +257,7 @@ export async function signInWithGoogle(recoveryCode = '') {
   savePendingRecoveryCode(recoveryCode)
   let redirectTo = `${window.location.origin}${window.location.pathname}`
   let native = false
-  if (import.meta.env.VITE_MOBILE === '1') {
+  if (import.meta.env.MODE === 'mobile' || import.meta.env.VITE_MOBILE === '1') {
     const { Capacitor } = await import('@capacitor/core')
     native = Capacitor.isNativePlatform()
     if (native) redirectTo = NATIVE_OAUTH_REDIRECT

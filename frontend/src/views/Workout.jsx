@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { exOr } from '../lib/exercises.js'
-import { effectiveRoutine, lastEntryFor, bestWeightFor, buildSets, setsDoneActive, supersetUnits, unitOf, setLabel, fmtSec, modeOf, isBw, isPerSide, sideReps, repStep, EFFORT, effortOf, stepEffort, capEffort } from '../lib/history.js'
+import { effectiveRoutine, lastEntryFor, bestWeightFor, buildSets, setsDoneActive, supersetUnits, unitOf, setLabel, fmtSec, modeOf, isBw, isPerSide, sideReps, usesPairedSides, repStep, EFFORT, effortOf, stepEffort, capEffort } from '../lib/history.js'
 import { fmtNum, fmtDate, todayISO, exCount, DAYN } from '../lib/format.js'
 import { beep, vibrate } from '../lib/sound.js'
 import { t } from '../lib/i18n.js'
@@ -23,8 +23,9 @@ function setLabelInUnit(id, set, cfg, fromUnit, toUnit) {
   const effort = set.rir != null ? ` (RIR ${fmtNum(set.rir)})` : set.rpe != null ? ` (RPE ${fmtNum(set.rpe)})` : ''
   const mode = modeOf(cfg || { id })
   if (mode === 'time') return fmtSec(set.sec) + (w ? ` · ${w} ${toUnit}` : '') + effort
-  if (isBw({ ...(cfg || {}), id })) return (w ? `+${w} ${toUnit} × ` : '') + (set.r || 0) + effort
-  return `${w || fmtNum(0)} ${toUnit}×${set.r || 0}${effort}`
+  const side = usesPairedSides(cfg) && set.side ? ` · ${t(set.side === 'left' ? 'Left' : 'Right')}` : ''
+  if (isBw({ ...(cfg || {}), id })) return (w ? `+${w} ${toUnit} × ` : '') + (set.r || 0) + side + effort
+  return `${w || fmtNum(0)} ${toUnit}×${set.r || 0}${side}${effort}`
 }
 
 /* ---------- start chooser (no active workout) ---------- */
@@ -89,9 +90,7 @@ function ExerciseBlock({ entryIdx, compact, focusMode = false, onToggle, onField
   const bw = !cardio && isBw(cfg)
   const added = bw && entry.sets.some(s => s.w > 0)
   const loadCol = { f: 'w', step: weightUnit === 'lb' ? 5 : 2.5, dec: true, hd: bw ? t('Added ({0})', weightUnit) : t('Weight ({0})', weightUnit) }
-  // The reps column is the total in every mode, unilateral included — the stepper walks in
-  // twos there so the number you land on is one you can actually split evenly.
-  const repCol = { f: 'r', step: repStep(cfg), dec: false, hd: t('Reps') }
+  const repCol = { f: 'r', step: repStep(cfg), dec: false, hd: t(usesPairedSides(cfg) ? 'Reps per side' : 'Reps') }
   const col1 = cardio ? { f: 'min', step: 1, dec: false, hd: t('Duration (min)') }
     : timed ? { f: 'sec', step: 5, dec: false, hd: t('Seconds') }
       : (bw && !added) ? repCol : loadCol
@@ -104,6 +103,12 @@ function ExerciseBlock({ entryIdx, compact, focusMode = false, onToggle, onField
   const kind = effortOf(S)
   const eff = EFFORT[kind]
   const col3 = mode === 'reps' && eff ? { ...eff, eff: kind, dec: true, opt: true, hd: t(eff.hd) } : null
+  const rows = entry.sets.map((set, index) => ({ set, index }))
+  if (usesPairedSides(cfg)) {
+    for (let i = 0; i + 1 < rows.length; i += 2) {
+      if (rows[i].set.side === 'left' && rows[i + 1].set.side === 'right') [rows[i], rows[i + 1]] = [rows[i + 1], rows[i]]
+    }
+  }
   // The effort column walks its own scale — see stepEffort. Weight and reps step up from 0
   // with no ceiling, as they always did.
   const bump = (s, i, col, dir) => {
@@ -136,9 +141,8 @@ function ExerciseBlock({ entryIdx, compact, focusMode = false, onToggle, onField
     </div>
     <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
       {cardio && <span className="tag acc"><Icon name="figureRun" />{t('Cardio')}</span>}
-      {/* You log the total; this is the split, so the set in front of you is unambiguous
-          without the rep count having to mean two different things (issue #31). */}
-      {!cardio && !timed && isPerSide(cfg) && <span className="tag acc nocap"><Icon name="shuffle" />{t('{0} per side', fmtNum(sideReps(entry.sets.find(s => !s.done)?.r ?? entry.sets[0]?.r)))}</span>}
+      {/* New paired sets show per-limb reps; legacy targets keep their total-rep interpretation. */}
+      {!cardio && !timed && isPerSide(cfg) && <span className="tag acc nocap"><Icon name="shuffle" />{t('{0} per side', fmtNum(usesPairedSides(cfg) ? (entry.sets.find(s => !s.done)?.r ?? entry.sets[0]?.r) : sideReps(entry.sets.find(s => !s.done)?.r ?? entry.sets[0]?.r)))}</span>}
       {(ex.tg || ex.bp) && <span className="tag">{t(ex.tg || ex.bp)}</span>}
       {ex.eq && <span className="tag">{t(ex.eq)}</span>}
       {!focusMode && best > 0 && <span className="tag nocap">{t('Best:')} {fmtNum(convertWeight(best, S.unit, weightUnit))} {weightUnit}</span>}
@@ -151,8 +155,8 @@ function ExerciseBlock({ entryIdx, compact, focusMode = false, onToggle, onField
     <div className="card" style={{ marginTop: 10, marginBottom: 0 }}>
       {/* the header carries the same eff3 sizing as the rows, or the labels drift off their columns */}
       <div className={'sethead' + (col3 ? ' eff3' : '')}><span className="n-sp" /><span className="w-sp">{col1.hd}</span>{col2 && <span className="r-sp">{col2.hd}</span>}{col3 && <span className="eff-sp">{col3.hd}</span>}{timed && <span className="ck-sp" />}<span className="ck-sp" /></div>
-      {entry.sets.map((s, i) => <div key={i} className={'setrow' + (s.done ? ' done' : '') + (col3 ? ' eff3' : '')}>
-        <div className="n">{i + 1}</div>
+      {rows.map(({ set: s, index: i }, rowIndex) => <div key={i} className={'setrow' + (s.done ? ' done' : '') + (col3 ? ' eff3' : '') + (usesPairedSides(cfg) ? ' paired' + (rowIndex % 2 === 1 ? ' pair-end' : '') : '')}>
+        <div className="n" aria-label={s.side ? t(s.side === 'left' ? 'Left' : 'Right') : t('Set {0}', rowIndex + 1)}>{s.side ? `${Math.floor(rowIndex / 2) + 1}${s.side === 'left' ? 'L' : 'R'}` : rowIndex + 1}</div>
         {cell(s, i, col1, 'w')}
         {col2 && cell(s, i, col2, 'r')}
         {col3 && cell(s, i, col3, 'eff')}
@@ -164,7 +168,7 @@ function ExerciseBlock({ entryIdx, compact, focusMode = false, onToggle, onField
       </div>)}
       <div style={{ height: 8 }} />
       <div className="row">
-        <Button size="sm" icon="minus" disabled={entry.sets.length <= 1} onClick={onRemoveSet}>{t('Remove set')}</Button>
+        <Button size="sm" icon="minus" disabled={entry.sets.length <= (usesPairedSides(cfg) ? 2 : 1)} onClick={onRemoveSet}>{t('Remove set')}</Button>
         <Button size="sm" icon="plus" onClick={onAddSet}>{t('Add set')}</Button>
       </div>
     </div>
@@ -256,9 +260,16 @@ function ActiveWorkout() {
     const m = modeOf({ ...(e.target || {}), id: e.id })
     if (m === 'cardio') e.sets.push({ min: l ? l.min : (e.target.min || 20), speed: l ? l.speed : (e.target.speed || 8), done: false })
     else if (m === 'time') e.sets.push({ sec: l ? l.sec : (e.target.sec || 45), w: l ? (l.w || 0) : (e.target.weight || 0), done: false })
-    else e.sets.push({ w: l ? l.w : 0, r: l ? l.r : e.target.reps, done: false })
+    else if (usesPairedSides(e.target)) {
+      const right = [...e.sets].reverse().find(s => s.side === 'right') || l || { w: e.target.weight || 0, r: e.target.reps }
+      const left = [...e.sets].reverse().find(s => s.side === 'left') || right
+      e.sets.push({ ...right, side: 'right', done: false }, { ...left, side: 'left', done: false })
+    } else e.sets.push({ w: l ? l.w : 0, r: l ? l.r : e.target.reps, done: false })
   })
-  const removeSet = idx => mutEntry(idx, e => { if (e.sets.length > 1) e.sets.pop() })
+  const removeSet = idx => mutEntry(idx, e => {
+    const remove = usesPairedSides(e.target) ? 2 : 1
+    if (e.sets.length > remove) e.sets.splice(-remove, remove)
+  })
 
   // A timed set is held, not typed. The work timer records what was actually held — an early
   // finish logs 0:38 of a 0:45 target rather than crediting the full prescription — and then
@@ -283,7 +294,9 @@ function ActiveWorkout() {
         beep(S.sound, 1040, 0.12); vibrate(30)
         const isLastExInUnit = idx === unit[unit.length - 1]
         const unitDone = unit.every(ui => (ui === idx ? e : A.entries[ui]).sets.every(x => x.done))
-        if (isLastExInUnit && !unitDone) startRest(S.restSec)
+        if (!unitDone && (usesPairedSides(e.target) || isLastExInUnit)) {
+          startRest(usesPairedSides(e.target) ? (S.sideRestSec ?? 30) : S.restSec)
+        }
         else if (unitDone) stopRest()
         if (unitDone && isLastUnit) workoutDone = true      // last exercise's last set → done
         // Only loaded reps training has a "working weight" worth confirming — a bodyweight

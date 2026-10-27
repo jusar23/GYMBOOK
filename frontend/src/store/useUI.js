@@ -41,9 +41,10 @@ export const useUI = create((set, get) => ({
 
   startRest(sec) {
     get().stopRest()
-    const endsAt = Date.now() + sec * 1000
-    set({ timer: { left: sec, total: sec, endsAt } })
-    pushRestTimer(sec)
+    const duration = Math.min(360, Math.max(1, Math.round(Number(sec) || 1)))
+    const endsAt = Date.now() + duration * 1000
+    set({ timer: { left: duration, total: duration, endsAt } })
+    pushRestTimer(duration)
     timerTick = () => {
       const tm = get().timer
       if (!tm) return
@@ -63,11 +64,12 @@ export const useUI = create((set, get) => ({
   addRest(sec) {
     const tm = get().timer
     if (!tm) return
-    const left = tm.left + sec
+    const left = Math.min(360, tm.left + sec)
     // taking off more than is left means "I'm ready now" — same as skipping, and it keeps a
     // negative duration out of both the progress bar and the server-side push schedule
     if (left <= 0) { get().stopRest(); return }
-    set({ timer: { ...tm, left, total: tm.total + sec, endsAt: tm.endsAt + sec * 1000 } })
+    const added = left - tm.left
+    set({ timer: { ...tm, left, total: Math.min(360, tm.total + added), endsAt: tm.endsAt + added * 1000 } })
     pushRestTimer(left)
   },
   stopRest() {

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { getLang, LANGS, useLang, setLang } from '../lib/i18n.js'
 import Icon from '../components/Icon.jsx'
+import Brand from '../components/Brand.jsx'
 import { WEBSITE_COPY } from './websiteCopy.js'
 import './Website.css'
 
@@ -136,7 +137,7 @@ export default function Website() {
 
   return <div className="site">
     <header className="site-nav">
-      <a className="site-brand" href="#inicio" aria-label="Gym Book Training, home"><span className="site-brand-mark"><Icon name="dumbbell" /></span><span className="site-wordmark"><span>gym book</span><small>training</small></span></a>
+      <a className="site-brand" href="#inicio" aria-label="GYMBOOK training, home"><Brand /></a>
       <nav aria-label={copy.nav[0]}>
         <a href="#funciones">{copy.nav[0]}</a>
         <a href="#legal">{copy.nav[1]}</a>
@@ -171,7 +172,7 @@ export default function Website() {
           <div className="site-orbit orbit-one" /><div className="site-orbit orbit-two" />
           <div className="site-phone">
             <div className="site-phone-camera" />
-            <div className="site-phone-head"><span>Gym Book Training</span><Icon name="gear" /></div>
+            <div className="site-phone-head"><Brand className="site-phone-brand" showIcon={false} /><Icon name="gear" /></div>
             <div className="site-phone-date">{phone[0]}</div>
             <div className="site-phone-greeting">{phone[1]}<br /><strong>{phone[2]}</strong></div>
             <div className="site-phone-routine"><div className="site-routine-icon"><Icon name="arm" /></div><div><small>{phone[3]}</small><strong>{phone[4]}</strong><span>{phone[5]}</span></div><Icon name="chevronRight" /></div>
@@ -235,6 +236,6 @@ export default function Website() {
       </section>
     </main>
 
-    <footer className="site-footer"><a className="site-brand" href="#inicio" aria-label="Gym Book Training, home"><span className="site-brand-mark"><Icon name="dumbbell" /></span><span className="site-wordmark"><span>gym book</span><small>training</small></span></a><span>{copy.footer[0]}</span><div><a href="#legal">{copy.footer[1]}</a><a href="#contacto">{copy.nav[2]}</a><span>© {new Date().getFullYear()} Gym Book Training</span></div></footer>
+    <footer className="site-footer"><a className="site-brand" href="#inicio" aria-label="GYMBOOK training, home"><Brand /></a><span>{copy.footer[0]}</span><div><a href="#legal">{copy.footer[1]}</a><a href="#contacto">{copy.nav[2]}</a><span>© {new Date().getFullYear()} GYMBOOKtraining</span></div></footer>
   </div>
 }

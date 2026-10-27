@@ -1,16 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
-  <!-- Gym Book Training mark: an open training log with a barbell at its center. -->
+  <!-- GYMBOOKtraining app mark: a single barbell on the dark app background. -->
   <rect width="512" height="512" rx="112" fill="#0c0e12"/>
-  <path d="M66 124c68-26 137-17 190 22v260c-53-39-122-48-190-22z" fill="#a3e635"/>
-  <path d="M446 124c-68-26-137-17-190 22v260c53-39 122-48 190-22z" fill="#a3e635"/>
-  <path d="M256 151v242" fill="none" stroke="#0c0e12" stroke-width="15"/>
-  <g fill="none" stroke="#0c0e12" stroke-linecap="round" stroke-width="12" opacity=".48">
-    <path d="M100 184c43-11 87-4 125 17M100 222c43-11 87-4 125 17"/>
-    <path d="M287 201c38-21 82-28 125-17M287 239c38-21 82-28 125-17"/>
-  </g>
-  <g fill="#0c0e12">
-    <rect x="136" y="278" width="24" height="88" rx="8"/>
-    <rect x="352" y="278" width="24" height="88" rx="8"/>
-    <rect x="160" y="309" width="192" height="26" rx="12"/>
+  <g fill="#B8F36B">
+    <rect x="118" y="238" width="276" height="36" rx="18"/>
+    <rect x="88" y="168" width="56" height="176" rx="18"/>
+    <rect x="144" y="198" width="44" height="116" rx="16"/>
+    <rect x="324" y="198" width="44" height="116" rx="16"/>
+    <rect x="368" y="168" width="56" height="176" rx="18"/>
   </g>
 </svg>

@@ -1,7 +1,7 @@
 // Copy for the public information site. Keep the keys aligned with LANGS in lib/i18n.js.
 export const WEBSITE_COPY = {
   en: {
-    title: 'Gym Book Training — Train at your pace', nav: ['Features', 'Terms', 'Contact', 'Download APK'],
+    title: 'GYMBOOKtraining — Train at your pace', nav: ['Features', 'Terms', 'Contact', 'Download APK'],
     hero: ['YOUR TRAINING, IN YOUR POCKET', 'Train with purpose.', 'Progress at your pace.', 'Gym Book Training helps you organize routines, log every workout, and follow your progress. Made for training on your Android phone.', 'Explore features', 'Available for Android · Use the app on your phone'],
     phone: ['WEDNESDAY, JUNE 18', 'Today is your day to', 'train.', "TODAY'S ROUTINE", 'Upper body', '6 exercises · 45 min', 'This week', '2 of 4 sessions', 'Home', 'Plan', 'Start', 'Progress', 'Exercises', 'WORKOUT SAVED', 'Workout complete'],
     trust: ['Workouts saved on your device', 'See your progress clearly', 'Made to go with you to the gym'],
@@ -12,7 +12,7 @@ export const WEBSITE_COPY = {
     contact: ['NEED A HAND?', 'Let’s talk.', 'Contact us with questions about Gym Book Training, downloads, or your data.', 'Social media', 'Coming soon'], footer: ['Train at your pace.', 'Legal & privacy']
   },
   es: {
-    title: 'Gym Book Training — Entrena a tu ritmo', nav: ['Funciones', 'Términos', 'Contacto', 'Descargar APK'],
+    title: 'GYMBOOKtraining — Entrena a tu ritmo', nav: ['Funciones', 'Términos', 'Contacto', 'Descargar APK'],
     hero: ['TU ENTRENAMIENTO, EN TU BOLSILLO', 'Entrena con intención.', 'Progresa a tu ritmo.', 'Gym Book Training te ayuda a organizar tus rutinas, registrar tus entrenamientos y seguir tu progreso. Diseñada para entrenar desde tu celular Android.', 'Conoce las funciones', 'Disponible para Android · Usa la app en tu celular'],
     phone: ['MIÉRCOLES, 18 DE JUNIO', 'Hoy es día de', 'entrenar.', 'RUTINA DE HOY', 'Tren superior', '6 ejercicios · 45 min', 'Esta semana', '2 de 4 sesiones', 'Inicio', 'Plan', 'Empezar', 'Progreso', 'Ejercicios', 'SESIÓN GUARDADA', 'Entrenamiento completo'],
     trust: ['Entrenamientos guardados en tu dispositivo', 'Sigue tu progreso con claridad', 'Hecha para acompañarte en el gym'],
@@ -23,7 +23,7 @@ export const WEBSITE_COPY = {
     contact: ['¿PODEMOS AYUDARTE?', 'Hablemos.', 'Escríbenos si tienes preguntas sobre Gym Book Training, las descargas o tus datos.', 'Redes sociales', 'Próximamente'], footer: ['Entrena a tu ritmo.', 'Legal y privacidad']
   },
   de: {
-    title: 'Gym Book Training — Trainiere in deinem Tempo', nav: ['Funktionen', 'Rechtliches', 'Kontakt', 'APK herunterladen'],
+    title: 'GYMBOOKtraining — Trainiere in deinem Tempo', nav: ['Funktionen', 'Rechtliches', 'Kontakt', 'APK herunterladen'],
     hero: ['DEIN TRAINING IN DEINER TASCHE', 'Trainiere mit Plan.', 'Mach Fortschritte in deinem Tempo.', 'Mit Gym Book Training organisierst du Trainingspläne, protokollierst jede Einheit und verfolgst deine Fortschritte. Für das Training mit deinem Android-Handy gemacht.', 'Funktionen ansehen', 'Für Android verfügbar · Nutze die App auf deinem Smartphone'],
     phone: ['MITTWOCH, 18. JUNI', 'Heute ist Zeit zum', 'Trainieren.', 'HEUTIGER PLAN', 'Oberkörper', '6 Übungen · 45 Min.', 'Diese Woche', '2 von 4 Einheiten', 'Start', 'Plan', 'Los', 'Fortschritt', 'Übungen', 'EINHEIT GESPEICHERT', 'Training abgeschlossen'],
     trust: ['Trainingsdaten auf deinem Gerät gespeichert', 'Fortschritte übersichtlich verfolgen', 'Fürs Training im Fitnessstudio gemacht'],
@@ -34,7 +34,7 @@ export const WEBSITE_COPY = {
     contact: ['FRAGEN?', 'Lass uns sprechen.', 'Schreib uns bei Fragen zu Gym Book Training, Downloads oder deinen Daten.', 'Soziale Medien', 'Demnächst'], footer: ['Trainiere in deinem Tempo.', 'Rechtliches & Datenschutz']
   },
   fr: {
-    title: 'Gym Book Training — Entraînez-vous à votre rythme', nav: ['Fonctionnalités', 'Conditions', 'Contact', 'Télécharger l’APK'],
+    title: 'GYMBOOKtraining — Entraînez-vous à votre rythme', nav: ['Fonctionnalités', 'Conditions', 'Contact', 'Télécharger l’APK'],
     hero: ['VOTRE ENTRAÎNEMENT DANS VOTRE POCHE', 'Entraînez-vous avec intention.', 'Progressez à votre rythme.', 'Gym Book Training vous aide à organiser vos routines, enregistrer chaque séance et suivre vos progrès. Conçue pour vous entraîner avec votre téléphone Android.', 'Découvrir les fonctionnalités', 'Disponible sur Android · Utilisez l’app sur votre téléphone'],
     phone: ['MERCREDI 18 JUIN', 'Aujourd’hui, place à', 'l’entraînement.', 'ROUTINE DU JOUR', 'Haut du corps', '6 exercices · 45 min', 'Cette semaine', '2 séances sur 4', 'Accueil', 'Plan', 'Démarrer', 'Progrès', 'Exercices', 'SÉANCE ENREGISTRÉE', 'Entraînement terminé'],
     trust: ['Séances enregistrées sur votre appareil', 'Suivez vos progrès facilement', 'Pensée pour vous accompagner à la salle'],
@@ -45,7 +45,7 @@ export const WEBSITE_COPY = {
     contact: ['BESOIN D’AIDE ?', 'Parlons-en.', 'Écrivez-nous pour toute question sur Gym Book Training, le téléchargement ou vos données.', 'Réseaux sociaux', 'Bientôt'], footer: ['Entraînez-vous à votre rythme.', 'Mentions légales et confidentialité']
   },
   it: {
-    title: 'Gym Book Training — Allenati al tuo ritmo', nav: ['Funzioni', 'Termini', 'Contatti', 'Scarica APK'],
+    title: 'GYMBOOKtraining — Allenati al tuo ritmo', nav: ['Funzioni', 'Termini', 'Contatti', 'Scarica APK'],
     hero: ['IL TUO ALLENAMENTO, IN TASCA', 'Allenati con determinazione.', 'Migliora al tuo ritmo.', 'Gym Book Training ti aiuta a organizzare le routine, registrare ogni sessione e seguire i tuoi progressi. Pensata per allenarti con il tuo telefono Android.', 'Scopri le funzioni', 'Disponibile per Android · Usa l’app sul telefono'],
     phone: ['MERCOLEDÌ 18 GIUGNO', 'Oggi è il giorno di', 'allenarsi.', 'ROUTINE DI OGGI', 'Parte superiore', '6 esercizi · 45 min', 'Questa settimana', '2 di 4 sessioni', 'Home', 'Piano', 'Inizia', 'Progressi', 'Esercizi', 'SESSIONE SALVATA', 'Allenamento completato'],
     trust: ['Allenamenti salvati sul dispositivo', 'Segui i progressi con chiarezza', 'Pensata per accompagnarti in palestra'],
@@ -56,7 +56,7 @@ export const WEBSITE_COPY = {
     contact: ['HAI BISOGNO DI AIUTO?', 'Parliamone.', 'Scrivici per domande su Gym Book Training, download o dati personali.', 'Social media', 'Prossimamente'], footer: ['Allenati al tuo ritmo.', 'Note legali e privacy']
   },
   pt: {
-    title: 'Gym Book Training — Treine no seu ritmo', nav: ['Funcionalidades', 'Termos', 'Contato', 'Baixar APK'],
+    title: 'GYMBOOKtraining — Treine no seu ritmo', nav: ['Funcionalidades', 'Termos', 'Contato', 'Baixar APK'],
     hero: ['SEU TREINO, NO SEU BOLSO', 'Treine com propósito.', 'Evolua no seu ritmo.', 'O Gym Book Training ajuda a organizar rotinas, registrar cada treino e acompanhar seu progresso. Feito para treinar pelo celular Android.', 'Conheça as funcionalidades', 'Disponível para Android · Use o app no celular'],
     phone: ['QUARTA-FEIRA, 18 DE JUNHO', 'Hoje é dia de', 'treinar.', 'ROTINA DE HOJE', 'Parte superior', '6 exercícios · 45 min', 'Esta semana', '2 de 4 treinos', 'Início', 'Plano', 'Começar', 'Progresso', 'Exercícios', 'TREINO SALVO', 'Treino concluído'],
     trust: ['Treinos salvos no seu dispositivo', 'Acompanhe seu progresso com clareza', 'Feito para acompanhar você na academia'],
@@ -67,7 +67,7 @@ export const WEBSITE_COPY = {
     contact: ['PRECISA DE AJUDA?', 'Vamos conversar.', 'Escreva se tiver dúvidas sobre o Gym Book Training, downloads ou seus dados.', 'Redes sociais', 'Em breve'], footer: ['Treine no seu ritmo.', 'Legal e privacidade']
   },
   pl: {
-    title: 'Gym Book Training — Trenuj we własnym tempie', nav: ['Funkcje', 'Warunki', 'Kontakt', 'Pobierz APK'],
+    title: 'GYMBOOKtraining — Trenuj we własnym tempie', nav: ['Funkcje', 'Warunki', 'Kontakt', 'Pobierz APK'],
     hero: ['TRENING ZAWSZE POD RĘKĄ', 'Trenuj świadomie.', 'Rób postępy we własnym tempie.', 'Gym Book Training pomaga układać plany, zapisywać każdy trening i śledzić postępy. Aplikacja została stworzona do treningu z telefonem z Androidem.', 'Poznaj funkcje', 'Dostępna na Androida · Korzystaj z aplikacji na telefonie'],
     phone: ['ŚRODA, 18 CZERWCA', 'Dziś czas na', 'trening.', 'PLAN NA DZIŚ', 'Górne partie', '6 ćwiczeń · 45 min', 'W tym tygodniu', '2 z 4 treningów', 'Start', 'Plan', 'Trenuj', 'Postępy', 'Ćwiczenia', 'TRENING ZAPISANY', 'Trening ukończony'],
     trust: ['Treningi zapisane na urządzeniu', 'Przejrzyste śledzenie postępów', 'Stworzona z myślą o siłowni'],
@@ -78,7 +78,7 @@ export const WEBSITE_COPY = {
     contact: ['POTRZEBUJESZ POMOCY?', 'Porozmawiajmy.', 'Napisz do nas w sprawie Gym Book Training, pobierania lub swoich danych.', 'Media społecznościowe', 'Wkrótce'], footer: ['Trenuj we własnym tempie.', 'Prawo i prywatność']
   },
   tr: {
-    title: 'Gym Book Training — Kendi temponda antrenman yap', nav: ['Özellikler', 'Koşullar', 'İletişim', 'APK indir'],
+    title: 'GYMBOOKtraining — Kendi temponda antrenman yap', nav: ['Özellikler', 'Koşullar', 'İletişim', 'APK indir'],
     hero: ['ANTRENMANIN CEBİNDE', 'Bilinçli antrenman yap.', 'Kendi temponda ilerle.', 'Gym Book Training rutinlerini düzenlemene, her antrenmanı kaydetmene ve gelişimini takip etmene yardımcı olur. Android telefonunda antrenman yapmak için tasarlandı.', 'Özellikleri keşfet', 'Android için · Uygulamayı telefonunda kullan'],
     phone: ['18 HAZİRAN ÇARŞAMBA', 'Bugün antrenman', 'günü.', 'BUGÜNÜN RUTİNİ', 'Üst vücut', '6 egzersiz · 45 dk', 'Bu hafta', '4 antrenmanın 2’si', 'Ana sayfa', 'Plan', 'Başla', 'İlerleme', 'Egzersizler', 'ANTRENMAN KAYDEDİLDİ', 'Antrenman tamamlandı'],
     trust: ['Antrenmanlar cihazında saklanır', 'Gelişimini kolayca takip et', 'Spor salonunda yanında olsun diye tasarlandı'],
@@ -89,7 +89,7 @@ export const WEBSITE_COPY = {
     contact: ['YARDIM GEREKİYOR MU?', 'Konuşalım.', 'Gym Book Training, indirme veya verilerinle ilgili sorularını bize yaz.', 'Sosyal medya', 'Yakında'], footer: ['Kendi temponda antrenman yap.', 'Yasal bilgiler ve gizlilik']
   },
   ru: {
-    title: 'Gym Book Training — Тренируйся в своём темпе', nav: ['Возможности', 'Условия', 'Контакты', 'Скачать APK'],
+    title: 'GYMBOOKtraining — Тренируйся в своём темпе', nav: ['Возможности', 'Условия', 'Контакты', 'Скачать APK'],
     hero: ['ТРЕНИРОВКИ ВСЕГДА ПОД РУКОЙ', 'Тренируйся осознанно.', 'Развивайся в своём темпе.', 'Gym Book Training помогает составлять планы, записывать тренировки и следить за прогрессом. Приложение создано для занятий с телефоном Android.', 'Посмотреть возможности', 'Для Android · Используй приложение на телефоне'],
     phone: ['СРЕДА, 18 ИЮНЯ', 'Сегодня пора', 'тренироваться.', 'ПЛАН НА СЕГОДНЯ', 'Верх тела', '6 упражнений · 45 мин', 'На этой неделе', '2 из 4 тренировок', 'Главная', 'План', 'Старт', 'Прогресс', 'Упражнения', 'ТРЕНИРОВКА СОХРАНЕНА', 'Тренировка завершена'],
     trust: ['Тренировки хранятся на устройстве', 'Следи за прогрессом наглядно', 'Создано для занятий в зале'],
@@ -100,7 +100,7 @@ export const WEBSITE_COPY = {
     contact: ['НУЖНА ПОМОЩЬ?', 'Давай обсудим.', 'Напиши нам с вопросами о Gym Book Training, загрузке или своих данных.', 'Социальные сети', 'Скоро'], footer: ['Тренируйся в своём темпе.', 'Правовая информация и конфиденциальность']
   },
   zh: {
-    title: 'Gym Book Training — 按自己的节奏训练', nav: ['功能', '条款', '联系', '下载 APK'],
+    title: 'GYMBOOKtraining — 按自己的节奏训练', nav: ['功能', '条款', '联系', '下载 APK'],
     hero: ['把训练装进口袋', '专注每一次训练。', '按自己的节奏进步。', 'Gym Book Training 帮你安排训练计划、记录每次训练并跟踪进度。专为使用 Android 手机训练而设计。', '了解功能', '适用于 Android · 请在手机上使用应用'],
     phone: ['6月18日 星期三', '今天适合', '训练。', '今日计划', '上半身', '6 个动作 · 45 分钟', '本周', '已完成 2/4 次', '首页', '计划', '开始', '进度', '动作', '训练已保存', '训练完成'],
     trust: ['训练记录保存在设备上', '清晰查看训练进度', '为健身房训练而设计'],
@@ -111,7 +111,7 @@ export const WEBSITE_COPY = {
     contact: ['需要帮助吗？', '欢迎联系。', '如有关于 Gym Book Training、下载或数据的问题，请联系我们。', '社交媒体', '即将推出'], footer: ['按自己的节奏训练。', '法律与隐私']
   },
   ko: {
-    title: 'Gym Book Training — 나만의 속도로 운동하세요', nav: ['기능', '약관', '문의', 'APK 다운로드'],
+    title: 'GYMBOOKtraining — 나만의 속도로 운동하세요', nav: ['기능', '약관', '문의', 'APK 다운로드'],
     hero: ['내 손안의 운동 기록', '목표를 정하고 운동하세요.', '나만의 속도로 성장하세요.', 'Gym Book Training으로 루틴을 구성하고 운동을 기록하며 진행 상황을 확인하세요. Android 휴대전화에서 운동하기 위해 만들었습니다.', '기능 살펴보기', 'Android에서 이용 가능 · 휴대전화에서 앱을 사용하세요'],
     phone: ['6월 18일 수요일', '오늘은 운동할', '날이에요.', '오늘의 루틴', '상체', '운동 6개 · 45분', '이번 주', '4회 중 2회 완료', '홈', '계획', '시작', '진행 상황', '운동', '운동 저장됨', '운동 완료'],
     trust: ['운동 기록은 기기에 저장됩니다', '진행 상황을 한눈에 확인하세요', '헬스장에서 쓰기 편하게 만들었습니다'],
@@ -122,7 +122,7 @@ export const WEBSITE_COPY = {
     contact: ['도움이 필요하신가요?', '문의하세요.', 'Gym Book Training, 다운로드 또는 데이터에 대해 궁금한 점을 보내주세요.', '소셜 미디어', '준비 중'], footer: ['나만의 속도로 운동하세요.', '법률 및 개인정보']
   },
   hi: {
-    title: 'Gym Book Training — अपनी गति से ट्रेन करें', nav: ['सुविधाएँ', 'शर्तें', 'संपर्क', 'APK डाउनलोड करें'],
+    title: 'GYMBOOKtraining — अपनी गति से ट्रेन करें', nav: ['सुविधाएँ', 'शर्तें', 'संपर्क', 'APK डाउनलोड करें'],
     hero: ['आपका वर्कआउट, आपकी जेब में', 'इरादे के साथ ट्रेन करें।', 'अपनी गति से आगे बढ़ें।', 'Gym Book Training आपको रूटीन बनाने, हर वर्कआउट दर्ज करने और प्रगति देखने में मदद करता है। इसे Android फ़ोन पर ट्रेनिंग के लिए बनाया गया है।', 'सुविधाएँ देखें', 'Android के लिए उपलब्ध · फ़ोन पर ऐप इस्तेमाल करें'],
     phone: ['बुधवार, 18 जून', 'आज ट्रेनिंग का', 'दिन है।', 'आज का रूटीन', 'ऊपरी शरीर', '6 एक्सरसाइज़ · 45 मिनट', 'इस सप्ताह', '4 में से 2 वर्कआउट', 'होम', 'योजना', 'शुरू करें', 'प्रगति', 'एक्सरसाइज़', 'वर्कआउट सेव हुआ', 'वर्कआउट पूरा'],
     trust: ['वर्कआउट आपके डिवाइस पर सेव होते हैं', 'प्रगति साफ़ तौर पर देखें', 'जिम में साथ देने के लिए बनाया गया'],

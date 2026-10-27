@@ -13,7 +13,7 @@ const SIGNED_OUT_KEY = 'gym_signed_out_v1'
 const timeoutSignal = ms => typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
   ? AbortSignal.timeout(ms) : undefined
 export const DEF = {
-  unit: 'kg', restSec: 90, sound: true, keepAwake: true, lockOrientation: false, lang: 'en',
+  unit: 'kg', restSec: 90, sideRestSec: 30, sound: true, keepAwake: true, lockOrientation: false, lang: 'en',
   theme: 'dark', accent: 'lime', body: 'male', targetW: null,
   bodyweight: [], routines: [], week: {}, dayPlan: {},
   exWeights: {}, workouts: [], active: null, customEx: [], favoriteEx: [], favoritesMigrated: false, gifSize: 'full',
@@ -28,9 +28,23 @@ const clone = o => JSON.parse(JSON.stringify(o))
 function loadState() {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return migrateChosenExercises(Object.assign(clone(DEF), JSON.parse(raw)))
+    if (raw) return migratePerSideRoutines(migrateChosenExercises(Object.assign(clone(DEF), JSON.parse(raw))))
   } catch (e) { /* ignore */ }
-  return migrateChosenExercises(clone(DEF))
+  return migratePerSideRoutines(migrateChosenExercises(clone(DEF)))
+}
+
+// Older routines stored both limbs' reps as one even total (`side: true`). Convert only
+// reusable routine targets to per-limb reps and mark the new paired-set format. Completed
+// workouts and an in-progress session retain their original values for accurate history.
+function migratePerSideRoutines(state) {
+  ;(state.routines || []).forEach(routine => (routine.ex || []).forEach(ex => {
+    if (ex.side !== true) return
+    for (const field of ['reps', 'repsMin', 'repsMax']) {
+      if (Number.isFinite(ex[field]) && ex[field] > 0) ex[field] = Math.max(1, Math.ceil(ex[field] / 2))
+    }
+    ex.side = 'paired'
+  }))
+  return state
 }
 
 // Preserve exercises already selected in routines or workouts when unifying "Chosen" with favorites.
@@ -77,6 +91,7 @@ export const useStore = create((set, get) => {
   const persist = (S, push = true) => {
     const reminderChanged = MOBILE && reminderConfig(get().S) !== reminderConfig(S)
     migrateChosenExercises(S)
+    migratePerSideRoutines(S)
     S._ts = Date.now()
     registerCustom(S.customEx)
     localStorage.setItem(KEY, JSON.stringify(S))

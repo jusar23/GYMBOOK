@@ -11,6 +11,7 @@ import { MOBILE } from '../lib/mobile.js'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
+import Brand from '../components/Brand.jsx'
 import { Button, Check } from '../components/ui.jsx'
 
 function ofAdultAge(dateValue) {
@@ -245,9 +246,8 @@ export default function Login({ legalSetup = false }) {
   }
 
   const head = <>
-    <div style={{ fontSize: 54, display: 'flex', justifyContent: 'center', color: 'var(--acc)' }}><Icon name="bookTraining" /></div>
-    <h1 style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-.035em', margin: '10px 0 4px' }}>Gym Book Training</h1>
-    <div style={{ color: 'var(--acc)', fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Your training, in your pocket</div>
+    <h1 className="login-brand-heading"><Brand className="login-brand" /></h1>
+    <div className="login-brand-tagline">Your training, in your pocket</div>
   </>
   const wrap = { display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '78vh', textAlign: 'center' }
 

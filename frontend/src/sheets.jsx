@@ -3,7 +3,7 @@ import { useStore } from './store/useStore.js'
 import { useUI } from './store/useUI.js'
 import { EXDB, EXIDX, BODYPARTS, isCardio, isBodyweightEq, allExercises, equipmentOf } from './lib/exercises.js'
 import { fmtDate, fmtNum, fmtVol, fmtDur, durPart, todayISO, uid, exCount, DAYN, MONTHS_LONG, ACCENTS } from './lib/format.js'
-import { lastEntryFor, bestWeightFor, buildSets, effectiveRoutineId, workoutVolume, setsDone, setsDoneActive, lastBW, supersetUnits, unitOf, setLabel, fmtSec, defaultConfig, cleanupSg, modeOf, effortOf, isBw, isPerSide, sideReps } from './lib/history.js'
+import { lastEntryFor, bestWeightFor, buildSets, effectiveRoutineId, workoutVolume, setsDone, setsDoneActive, lastBW, supersetUnits, unitOf, setLabel, fmtSec, defaultConfig, cleanupSg, modeOf, effortOf, isBw, isPerSide } from './lib/history.js'
 import { beep, vibrate } from './lib/sound.js'
 import { t, instrFor, getLang, INSTR_LANGS, loadInstructions, useLang } from './lib/i18n.js'
 import { nav } from './lib/nav.js'
@@ -553,9 +553,8 @@ function ExConfig({ ex, existing, onSave, onDelete, close, routine }) {
     else {
       // A unilateral target is stored even: the split has to divide, and a typed 15 would
       // otherwise plan seven reps on one side and eight on the other, every session.
-      const typed = Math.max(1, Math.round(c.reps) || 10)
-      const reps = perSide ? Math.ceil(typed / 2) * 2 : typed
-      const out = { sets, mode: 'reps', reps, weight: Math.max(0, c.weight || 0), ...flags, ...(perSide ? { side: true } : {}), ...prog }
+      const reps = Math.max(1, Math.round(c.reps) || 10)
+      const out = { sets, mode: 'reps', reps, weight: Math.max(0, c.weight || 0), ...flags, ...(perSide ? { side: 'paired' } : {}), ...prog }
       if (policyFor({ ...c, id: ex.id }, routine, 'reps') === 'double') out.repsMin = Math.min(reps, Math.max(1, Math.round(c.repsMin) || Math.max(1, reps - 2)))
       // A ceiling below the working reps would tell you to add a set on day one.
       if (bw && !(out.weight > 0) && c.repsMax > 0) out.repsMax = Math.max(reps, Math.round(c.repsMax))
@@ -585,7 +584,7 @@ function ExConfig({ ex, existing, onSave, onDelete, close, routine }) {
         <Stepper label={t('Weight ({0})', st.unit)} value={c.weight} step={2.5} onChange={v => setC(x => ({ ...x, weight: v }))} />
       </> : <>
         <Stepper label={t('Sets')} value={c.sets} step={1} decimal={false} onChange={v => setC(x => ({ ...x, sets: v }))} />
-        <Stepper label={t('Reps')} value={c.reps} step={perSide ? 2 : 1} decimal={false} onChange={v => setC(x => ({ ...x, reps: v }))} />
+        <Stepper label={t(perSide ? 'Reps per side' : 'Reps')} value={c.reps} step={1} decimal={false} onChange={v => setC(x => ({ ...x, reps: v }))} />
         {/* On bodyweight work the weight stepper is the click #32 is about, so it is not here
             until there is a belt to describe — see the added-weight row below. */}
         {!bw && <Stepper label={t('Weight ({0})', st.unit)} value={c.weight} step={2.5} onChange={v => setC(x => ({ ...x, weight: v }))} />}
@@ -601,11 +600,12 @@ function ExConfig({ ex, existing, onSave, onDelete, close, routine }) {
         <Switch checked={bw} onChange={v => setC(x => ({ ...x, bodyweight: v, weight: v ? 0 : x.weight }))} />
       </Row>
       {mode === 'reps' && <Row icon="shuffle" iconTint="var(--blue)" title={t('Reps per side')}
-        subtitle={perSide ? t('You still log the total: {0} is {1} per side.', c.reps || 0, fmtNum(sideReps(c.reps))) : t('For lunges, single-arm rows and the like.')}>
-        {/* Turning it on rounds the target up to an even number, since half of an odd
-            total is a rep one side does not get. */}
-        <Switch checked={perSide} onChange={v => setC(x => ({ ...x, side: v || undefined, reps: v ? Math.ceil((x.reps || 0) / 2) * 2 : x.reps }))} />
+        subtitle={perSide ? t('{0} rounds create {1} sets of {2} reps per side.', c.sets || 1, (c.sets || 1) * 2, c.reps || 0) : t('For lunges, single-arm rows and the like.')}>
+        <Switch checked={perSide} onChange={v => setC(x => ({ ...x, side: v ? 'paired' : undefined }))} />
       </Row>}
+    </div>}
+    {mode === 'reps' && perSide && <div className="small dim" style={{ margin: '-2px 2px 16px' }}>
+      {t('Alternate left and right. Take the configured short rest after each side; the same weight is used on both sides.')}
     </div>}
     {/* A stepper is too wide to sit in a list row next to a label — it squeezes the text to
         one word per line — so added weight gets the same full-width treatment as sets and

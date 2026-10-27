@@ -8,7 +8,7 @@ import { useUI } from '../store/useUI.js'
 
 import { ACCENTS, todayISO, localTZ } from '../lib/format.js'
 
-import { effortOf } from '../lib/history.js'
+import { effortOf, fmtSec } from '../lib/history.js'
 
 import { api, createAppSessionWithSupabase, webauthnOK, passkeyLogin, passkeyRegister, IS_ANDROID } from '../lib/api.js'
 
@@ -30,19 +30,23 @@ import { DEMO } from '../lib/demo.js'
 import { MOBILE, shareExport, syncReminder } from '../lib/mobile.js'
 
 import { loadStarterPlan, confirmSheet, importFromApp } from '../sheets.jsx'
-
 import Icon from '../components/Icon.jsx'
 import { openTutorial } from '../components/Tutorial.jsx'
+
+const ACCENT_TONES = [
+  { id: 'vivid', label: 'Vivid' },
+  { id: 'light-intense', label: 'Light intense' },
+]
 
 import { Section, Row, SelectRow, Switch, Segmented, Button, TextField } from '../components/ui.jsx'
 
 import { DOCS } from './Legal.jsx'
 
 const SOCIAL_LINKS = [
-  { name: 'Facebook', url: import.meta.env.VITE_SOCIAL_FACEBOOK_URL || '' },
-  { name: 'X', url: import.meta.env.VITE_SOCIAL_X_URL || '' },
-  { name: 'Instagram', url: import.meta.env.VITE_SOCIAL_INSTAGRAM_URL || '' },
-  { name: 'Website', url: import.meta.env.VITE_PUBLIC_WEBSITE_URL || 'https://gymbooktraining.com/' },
+  { name: 'Facebook', icon: 'facebook', url: import.meta.env.VITE_SOCIAL_FACEBOOK_URL || '' },
+  { name: 'X', icon: 'xSocial', url: import.meta.env.VITE_SOCIAL_X_URL || '' },
+  { name: 'Instagram', icon: 'instagram', url: import.meta.env.VITE_SOCIAL_INSTAGRAM_URL || '' },
+  { name: 'Website', icon: 'globe', url: import.meta.env.VITE_PUBLIC_WEBSITE_URL || 'https://gymbooktraining.com/' },
 ]
 
 function openSocialLink(rawUrl) {
@@ -425,7 +429,11 @@ export default function Settings() {
 
         value={S.restSec} onChange={v => update(s => { s.restSec = v })}
 
-        options={[60, 90, 120, 150, 180].map(v => ({ value: v, label: v + 's' }))} />
+        options={Array.from({ length: 12 }, (_, i) => (i + 1) * 30).map(v => ({ value: v, label: fmtSec(v) }))} />
+
+      <SelectRow icon="timer" iconTint="var(--blue)" title={t('Double-set rest')}
+        value={S.sideRestSec ?? 30} onChange={v => update(s => { s.sideRestSec = v })}
+        options={Array.from({ length: 6 }, (_, i) => (i + 1) * 30).map(v => ({ value: v, label: fmtSec(v) }))} />
 
       {(wakeOK || !MOBILE) && (
 
@@ -502,19 +510,20 @@ export default function Settings() {
 
         <span className="lrow-t">{t('Accent color')}</span>
 
-        {['dark', 'light'].map(tone => <div key={tone} style={{ marginBottom: 10 }}>
+        {ACCENT_TONES.map(({ id, label }) => <div key={id} style={{ marginBottom: 10 }}>
 
-          <div className="small dim" style={{ marginBottom: 8 }}>{t(tone === 'dark' ? 'Dark-theme tones (also available in Light)' : 'Light-theme tones (also available in Dark)')}</div>
+          <div className="small dim" style={{ marginBottom: 8 }}>{t(label)}</div>
 
           <div className="swatches">
 
-            {Object.entries(ACCENTS).filter(([k]) => k.endsWith('-light') === (tone === 'light')).map(([k, colors]) => {
+            {Object.entries(ACCENTS).filter(([, colors]) => colors.selectable !== false && colors.tone === id).map(([k, colors]) => {
 
-              const hue = k.replace(/-light$/, '')
+              const selectedAccent = ACCENTS[S.accent]?.alias || (ACCENTS[S.accent] ? S.accent : 'lime')
+              const labelText = `${t(colors.label)} · ${t(label)} · ${colors.color}`
 
-              return <button key={k} className={'swatch' + ((S.accent || 'lime') === k ? ' on' : '')}
+              return <button key={k} className={'swatch' + (selectedAccent === k ? ' on' : '')}
 
-                style={{ background: colors.swatch }} onClick={() => update(s => { s.accent = k })} aria-label={`${t(hue)} · ${t(tone === 'dark' ? 'Dark' : 'Light')}`} title={`${t(hue)} · ${t(tone === 'dark' ? 'Dark' : 'Light')}`} />
+                style={{ background: colors.swatch }} onClick={() => update(s => { s.accent = k })} aria-label={labelText} title={labelText} />
 
             })}
 
@@ -637,7 +646,7 @@ export default function Settings() {
     </Section>
 
     <Section title={t('Social')}>
-      {SOCIAL_LINKS.map(({ name, url }) => <Row key={name} icon={name === 'Website' ? 'globe' : 'link'}
+      {SOCIAL_LINKS.map(({ name, icon, url }) => <Row key={name} icon={icon}
         iconTint="var(--acc)" title={t(name)}
         subtitle={url || t('Coming soon')}
         accessory={url ? 'chevron' : 'none'} onClick={url ? () => openSocialLink(url) : undefined} />)}
@@ -711,15 +720,15 @@ export default function Settings() {
 
 const EFFORT_ROWS = [
 
-  ['0', '10', 'Nothing left — went to failure'],
+  ['0', '10', 'No more reps possible with good form — muscular failure'],
 
-  ['1', '9', 'One more rep in the tank'],
+  ['1', '9', 'Could do 1 more rep'],
 
-  ['2', '8', 'Two more reps'],
+  ['2', '8', 'Could do 2 more reps'],
 
-  ['3', '7', 'Three more reps'],
+  ['3', '7', 'Could do 3 more reps'],
 
-  ['4+', '≤6', 'Easy — warm-up territory'],
+  ['4+', '≤6', 'Could do 4 or more reps; light effort'],
 
 ]
 
@@ -739,13 +748,13 @@ function effortHelpSheet() {
 
     <div className="muted small" style={{ lineHeight: 1.5 }}>
 
-      {t('How hard a set was, logged next to weight and reps. Two scales for the same judgement, counted from opposite ends.')}
+      {t('After a set, note how it ended: how many more reps you could do (RIR), or how hard it felt (RPE).')}
 
     </div>
 
     <div className="efftbl">
 
-      <div className="r hd"><span className="n">{t('RIR')}</span><span className="n">{t('RPE')}</span><span className="f">{t('How it felt')}</span></div>
+      <div className="r hd"><span className="n">{t('RIR')}</span><span className="n">{t('RPE')}</span><span className="f">{t('What it means')}</span></div>
 
       {EFFORT_ROWS.map(([rir, rpe, feel], i) => (
 
@@ -761,7 +770,7 @@ function effortHelpSheet() {
 
     <div className="dim small" style={{ lineHeight: 1.5, display: 'grid', gap: 8 }}>
 
-      <div>{t('RIR counts the reps you left; RPE reads the same effort off a 10-point scale — so RPE ≈ 10 − RIR. Pick the one you already think in.')}</div>
+      <div>{t('RIR (reps in reserve) estimates how many more reps you could do before muscular failure. RPE (rate of perceived exertion) rates how hard the set felt from 1 to 10: RPE 10 is maximum effort, and RPE 8 means you could do about 2 more reps. For example, that set can be logged as RIR 2 or RPE 8.')}</div>
 
       <div>{t('The highlighted row is where most working sets land. Sets you have already logged keep their own scale, and nothing else reads the value — progression and estimated 1RM are unaffected.')}</div>
 

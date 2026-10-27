@@ -44,31 +44,54 @@ export function weekKey(d) {
 export const localTZ = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } catch { return 'UTC' } }
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
-// Each swatch is a selectable tone, not a theme lock. The paired values preserve
-// that choice's hue and contrast when the app switches between dark and light.
+// Accent HEX values are identical in light and dark themes; only foreground
+// contrast is adjusted when a color is applied.
+const accent = (label, tone, color) => ({ label, tone, color, swatch: color })
+const accentOptions = {
+  lime: accent('lime', 'vivid', '#B8F36B'),
+  emerald: accent('emerald', 'vivid', '#10B981'),
+  turquoise: accent('turquoise', 'vivid', '#06B6D4'),
+  'electric-blue': accent('electric blue', 'vivid', '#3B82F6'),
+  indigo: accent('indigo', 'vivid', '#6366F1'),
+  violet: accent('violet', 'vivid', '#8B5CF6'),
+  purple: accent('purple', 'vivid', '#A855F7'),
+  magenta: accent('magenta', 'vivid', '#D946EF'),
+  'intense-pink': accent('intense pink', 'vivid', '#F43F5E'),
+  red: accent('red', 'vivid', '#EF4444'),
+  orange: accent('orange', 'vivid', '#F97316'),
+  amber: accent('amber', 'vivid', '#F59E0B'),
+  'lime-light': accent('lime', 'light-intense', '#D9F7A8'),
+  'emerald-light': accent('emerald', 'light-intense', '#9AE6C5'),
+  'turquoise-light': accent('turquoise', 'light-intense', '#8BE5F2'),
+  'electric-blue-light': accent('electric blue', 'light-intense', '#A5C8FF'),
+  'indigo-light': accent('indigo', 'light-intense', '#B7B8FC'),
+  'violet-light': accent('violet', 'light-intense', '#C9B3FF'),
+  'purple-light': accent('purple', 'light-intense', '#DDB5FC'),
+  'magenta-light': accent('magenta', 'light-intense', '#F3B0F4'),
+  'intense-pink-light': accent('intense pink', 'light-intense', '#FDAAB9'),
+  'red-light': accent('red', 'light-intense', '#FFAAAA'),
+  'orange-light': accent('orange', 'light-intense', '#FFC08A'),
+  'amber-light': accent('amber', 'light-intense', '#FFDA85'),
+}
+
+const legacyAccent = target => ({ ...accentOptions[target], selectable: false, alias: target })
 export const ACCENTS = {
-  lime: { swatch: '#30d158', dark: '#30d158', light: '#167a34' },
-  sky: { swatch: '#62aaff', dark: '#62aaff', light: '#0057b8' },
-  orange: { swatch: '#ff9f0a', dark: '#ff9f0a', light: '#a84b00' },
-  violet: { swatch: '#d18cff', dark: '#d18cff', light: '#7733a8' },
-  pink: { swatch: '#ff8298', dark: '#ff8298', light: '#c2185b' },
-  rose: { swatch: '#ff9ec7', dark: '#ff9ec7', light: '#a61b58' },
-  red: { swatch: '#ff8078', dark: '#ff8078', light: '#c62828' },
-  teal: { swatch: '#40c8e0', dark: '#40c8e0', light: '#006f82' },
-  gold: { swatch: '#ffd60a', dark: '#ffd60a', light: '#8a6500' },
-  lavender: { swatch: '#c9a0ff', dark: '#c9a0ff', light: '#6633a8' },
-  mint: { swatch: '#70e1c2', dark: '#70e1c2', light: '#00785e' },
-  coral: { swatch: '#ff8a65', dark: '#ff8a65', light: '#a63f25' },
-  'lime-light': { swatch: '#9be8ae', dark: '#9be8ae', light: '#236d39' },
-  'sky-light': { swatch: '#9ecbff', dark: '#9ecbff', light: '#1c4f8a' },
-  'orange-light': { swatch: '#ffc875', dark: '#ffc875', light: '#8a4700' },
-  'violet-light': { swatch: '#e3b7ff', dark: '#e3b7ff', light: '#65378a' },
-  'pink-light': { swatch: '#ffafbd', dark: '#ffafbd', light: '#98324d' },
-  'rose-light': { swatch: '#ffc7df', dark: '#ffc7df', light: '#8b2751' },
-  'red-light': { swatch: '#ffaaa5', dark: '#ffaaa5', light: '#972d29' },
-  'teal-light': { swatch: '#8ee7f4', dark: '#8ee7f4', light: '#006676' },
-  'gold-light': { swatch: '#ffe680', dark: '#ffe680', light: '#755800' },
-  'lavender-light': { swatch: '#dec6ff', dark: '#dec6ff', light: '#573888' },
-  'mint-light': { swatch: '#a5efd9', dark: '#a5efd9', light: '#006d59' },
-  'coral-light': { swatch: '#ffb49c', dark: '#ffb49c', light: '#874533' },
+  ...accentOptions,
+  // Preserve the saved appearance of profiles using the former palette names.
+  sky: legacyAccent('electric-blue'),
+  pink: legacyAccent('intense-pink'),
+  rose: legacyAccent('intense-pink'),
+  teal: legacyAccent('turquoise'),
+  gold: legacyAccent('amber'),
+  lavender: legacyAccent('purple'),
+  mint: legacyAccent('emerald'),
+  coral: legacyAccent('orange'),
+  'sky-light': legacyAccent('electric-blue-light'),
+  'pink-light': legacyAccent('intense-pink-light'),
+  'rose-light': legacyAccent('intense-pink-light'),
+  'teal-light': legacyAccent('turquoise-light'),
+  'gold-light': legacyAccent('amber-light'),
+  'lavender-light': legacyAccent('purple-light'),
+  'mint-light': legacyAccent('emerald-light'),
+  'coral-light': legacyAccent('orange-light'),
 }
