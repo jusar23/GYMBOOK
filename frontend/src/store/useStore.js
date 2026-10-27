@@ -13,7 +13,7 @@ const SIGNED_OUT_KEY = 'gym_signed_out_v1'
 const timeoutSignal = ms => typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
   ? AbortSignal.timeout(ms) : undefined
 export const DEF = {
-  unit: 'kg', restSec: 90, sideRestSec: 30, sound: true, keepAwake: true, lockOrientation: false, lang: 'en',
+  unit: 'kg', restSec: 90, sideRestSec: 30, warmupEnabled: false, sound: true, soundTone: 'classic', restBubble: false, keepAwake: true, lockOrientation: false, lang: 'en',
   theme: 'dark', accent: 'lime', body: 'male', targetW: null,
   bodyweight: [], routines: [], week: {}, dayPlan: {},
   exWeights: {}, workouts: [], active: null, customEx: [], favoriteEx: [], favoritesMigrated: false, gifSize: 'full',

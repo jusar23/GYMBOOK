@@ -16,7 +16,7 @@
 //   · fewer sets than prescribed                       → miss
 // So a session that fell apart can never advance the load as though it had succeeded.
 
-import { modeOf, repStep, usesPairedSides } from './history.js'
+import { modeOf, repStep, usesPairedSides, isBw } from './history.js'
 import { EXIDX } from './exercises.js'
 
 export const POLICIES = ['off', 'linear', 'greyskull', 'double', 'time']
@@ -122,7 +122,9 @@ export function readSession(entry, fallback) {
   const reps = sets.map(s => (s.done ? (s.r || 0) : 0))
   return {
     mode, goal, reps,
-    weight: Math.max(0, ...sets.filter(s => s.done).map(s => s.w || 0)),
+    weight: isBw({ ...target, id: entry?.id })
+      ? (sets.filter(s => s.done).slice(-1)[0]?.w || 0)
+      : Math.max(0, ...sets.filter(s => s.done).map(s => s.w || 0)),
     count: pairedSides ? Math.floor(reps.length / 2) : reps.length, // bodyweight progression counts full rounds
     low: reps.length ? Math.min(...reps) : 0,
     amrap: reps.length ? reps[reps.length - 1] : 0,       // Greyskull's final set
@@ -192,7 +194,7 @@ export function nextPrescription(S, cfg, routine) {
   // belongs on the normal policies, and a barbell lift logged at 0 has nothing to add to.
   if (w <= 0) {
     const goal = last.goal || cfg.reps || 0
-    if (!last.ok || goal <= 0) return { policy, kind: 'hold', weight: 0, reps: goal || undefined, why: ['Bodyweight — same target again until every set is clean.'] }
+    if (!last.ok || goal <= 0) return { policy, kind: 'hold', weight: w, reps: goal || undefined, why: ['Bodyweight — same target again until every set is clean.'] }
     // A ceiling turns "+1 rep forever" into a plan (issue #33). Past the top of the range the
     // reps go back to the bottom and a set is added instead, which is how bodyweight work
     // actually progresses once a set of 30 push-ups stops being a strength stimulus.
@@ -200,14 +202,14 @@ export function nextPrescription(S, cfg, routine) {
     if (top > 0 && goal >= top) {
       const sets = Math.max(1, cfg.sets || last.count || 1) + 1
       const bottom = Math.max(1, Math.min(cfg.reps || top, top))
-      if (sets <= MAX_BW_SETS) return { policy, kind: 'up', weight: 0, reps: bottom, sets, why: ['{0} reps in every set — add a set and go back to {1}.', goal, bottom] }
+      if (sets <= MAX_BW_SETS) return { policy, kind: 'up', weight: w, reps: bottom, sets, why: ['{0} reps in every set — add a set and go back to {1}.', goal, bottom] }
       // Out of sets worth adding: more volume is no longer the answer, load or a harder
       // variation is — and that is a decision for a person, not a policy.
-      return { policy, kind: 'hold', weight: 0, reps: goal, why: ['{0} sets of {1} — time to add weight or move to a harder variation.', sets - 1, goal] }
+      return { policy, kind: 'hold', weight: w, reps: goal, why: ['{0} sets of {1} — time to add weight or move to a harder variation.', sets - 1, goal] }
     }
     // Unilateral work steps by two, so the total stays even and both sides get the rep.
     const next = goal + repStep(cfg)
-    return { policy, kind: 'up', weight: 0, reps: next, why: ['Bodyweight — every rep last time, so go for {0} this time.', next] }
+    return { policy, kind: 'up', weight: w, reps: next, why: ['Bodyweight — every rep last time, so go for {0} this time.', next] }
   }
   if (policy === 'double') {
     const top = cfg.reps || last.goal || 10

@@ -580,10 +580,11 @@ export default function Legal() {
   const selected = DOCS.find(item => item.id === doc)
 
   const from = location.state?.from || '/home'
+  const returnState = location.state?.returnState
 
   const title = selected ? (lang === 'es' ? selected.es : t(selected.title)) : (lang === 'es' ? 'Legal y privacidad' : t('Legal & privacy'))
 
-  const goBack = () => navigate(selected ? '/legal' : from, { replace: true, state: selected ? { from } : undefined })
+  const goBack = () => navigate(from, { replace: true, state: returnState })
 
 
 
@@ -609,7 +610,7 @@ export default function Legal() {
 
       <div className="sect-b">
 
-        {DOCS.map(item => <Row key={item.id} icon={item.icon} title={lang === 'es' ? item.es : t(item.title)} accessory="chevron" onClick={() => navigate(`/legal/${item.id}`, { state: { from } })} />)}
+        {DOCS.map(item => <Row key={item.id} icon={item.icon} title={lang === 'es' ? item.es : t(item.title)} accessory="chevron" onClick={() => navigate(`/legal/${item.id}`, { state: { from, returnState } })} />)}
 
       </div>
 

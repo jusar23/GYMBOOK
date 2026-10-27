@@ -2,7 +2,7 @@
 // out of the bundle self-hosters ship.
 import { isoOf, uid } from './format.js'
 import { starterRoutines } from './starter.js'
-import { modeOf } from './history.js'
+import { modeOf, workoutVolume } from './history.js'
 
 // Starting weight and weekly increment per exercise of the starter plan (kg).
 // Chest dips are body-weight only here, so they log reps at 0 added weight.
@@ -114,9 +114,8 @@ export function buildDemoState() {
           - (drop ? 0.5 : 0)              // reps slipping is the set that ran out of room
           + (rnd() - 0.5), 0.5), 0, 6)
         if (rateable && rnd() > UNRATED) {
-          // RPE's floor of 6 is a convention about which sets are worth rating, so an easy
-          // set logged in RPE genuinely loses the distance it was from failure.
-          if (scale === 'rpe') s.rpe = clamp(10 - rir, 6, 10)
+          // Keep the RPE value as the exact distance from failure, including easier sets.
+          if (scale === 'rpe') s.rpe = clamp(Math.round(10 - rir), 1, 10)
           else s.rir = rir
         }
         sets.push(s)
@@ -134,7 +133,7 @@ export function buildDemoState() {
       entries,
       prs: weekIdx === 0 ? [] : prs   // the very first session isn't a PR party
     }
-    w.vol = entries.reduce((v, e) => v + e.sets.reduce((n, s) => n + s.w * s.r, 0), 0)
+    w.vol = workoutVolume(w)
     workouts.push(w)
   }
 

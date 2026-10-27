@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore.js'
 import { effectiveRoutine } from '../lib/history.js'
 import { todayISO } from '../lib/format.js'
 import { t } from '../lib/i18n.js'
+import { useUI } from '../store/useUI.js'
 import Icon from './Icon.jsx'
 
 export default function TabBar({ onStart }) {
@@ -11,11 +12,22 @@ export default function TabBar({ onStart }) {
   const S = useStore(s => s.S)
   const user = useStore(s => s.user)
   const isGuest = useStore(s => s.isGuest())
+  const workoutAdvance = useUI(s => s.workoutAdvance)
+  const workTimer = useUI(s => s.work)
+  const restTimer = useUI(s => s.timer)
   if (!user && !isGuest) return null
   const cur = loc.pathname.split('/')[1] || 'home'
   const on = k => cur === k || (cur === 'history' && k === 'stats') || (cur === 'settings' && k === 'home')
 
   const startWorkout = () => {
+    if (S.active) {
+      if (cur !== 'workout') { nav('/workout'); return }
+      if (workTimer) return
+      if (restTimer) { useUI.getState().finishRestEarly(); return }
+      if (workoutAdvance) workoutAdvance()
+      else nav('/workout')
+      return
+    }
     if (!S.active) {
       const r = effectiveRoutine(S, todayISO())
       if (r && r.ex.length) { onStart(r.id); return }
@@ -32,9 +44,9 @@ export default function TabBar({ onStart }) {
     <nav id="tabbar">
       <Tab k="home" icon="house" to="/home" label={t('Home')} />
       <Tab k="plan" icon="calendar" to="/plan" label={t('Plan')} />
-      <button className={'start' + (S.active ? ' rec' : '')} onClick={startWorkout}>
-        <span className="cir"><Icon name={S.active ? 'play' : 'dumbbell'} /></span>
-        <span>{S.active ? t('Resume') : t('Start')}</span>
+      <button className={'start' + (S.active ? ' rec advancing' : '') + (restTimer && cur === 'workout' ? ' resting' : '')} onClick={startWorkout} disabled={!!(S.active && workTimer)} aria-label={S.active ? t(restTimer && cur === 'workout' ? 'End rest' : 'Next set') : t('Start')}>
+        <span className="cir"><Icon name={restTimer && cur === 'workout' ? 'timer' : S.active ? 'check' : 'dumbbell'} /></span>
+        <span>{S.active ? t(restTimer && cur === 'workout' ? 'End rest' : 'Next set') : t('Start')}</span>
       </button>
       <Tab k="stats" icon="chart" to="/stats" label={t('Stats')} />
       <Tab k="library" icon="list" to="/library" label={t('Exercises')} />

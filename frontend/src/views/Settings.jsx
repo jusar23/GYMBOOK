@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import { useStore, DEF, hasData } from '../store/useStore.js'
 
@@ -22,12 +22,13 @@ import { openSubscriptionManagement } from '../lib/subscription.js'
 import { pushSupported, enablePush, disablePush, sendTestPush } from '../lib/push.js'
 
 import { wakeLockSupported } from '../lib/wakelock.js'
+import { playTimerTone, TIMER_TONES } from '../lib/sound.js'
 
 import { t, LANGS, INSTR_LANGS } from '../lib/i18n.js'
 
 import { DEMO } from '../lib/demo.js'
 
-import { MOBILE, shareExport, syncReminder } from '../lib/mobile.js'
+import { ANDROID_APP, MOBILE, listenRestBubblePermission, requestRestBubblePermission, shareExport, syncReminder } from '../lib/mobile.js'
 
 import { loadStarterPlan, confirmSheet, importFromApp } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
@@ -43,11 +44,12 @@ import { Section, Row, SelectRow, Switch, Segmented, Button, TextField } from '.
 import { DOCS } from './Legal.jsx'
 
 const SOCIAL_LINKS = [
-  { name: 'Facebook', icon: 'facebook', url: import.meta.env.VITE_SOCIAL_FACEBOOK_URL || '' },
-  { name: 'X', icon: 'xSocial', url: import.meta.env.VITE_SOCIAL_X_URL || '' },
-  { name: 'Instagram', icon: 'instagram', url: import.meta.env.VITE_SOCIAL_INSTAGRAM_URL || '' },
-  { name: 'Website', icon: 'globe', url: import.meta.env.VITE_PUBLIC_WEBSITE_URL || 'https://gymbooktraining.com/' },
+  { name: 'Facebook', icon: 'facebook', tint: '#1877f2', url: import.meta.env.VITE_SOCIAL_FACEBOOK_URL || '' },
+  { name: 'X', icon: 'xSocial', tint: '#222222', url: import.meta.env.VITE_SOCIAL_X_URL || '' },
+  { name: 'Instagram', icon: 'instagram', tint: '#c13584', url: import.meta.env.VITE_SOCIAL_INSTAGRAM_URL || '' },
+  { name: 'Website', icon: 'globe', tint: '#3478f6', url: import.meta.env.VITE_PUBLIC_WEBSITE_URL || 'https://gymbooktraining.com/' },
 ]
+const DOC_TINT = { privacy: 'var(--blue)', collection: 'var(--teal)', 'third-parties': 'var(--purple)', terms: 'var(--brown)' }
 
 function openSocialLink(rawUrl) {
   try {
@@ -61,6 +63,7 @@ function openSocialLink(rawUrl) {
 export default function Settings() {
 
   const nav = useNavigate()
+  const location = useLocation()
 
   const S = useStore(s => s.S)
 
@@ -88,7 +91,55 @@ export default function Settings() {
   const [accountDeleting, setAccountDeleting] = useState(false)
   const [trainingConsentBusy, setTrainingConsentBusy] = useState(false)
 
-  const updateTrainingConsent = async accepted => {
+  useEffect(() => {
+    const scrollY = location.state?.restoreScrollY
+    if (!Number.isFinite(scrollY)) return
+    requestAnimationFrame(() => window.scrollTo(0, scrollY))
+  }, [location.key, location.state?.restoreScrollY])
+
+  useEffect(() => {
+    if (!ANDROID_APP) return
+    let mounted = true
+    let listener = null
+    listenRestBubblePermission(granted => {
+      if (!mounted) return
+      if (!granted && useStore.getState().S.restBubble) {
+        update(s => { s.restBubble = false })
+        toast(t('Allow Gymbook to display over other apps to use the rest bubble.'))
+      }
+    }).then(handle => {
+      if (mounted) listener = handle
+      else handle?.remove()
+    })
+    return () => { mounted = false; listener?.remove() }
+  }, [update, toast])
+
+  const saveTrainingDataConsent = async () => {
+    const session = await getAuthSession()
+    if (!session?.user) throw new Error(t('Sign in to use cloud backup.'))
+    const metadata = session.user.user_metadata || {}
+    const updated = await updateAuthUserMetadata({ ...metadata,
+      gymbook_sensitive_training_consent: true,
+      gymbook_sensitive_training_consent_version: LEGAL_VERSION,
+      gymbook_sensitive_training_consent_text_version: LEGAL_VERSION,
+      gymbook_sensitive_training_consent_at: new Date().toISOString(),
+    })
+    await setCloudBackupConsent(true)
+    setUser({ ...user, email: updated.email, trainingDataConsent: true })
+  }
+
+  const requestTrainingDataConsent = onAccept => confirmSheet({
+    title: t('Authorize workout data processing'),
+    message: t('Optional: I explicitly authorize processing of my workout and body-weight data for progress tracking and server backups. Without this authorization, my workouts stay on this device and server backup and restore are unavailable.'),
+    confirmText: t('Confirm'),
+    onConfirm: onAccept,
+  })
+
+  const updateTrainingConsent = async (accepted, confirmed = false) => {
+    if (MOBILE && accepted && !confirmed && user.trainingDataConsent !== true) {
+      requestTrainingDataConsent(() => updateTrainingConsent(true, true))
+      return
+    }
     setTrainingConsentBusy(true)
     try {
       if (MOBILE) {
@@ -117,16 +168,7 @@ export default function Settings() {
           })
           return
         }
-        const session = await getAuthSession()
-        const metadata = session?.user?.user_metadata || {}
-        const updated = await updateAuthUserMetadata({ ...metadata,
-          gymbook_sensitive_training_consent: true,
-          gymbook_sensitive_training_consent_version: LEGAL_VERSION,
-          gymbook_sensitive_training_consent_text_version: LEGAL_VERSION,
-          gymbook_sensitive_training_consent_at: new Date().toISOString(),
-        })
-        await setCloudBackupConsent(true)
-        setUser({ ...user, email: updated.email, trainingDataConsent: true })
+        await saveTrainingDataConsent()
         toast(t('Server workout sync enabled'))
         return
       }
@@ -157,11 +199,26 @@ export default function Settings() {
     </div>
   ), { kind: 'full', locked: true })
 
-  const backUpToCloud = async () => {
+  const uploadCloudBackup = async ({ authorize = false } = {}) => {
     setCloudBusy(true)
-    try { await saveCloudBackup(S); toast(t('Cloud backup saved')) }
+    try {
+      if (authorize) {
+        setTrainingConsentBusy(true)
+        await saveTrainingDataConsent()
+      }
+      await saveCloudBackup(S)
+      toast(t('Cloud backup saved'))
+    }
     catch (e) { toast(e.message || t('Cloud backup failed')) }
-    finally { setCloudBusy(false) }
+    finally { setCloudBusy(false); setTrainingConsentBusy(false) }
+  }
+
+  const backUpToCloud = () => {
+    if (user?.trainingDataConsent !== true) {
+      requestTrainingDataConsent(() => uploadCloudBackup({ authorize: true }))
+      return
+    }
+    uploadCloudBackup()
   }
 
   const restoreCloudBackup = async () => {
@@ -413,6 +470,27 @@ export default function Settings() {
 
       </Row>
 
+      <Row icon="volume" iconTint="var(--pink)" title={t('Sounds')}>
+        <Switch checked={!!S.sound} onChange={v => update(s => { s.sound = v })} />
+      </Row>
+
+      {S.sound && <SelectRow icon="music" iconTint="var(--indigo)" title={t('Timer tones')}
+        value={S.soundTone || 'classic'} options={TIMER_TONES.map(o => ({ ...o, label: t(o.label) }))}
+        onChange={v => {
+          update(s => { s.soundTone = v })
+          playTimerTone(true, v, 'countdown')
+        }} />}
+
+      {ANDROID_APP && <Row icon="clock" iconTint="var(--teal)" title={t('Rest bubble over other apps')}
+        subtitle={t('Show the movable rest timer when you switch to another app.')}>
+        <Switch checked={!!S.restBubble} onChange={async enabled => {
+          update(s => { s.restBubble = enabled })
+          if (enabled) {
+            await requestRestBubblePermission()
+          }
+        }} />
+      </Row>}
+
       <Row icon="lightbulb" iconTint="var(--yellow)" title={t('Tutorial')}
         subtitle={t('Review the usage guide for Gym Book Training.')}
         accessory="chevron" onClick={confirmTutorial} />
@@ -431,9 +509,14 @@ export default function Settings() {
 
         options={Array.from({ length: 12 }, (_, i) => (i + 1) * 30).map(v => ({ value: v, label: fmtSec(v) }))} />
 
-      <SelectRow icon="timer" iconTint="var(--blue)" title={t('Double-set rest')}
+      <SelectRow icon="clock" iconTint="var(--teal)" title={t('Double-set rest')}
         value={S.sideRestSec ?? 30} onChange={v => update(s => { s.sideRestSec = v })}
         options={Array.from({ length: 6 }, (_, i) => (i + 1) * 30).map(v => ({ value: v, label: fmtSec(v) }))} />
+
+      <Row icon="dumbbell" iconTint="var(--orange)" title={t('Approach set')}
+        subtitle={t('Add a separate half-weight approach set to the first exercise of a workout.') }>
+        <Switch checked={!!S.warmupEnabled} onChange={v => update(s => { s.warmupEnabled = v })} />
+      </Row>
 
       {(wakeOK || !MOBILE) && (
 
@@ -449,22 +532,16 @@ export default function Settings() {
 
       )}
 
-      {MOBILE && <Row icon="expand" iconTint="var(--purple)" title={t('Lock screen orientation')}
+      {MOBILE && <Row icon="rotate" iconTint="var(--indigo)" title={t('Lock screen orientation')}
         subtitle={t('Keep the current screen direction while a workout is active.') }>
         <Switch checked={!!S.lockOrientation} onChange={v => update(s => { s.lockOrientation = v })} />
       </Row>}
-
-      <Row icon="bell" iconTint="var(--pink)" title={t('Sounds')}>
-
-        <Switch checked={!!S.sound} onChange={v => update(s => { s.sound = v })} />
-
-      </Row>
 
       {/* Two names for the same judgement, so the column asks in the scale you already think in.
 
           The (i) sits before the control — you read it on the way to the choice, not after it. */}
 
-      <Row icon="target" iconTint="var(--purple)" title={t('Effort per set')}>
+	      <Row icon="flame" iconTint="var(--orange)" title={t('Effort per set')}>
 
         <button className="helpbtn" aria-label={t('What are RIR and RPE?')} onClick={effortHelpSheet}><Icon name="info" /></button>
 
@@ -543,15 +620,15 @@ export default function Settings() {
 
       {MOBILE ? <>
 
-        <Row icon="lock" iconTint="var(--acc)" title={user ? user.name : t('Local data on this phone')} subtitle={t('Workout data is stored on this phone. Finished workouts update an authorized server backup automatically.')} />
+        <Row icon={user ? 'personCircle' : 'phone'} iconTint={user ? 'var(--blue)' : 'var(--teal)'} title={user ? user.name : t('Local data on this phone')} subtitle={t('Workout data is stored on this phone. Finished workouts update an authorized server backup automatically.')} />
         {user
           ? <>
-            <Row icon="shield" iconTint="var(--blue)" title={t('Server backup of workout data')}
+            <Row icon="sync" iconTint="var(--teal)" title={t('Server backup of workout data')}
               subtitle={t('Turning this off stops future uploads and blocks access to the existing server copy. The copy remains stored until you request deletion or delete your account.') }>
               <Switch checked={user.trainingDataConsent === true} disabled={trainingConsentBusy}
                 onChange={updateTrainingConsent} />
             </Row>
-            <Row icon="shield" iconTint="var(--acc)" title={t('Manage subscription')} subtitle={t('View your plan, renewal date, payment method or cancellation options.')} accessory="chevron" onClick={manageSubscription} />
+            <Row icon="crown" iconTint="var(--yellow)" title={t('Manage subscription')} subtitle={t('View your plan, renewal date, payment method or cancellation options.')} accessory="chevron" onClick={manageSubscription} />
             <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your progress stays on this phone. Cloud backup is not changed.'), confirmText: t('Sign out'), danger: true, onConfirm: async () => { await signOut(); nav('/home') } })} />
             <Row icon="trash" iconTint="var(--red)" title={t('Delete account')} subtitle={t('Permanently delete your account and its data.')} danger onClick={deleteAccount} />
           </>
@@ -559,7 +636,7 @@ export default function Settings() {
 
       </> : DEMO ? <>
 
-        <Row icon="sparkles" iconTint="var(--acc)" title={t('You’re in the demo')} subtitle={t('Example data, stored only in this browser — change anything you like.')} />
+    <Row icon="sparkles" iconTint="var(--yellow)" title={t('You’re in the demo')} subtitle={t('Example data, stored only in this browser — change anything you like.')} />
 
         <Row icon="reset" iconTint="var(--blue)" title={t('Reset demo data')} accessory="chevron"
 
@@ -567,12 +644,12 @@ export default function Settings() {
 
       </> : user ? <>
 
-        <Row icon="personCircle" iconTint="var(--grey)" title={user.name}
+        <Row icon="personCircle" iconTint="var(--blue)" title={user.name}
           subtitle={user.trainingDataConsent === true
             ? t('Your profile and workout progress sync across devices.')
             : t('Workout data stays on this device until you enable server sync.')} />
 
-        <Row icon="shield" iconTint="var(--blue)" title={t('Server sync of workout data')}
+        <Row icon="sync" iconTint="var(--teal)" title={t('Server sync of workout data')}
           subtitle={t('Authorize workout and body-weight data to sync with your Gymbook server. Turning this off stops sync and server restore.') }>
           <Switch checked={user.trainingDataConsent === true} disabled={trainingConsentBusy}
             onChange={updateTrainingConsent} />
@@ -582,7 +659,7 @@ export default function Settings() {
 
         <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your data is synced to your profile first, then cleared from this device.'), confirmText: t('Sign out'), danger: true, onConfirm: async () => { await signOut(); nav('/home') } })} />
 
-        <Row icon="shield" iconTint="var(--red)" title={t('Sign out everywhere')} subtitle={t('Ends this profile’s sessions on all your devices.')} danger onClick={signOutEverywhere} />
+        <Row icon="signOut" iconTint="var(--red)" title={t('Sign out everywhere')} subtitle={t('Ends this profile’s sessions on all your devices.')} danger onClick={signOutEverywhere} />
         <Row icon="trash" iconTint="var(--red)" title={t('Delete account')} subtitle={t('Permanently delete your account and its data.')} danger onClick={deleteAccount} />
       
       </> : (
@@ -615,9 +692,9 @@ export default function Settings() {
             <Icon name="chevronDown" className="data-more-chevron" />
           </summary>
           <div className="data-more-content">
-            <Row icon="sparkles" iconTint="var(--acc)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={confirmStarterPlan} />
-            <Row icon="shuffle" iconTint="var(--teal)" title={t('Import from another app')} subtitle={t('FitNotes, Strong, Hevy — or body weight from Apple Health')} accessory="chevron" onClick={() => importRef.current.click()} />
-            <Row icon="upload" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />
+            <Row icon="dumbbell" iconTint="var(--orange)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={confirmStarterPlan} />
+            <Row icon="download" iconTint="var(--teal)" title={t('Import from another app')} subtitle={t('FitNotes, Strong, Hevy — or body weight from Apple Health')} accessory="chevron" onClick={() => importRef.current.click()} />
+            <Row icon="download" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />
             <Row icon="download" iconTint="var(--blue)" title={t('Export routines only')} accessory="chevron" onClick={() => confirmExport('routines')} />
             <Row icon="download" iconTint="var(--blue)" title={t('Export backup (JSON)')} accessory="chevron" onClick={confirmExport} />
             <Row icon="trash" iconTint="var(--red)" title={t('Reset everything')} danger onClick={() => confirmSheet({ title: t('Reset everything?'), message: t('Deletes your plan, workouts and body weight on this device. This cannot be undone.'), confirmText: t('Delete everything'), danger: true, onConfirm: () => { replaceState(JSON.parse(JSON.stringify(DEF)), true); nav('/home'); toast(t('All data reset')) } })} />
@@ -627,15 +704,15 @@ export default function Settings() {
 
       {!MOBILE && user && <Row icon="reset" iconTint="var(--blue)" title={t('Restore an imported profile')} subtitle={t('Use a one-time code from your previous Gym Book Training installation.')} accessory="chevron" onClick={restoreProfile} />}
 
-      {!MOBILE && <Row icon="sparkles" iconTint="var(--acc)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={confirmStarterPlan} />}
+      {!MOBILE && <Row icon="dumbbell" iconTint="var(--orange)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={confirmStarterPlan} />}
 
-      {!MOBILE && <Row icon="shuffle" iconTint="var(--teal)" title={t('Import from another app')}
+      {!MOBILE && <Row icon="download" iconTint="var(--teal)" title={t('Import from another app')}
 
         subtitle={t('FitNotes, Strong, Hevy — or body weight from Apple Health')}
 
         accessory="chevron" onClick={() => importRef.current.click()} />}
 
-      {!MOBILE && <Row icon="upload" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />}
+      {!MOBILE && <Row icon="download" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />}
 
       {!MOBILE && <Row icon="download" iconTint="var(--blue)" title={t('Export routines only')} accessory="chevron" onClick={() => confirmExport('routines')} />}
 
@@ -646,17 +723,17 @@ export default function Settings() {
     </Section>
 
     <Section title={t('Social')}>
-      {SOCIAL_LINKS.map(({ name, icon, url }) => <Row key={name} icon={icon}
-        iconTint="var(--acc)" title={t(name)}
+      {SOCIAL_LINKS.map(({ name, icon, tint, url }) => <Row key={name} icon={icon}
+        iconTint={tint} title={t(name)}
         subtitle={url || t('Coming soon')}
         accessory={url ? 'chevron' : 'none'} onClick={url ? () => openSocialLink(url) : undefined} />)}
     </Section>
 
     <Section title={t('Legal')}>
 
-      {DOCS.map(doc => <Row key={doc.id} icon={doc.icon} title={t(doc.title)} accessory="chevron"
+      {DOCS.map(doc => <Row key={doc.id} icon={doc.icon} iconTint={DOC_TINT[doc.id]} title={t(doc.title)} accessory="chevron"
 
-        onClick={() => nav(`/legal/${doc.id}`, { state: { from: '/settings' } })} />)}
+        onClick={() => nav(`/legal/${doc.id}`, { state: { from: '/settings', returnState: { restoreScrollY: window.scrollY } } })} />)}
 
     </Section>
 
@@ -926,7 +1003,7 @@ function PushCard({ S, update, toast }) {
 
     >
 
-      <Row icon="bell" iconTint="var(--red)" title={t('Push notifications')} subtitle={t('Rest-timer alerts, even if Gym Book Training is closed.')}>
+      <Row icon="bell" iconTint="var(--blue)" title={t('Push notifications')} subtitle={t('Rest-timer alerts, even if Gym Book Training is closed.')}>
 
         <Switch checked={on} disabled={busy} onChange={toggle} />
 

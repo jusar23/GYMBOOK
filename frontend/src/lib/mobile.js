@@ -10,8 +10,56 @@
 // Like the demo build, MOBILE is replaced at build time, so all of this folds away in
 // web bundles; the Capacitor plugins are only ever imported behind it.
 import { t } from './i18n.js'
+import { Capacitor } from '@capacitor/core'
 
 export const MOBILE = import.meta.env.MODE === 'mobile' || import.meta.env.VITE_MOBILE === '1'
+export const ANDROID_APP = MOBILE && Capacitor.getPlatform() === 'android'
+
+let restBubblePlugin
+async function getRestBubblePlugin() {
+  if (!ANDROID_APP) return null
+  if (!restBubblePlugin) {
+    const { registerPlugin } = await import('@capacitor/core')
+    restBubblePlugin = registerPlugin('RestBubble')
+  }
+  return restBubblePlugin
+}
+
+export async function setNativeRestTimer(options) {
+  try {
+    const plugin = await getRestBubblePlugin()
+    if (!plugin) return false
+    await plugin.setRestTimer(options)
+    return true
+  } catch { return false }
+}
+
+export async function clearNativeRestTimer() {
+  try { const plugin = await getRestBubblePlugin(); await plugin?.clearRestTimer() } catch { /* Native timer is optional. */ }
+}
+
+export async function requestRestBubblePermission() {
+  try {
+    const plugin = await getRestBubblePlugin()
+    if (!plugin) return false
+    const result = await plugin.requestOverlayPermission()
+    return !!result.granted
+  } catch { return false }
+}
+
+export async function listenRestBubblePermission(onChange) {
+  const plugin = await getRestBubblePlugin()
+  if (!plugin) return null
+  return plugin.addListener('overlayPermissionChanged', result => onChange(!!result.granted))
+}
+
+export async function listenRestBubbleEvents(onContinue, onFinished) {
+  const plugin = await getRestBubblePlugin()
+  if (!plugin) return null
+  const continueHandle = await plugin.addListener('continueRest', onContinue)
+  const finishedHandle = await plugin.addListener('restFinished', onFinished)
+  return { remove: () => { continueHandle.remove(); finishedHandle.remove() } }
+}
 
 const FILE = 'opengym-state.json'
 

@@ -32,8 +32,18 @@ export const allExercises = st => [...(st.customEx || []), ...EXDB]
 // shipping ~140 MB of images into the deployment.
 const IMG_BASE = import.meta.env.VITE_IMG_BASE || 'img/'
 const GIF_BASE = import.meta.env.VITE_GIF_BASE || 'gif/'
-export const imgSrc = ex => IMG_BASE + (MOBILE ? ex.img.replace(/\.jpe?g$/i, '.webp') : ex.img)
-export const gifSrc = ex => GIF_BASE + (MOBILE ? ex.gif.replace(/\.gif$/i, '.webp') : ex.gif)
+// Catalogues may provide sex-specific demonstrations (imgFemale/gifFemale,
+// imgMale/gifMale). Older entries only have the shared img/gif, which remains
+// the fallback so exercises never lose their media.
+const variant = (ex, key, body) => ex[`${key}${body === 'female' ? 'Female' : 'Male'}`] || ex[key]
+export const imgSrc = (ex, body = 'male') => {
+  const file = variant(ex, 'img', body)
+  return file ? IMG_BASE + (MOBILE ? file.replace(/\.jpe?g$/i, '.webp') : file) : ''
+}
+export const gifSrc = (ex, body = 'male') => {
+  const file = variant(ex, 'gif', body)
+  return file ? GIF_BASE + (MOBILE ? file.replace(/\.gif$/i, '.webp') : file) : ''
+}
 
 // Cardio exercises log time + speed instead of weight × reps.
 export const isCardio = idOrEx => (typeof idOrEx === 'string' ? EXIDX[idOrEx] : idOrEx)?.bp === 'cardio'

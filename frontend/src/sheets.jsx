@@ -260,10 +260,11 @@ function detailSetLabel(id, set, cfg, fromUnit, toUnit) {
   if (fromUnit === toUnit) return setLabel(id, set, cfg)
   const mode = modeOf(cfg || { id })
   const effort = set.rir != null ? ` (RIR ${fmtNum(set.rir)})` : set.rpe != null ? ` (RPE ${fmtNum(set.rpe)})` : ''
-  const weight = set.w > 0 ? fmtNum(convertWeight(set.w, fromUnit, toUnit)) : ''
+  const displayWeight = set.w == null ? 0 : convertWeight(set.w, fromUnit, toUnit)
+  const weight = displayWeight !== 0 ? fmtNum(displayWeight) : ''
   if (mode === 'cardio') return setLabel(id, set, cfg)
   if (mode === 'time') return fmtSec(set.sec) + (weight ? ` · ${weight} ${toUnit}` : '') + effort
-  if (isBw({ ...(cfg || {}), id })) return (weight ? `+${weight} ${toUnit} × ` : '') + (set.r || 0) + effort
+  if (isBw({ ...(cfg || {}), id })) return (weight ? `${displayWeight > 0 ? '+' : '−'}${fmtNum(Math.abs(displayWeight))} ${toUnit} × ` : '') + (set.r || 0) + effort
   return `${weight || fmtNum(0)} ${toUnit}×${set.r || 0}${effort}`
 }
 
@@ -581,12 +582,10 @@ function ExConfig({ ex, existing, onSave, onDelete, close, routine }) {
       </> : mode === 'time' ? <>
         <Stepper label={t('Sets')} value={c.sets} step={1} decimal={false} onChange={v => setC(x => ({ ...x, sets: v }))} />
         <Stepper label={t('Seconds')} value={c.sec} step={5} decimal={false} onChange={v => setC(x => ({ ...x, sec: v }))} />
-        <Stepper label={t('Weight ({0})', st.unit)} value={c.weight} step={2.5} onChange={v => setC(x => ({ ...x, weight: v }))} />
+        <Stepper label={t(bw ? 'Added / assistance ({0})' : 'Weight ({0})', st.unit)} value={c.weight} step={2.5} allowNegative={bw} onChange={v => setC(x => ({ ...x, weight: v }))} />
       </> : <>
         <Stepper label={t('Sets')} value={c.sets} step={1} decimal={false} onChange={v => setC(x => ({ ...x, sets: v }))} />
         <Stepper label={t(perSide ? 'Reps per side' : 'Reps')} value={c.reps} step={1} decimal={false} onChange={v => setC(x => ({ ...x, reps: v }))} />
-        {/* On bodyweight work the weight stepper is the click #32 is about, so it is not here
-            until there is a belt to describe — see the added-weight row below. */}
         {!bw && <Stepper label={t('Weight ({0})', st.unit)} value={c.weight} step={2.5} onChange={v => setC(x => ({ ...x, weight: v }))} />}
       </>}
     </div>
@@ -596,7 +595,7 @@ function ExConfig({ ex, existing, onSave, onDelete, close, routine }) {
     {/* ---------- bodyweight + per side (issues #31/#32/#33) ---------- */}
     {!cardio && <div className="sect-b" style={{ marginBottom: 8 }}>
       <Row icon="figureStrength" iconTint="var(--acc)" title={t('Bodyweight')}
-        subtitle={bw ? t('No weight to enter — just log the reps.') : t('Ask for a weight on every set.')}>
+        subtitle={bw ? t('Enter extra load or a negative value for assistance.') : t('Ask for a weight on every set.')}>
         <Switch checked={bw} onChange={v => setC(x => ({ ...x, bodyweight: v, weight: v ? 0 : x.weight }))} />
       </Row>
       {mode === 'reps' && <Row icon="shuffle" iconTint="var(--blue)" title={t('Reps per side')}
@@ -612,11 +611,11 @@ function ExConfig({ ex, existing, onSave, onDelete, close, routine }) {
         reps, with its explanation underneath. */}
     {bw && <>
       <div className="row cfgrow" style={{ marginBottom: 8 }}>
-        <Stepper label={t('Added ({0})', st.unit)} value={c.weight || 0} step={2.5}
+        <Stepper label={t('Added / assistance ({0})', st.unit)} value={c.weight || 0} step={2.5} allowNegative
           onChange={v => setC(x => ({ ...x, weight: v }))} />
       </div>
       <div className="small dim" style={{ marginBottom: 18 }}>
-        {t('For dips or pull-ups with a belt. Progression then follows the weight.')}
+        {t('Use positive values for added load and negative values when equipment assists your bodyweight.')}
       </div>
     </>}
     {/* The rep ceiling only means something when there is no load to add instead. */}
@@ -789,13 +788,16 @@ function WorkoutDetail({ w, close }) {
   const st = useStore(s => s.S)
   return <>
     <h3>{w.name}</h3>
-    <div className="muted small" style={{ marginBottom: 12 }}>{[fmtDate(w.d, true), ...durPart(w.end - w.start), fmtVol(w.vol, st.unit), ...(w.bw ? [fmtNum(w.bw) + ' ' + st.unit] : [])].join(' · ')}</div>
+    <div className="muted small" style={{ marginBottom: 12 }}>{[fmtDate(w.d, true), ...durPart(w.end - w.start), fmtVol(workoutVolume(w, st.bodyweight), st.unit), ...(w.bw ? [fmtNum(w.bw) + ' ' + st.unit] : [])].join(' · ')}</div>
     {w.entries.map((e, i) => {
       const ex = EXIDX[e.id]
       return <div key={i} className="row" style={{ marginBottom: 12, alignItems: 'flex-start' }}>
         {ex && <Thumb ex={ex} />}
         <div className="grow"><div className="tt capitalize" style={{ fontWeight: 600 }}>{ex ? ex.n : (e.n || e.id)} {w.prs && w.prs.includes(e.id) && <span className="pr"><Icon name="trophy" />PR</span>}</div>
-          <div className="ss">{e.sets.filter(s => s.done).map(s => setLabel(e.id, s, e.target)).join('  ·  ') || t('no sets')}</div></div>
+          <div className="ss">{[
+            ...(e.warmupSet?.done ? [`${t('Approach set')}: ${setLabel(e.id, e.warmupSet, e.target)}`] : []),
+            ...e.sets.filter(s => s.done).map(s => setLabel(e.id, s, e.target)),
+          ].join('  ·  ') || t('no sets')}</div></div>
       </div>
     })}
     <Button variant="danger" onClick={() => confirmSheet({ title: t('Delete workout?'), message: t('This removes it from your history for good.'), confirmText: t('Delete'), danger: true, onConfirm: () => { update(s => { s.workouts = s.workouts.filter(x => x.id !== w.id) }); close(); toast(t('Workout deleted')) } })}>{t('Delete workout')}</Button>
@@ -813,7 +815,7 @@ function Calendar({ start, close }) {
   const startOffset = (new Date(y, mo, 1).getDay() + 6) % 7
   const daysIn = new Date(y, mo + 1, 0).getDate()
   const monthWs = st.workouts.filter(w => w.d.startsWith(y + '-' + String(mo + 1).padStart(2, '0')))
-  const monthVol = monthWs.reduce((a, w) => a + (w.vol || 0), 0)
+  const monthVol = monthWs.reduce((a, w) => a + workoutVolume(w, st.bodyweight), 0)
   const monthMs = monthWs.reduce((a, w) => a + Math.max(0, (w.end || w.start) - w.start), 0)
   const cells = []
   for (let i = 0; i < startOffset; i++) cells.push(<div key={'e' + i} />)
@@ -852,7 +854,7 @@ export function WorkoutRow({ w, onClick }) {
   return <div className="item" onClick={onClick}>
     <span className="lrow-i" style={{ width: 34, height: 34, borderRadius: 8, fontSize: 19 }}><Icon name={glyph} /></span>
     <div className="grow"><div className="tt">{w.name}</div>
-      <div className="ss">{[fmtDate(w.d, true), ...durPart(w.end - w.start), t('{0} sets', setsDone(w)), fmtVol(w.vol, st.unit)].join(' · ')}</div></div>
+      <div className="ss">{[fmtDate(w.d, true), ...durPart(w.end - w.start), t('{0} sets', setsDone(w)), fmtVol(workoutVolume(w, st.bodyweight), st.unit)].join(' · ')}</div></div>
     {w.prs && w.prs.length > 0 && <span className="pr"><Icon name="trophy" />{w.prs.length} PR</span>}
     <Icon name="chevronRight" className="chev" />
   </div>
@@ -860,18 +862,90 @@ export function WorkoutRow({ w, onClick }) {
 
 /* ============================ workout lifecycle ============================ */
 export function startFlow(routineId) {
-  bwSheet({ required: true, onDone: bw => beginWorkout(routineId, bw) })
+  bwSheet({ required: true, onDone: bw => {
+    warmupSheet(routineId, bw)
+  } })
 }
-export function beginWorkout(routineId, bw) {
+function WarmupPrompt({ routineId, bw, close }) {
+  const [remaining, setRemaining] = useState(300)
+  const advanced = useRef(false)
+  const continueToPicker = () => {
+    if (advanced.current) return
+    advanced.current = true
+    close()
+    const routine = routineId ? S().routines.find(x => x.id === routineId) : null
+    if (routine?.ex?.length) exerciseStartSheet(routineId, bw)
+    else beginWorkout(routineId, bw)
+  }
+  useEffect(() => {
+    if (remaining <= 0) { continueToPicker(); return }
+    const timer = setTimeout(() => setRemaining(value => Math.max(0, value - 1)), 1000)
+    return () => clearTimeout(timer)
+  }, [remaining])
+  const change = amount => setRemaining(value => Math.max(0, Math.min(1800, value + amount)))
+  return <>
+    <h3>{t('Warm-up recommendation')}</h3>
+    <p className="muted">{t('Take a few minutes to warm up before lifting. This timer is a recommendation; use a warm-up that suits you.')}</p>
+    <div className="bw-read" style={{ textAlign: 'center', fontSize: 42, margin: '16px 0' }}>{fmtSec(remaining)}</div>
+    <div className="row between">
+      <Button icon="minus" onClick={() => change(-30)}>{t('30 seconds')}</Button>
+      <Button icon="plus" onClick={() => change(30)}>{t('30 seconds')}</Button>
+    </div>
+    <div style={{ height: 10 }} /><Button variant="primary" onClick={continueToPicker}>{t('Choose starting exercise')}</Button>
+  </>
+}
+export function warmupSheet(routineId, bw) {
+  ui().openSheet(close => <WarmupPrompt routineId={routineId} bw={bw} close={close} />)
+}
+function ExerciseStartPicker({ routineId, bw, close }) {
+  const routine = useStore(s => s.S.routines.find(x => x.id === routineId))
+  const approachSetEnabled = useStore(s => !!s.S.warmupEnabled)
+  if (!routine?.ex?.length) return null
+  return <>
+    <h3>{t('Choose starting exercise')}</h3>
+    {approachSetEnabled && <p className="muted">{t('This exercise will start with a separate approach set at half its planned weight.')}</p>}
+    <div className="list">{routine.ex.map((cfg, index) => {
+      const ex = EXIDX[cfg.id]
+      return <div key={`${cfg.id}-${index}`} className="item" onClick={() => { close(); beginWorkout(routineId, bw, index) }}>
+        <span className="lrow-i"><Icon name="dumbbell" /></span><div className="grow"><div className="tt">{ex?.n || cfg.id}</div></div><Icon name="chevronRight" className="chev" />
+      </div>
+    })}</div>
+  </>
+}
+export function exerciseStartSheet(routineId, bw) {
+  ui().openSheet(close => <ExerciseStartPicker routineId={routineId} bw={bw} close={close} />)
+}
+export function beginWorkout(routineId, bw, selectedIndex = 0) {
   const st = S()
   const r = routineId ? st.routines.find(x => x.id === routineId) : null
   // The prescription is applied as the session is built, so you walk up to the bar with the
   // right weight already on the screen instead of being told about it afterwards. `plan` is
   // kept on the entry purely so the workout can explain the number it chose.
-  const entries = (r ? r.ex : []).map(cfg => {
+  let entries = (r ? r.ex : []).map(cfg => {
     const plan = nextPrescription(st, cfg, r)
     return { id: cfg.id, sg: cfg.sg, target: { ...cfg }, plan, sets: applyPrescription(buildSets(st, cfg), plan) }
   })
+  if (entries.length && selectedIndex > 0 && selectedIndex < entries.length) {
+    const units = supersetUnits(entries)
+    const unitIndex = units.findIndex(unit => unit.includes(selectedIndex))
+    const selectedUnit = units[unitIndex] || [selectedIndex]
+    const orderedUnits = [...units.slice(unitIndex), ...units.slice(0, unitIndex)]
+      .map(unit => unit.map(index => entries[index]))
+    const selected = orderedUnits[0].findIndex(entry => entries.indexOf(entry) === selectedIndex)
+    if (selected > 0) orderedUnits[0].unshift(...orderedUnits[0].splice(selected, 1))
+    entries = orderedUnits.flat()
+  }
+  if (entries.length && st.warmupEnabled) {
+    const first = entries[0]
+    const mode = modeOf({ ...(first.target || {}), id: first.id })
+    const planned = first.sets.find(set => (set.w || 0) > 0) || first.sets[0]
+    if (mode !== 'cardio' && planned) first.warmupSet = {
+      w: Math.round((planned.w || 0) * 5) / 10,
+      r: planned.r || first.target.reps || 0,
+      ...(planned.sec != null ? { sec: planned.sec } : {}),
+      done: false,
+    }
+  }
   update(s => {
     s.active = { id: uid(), d: todayISO(), start: Date.now(), routineId, name: r ? r.name : t('Freestyle'), bw: bw || null, cur: 0, entries }
   })
@@ -896,12 +970,12 @@ function TopWeight({ entryIdx, close }) {
 
   const units = supersetUnits(A ? A.entries : [])
   const unit = entry ? unitOf(units, entryIdx) : []
-  const unitDone = !!entry && unit.every(i => A.entries[i].sets.every(s => s.done))
+  const unitDone = !!entry && unit.every(i => A.entries[i].sets.every(s => s.done) && (!A.entries[i].warmupSet || A.entries[i].warmupSet.done))
   const unitIdx = units.findIndex(u => u === unit)
   const isLastUnit = unitIdx === units.length - 1
   if (!entry || !ex) return null
 
-  const commit = advance => {
+  const commit = () => {
     const n = Math.round((v || 0) * 10) / 10
     if (!isFinite(n) || n < 0) { toast(t('Enter a valid weight')); return }
     update(s => {
@@ -910,9 +984,9 @@ function TopWeight({ entryIdx, close }) {
       s.exWeights[entry.id] = { w: Math.max(n, cur ? cur.w : 0), d: todayISO() }
     })
     close()
-    if (advance && unitDone) {
-      if (isLastUnit) workoutCompleteSheet()               // whole workout done → finish/continue prompt
-      else update(s => { s.active.cur = units[unitIdx + 1][0] })
+    if (unitDone) {
+      if (isLastUnit) workoutCompleteSheet()
+      else nextWorkoutExerciseSheet(unitIdx)
     } else toast(t('Tracked — next time starts at {0}', fmtNum(S().exWeights[entry.id].w) + ' ' + st.unit))
   }
   return <>
@@ -922,12 +996,39 @@ function TopWeight({ entryIdx, close }) {
     <div style={{ height: 10 }} />
     {prevBest > 0 ? <div className="small dim" style={{ textAlign: 'center', marginBottom: 12 }}>{t('Previous best:')} {fmtNum(convertWeight(prevBest, st.unit, weightUnit))} {weightUnit}{maxSet > prevBest && <span style={{ color: 'var(--yellow)' }}> — {t('new record!')}</span>}</div> : <div style={{ height: 4 }} />}
     {unitDone ? <>
-      <Button variant="primary" trailingIcon={isLastUnit ? null : 'chevronRight'} onClick={() => commit(true)}>{isLastUnit ? t('Save') : t('Save & next exercise')}</Button>
-      <div style={{ height: 8 }} /><Button variant="ghost" className="dim" onClick={() => commit(false)}>{t('Just close')}</Button>
-    </> : <Button variant="primary" onClick={() => commit(false)}>{t('Save weight')}</Button>}
+      <Button variant="primary" trailingIcon={isLastUnit ? null : 'chevronRight'} onClick={commit}>{isLastUnit ? t('Save') : t('Save & next exercise')}</Button>
+    </> : <Button variant="primary" onClick={commit}>{t('Save weight')}</Button>}
   </>
 }
 export const topWeightSheet = entryIdx => ui().openSheet(close => <TopWeight entryIdx={entryIdx} close={close} />)
+
+function NextWorkoutExercisePicker({ currentUnitIndex, close }) {
+  const active = useStore(s => s.S.active)
+  if (!active) return null
+  const units = supersetUnits(active.entries)
+  const choices = units.map((indices, unitIndex) => ({ indices, unitIndex }))
+    .filter(({ indices, unitIndex }) => unitIndex !== currentUnitIndex && indices.some(index => {
+      const entry = active.entries[index]
+      return !entry.sets.every(set => set.done) || (entry.warmupSet && !entry.warmupSet.done)
+    }))
+  return <>
+    <h3>{t('Choose next exercise')}</h3>
+    <div className="list">{choices.map(({ indices, unitIndex }) => {
+      const label = indices.map(index => EXIDX[active.entries[index].id]?.n || active.entries[index].id).join(' · ')
+      const firstId = active.entries[indices[0]].id
+      const firstExercise = EXIDX[firstId] || { id: firstId, n: firstId }
+      return <div key={unitIndex} className="item" onClick={() => {
+        update(state => { if (state.active) state.active.cur = indices[0] })
+        close()
+      }}>
+        <Thumb ex={firstExercise} /><div className="grow"><div className="tt">{label}</div></div><Icon name="chevronRight" className="chev" />
+      </div>
+    })}</div>
+    {!choices.length && <p className="muted">{t('All routine exercises are complete.')}</p>}
+    <div style={{ height: 8 }} /><Button onClick={close}>{t('Stay on this exercise')}</Button>
+  </>
+}
+export const nextWorkoutExerciseSheet = currentUnitIndex => ui().openSheet(close => <NextWorkoutExercisePicker currentUnitIndex={currentUnitIndex} close={close} />)
 
 // Shown when the last exercise's last set is checked — finish, or keep going.
 function WorkoutComplete({ close }) {
@@ -988,7 +1089,7 @@ export function finishWorkout() {
   const A = S().active
   if (!A) return
   const done = setsDoneActive(A)
-  const total = A.entries.reduce((n, e) => n + e.sets.length, 0)
+  const total = A.entries.reduce((n, e) => n + e.sets.length + (e.warmupSet ? 1 : 0), 0)
   if (!done) { confirmSheet({ title: t('Nothing logged yet'), message: t('You haven’t checked off any sets. Finish the workout anyway?'), confirmText: t('Finish anyway'), onConfirm: doFinishWorkout }); return }
   if (done < total) { confirmSheet({ title: t('Finish early?'), message: t(total - done === 1 ? '{0} set still unchecked. Finish the workout now?' : '{0} sets still unchecked. Finish the workout now?', total - done), confirmText: t('Finish workout'), onConfirm: doFinishWorkout }); return }
   doFinishWorkout()
@@ -1012,10 +1113,10 @@ function doFinishWorkout() {
     // `target` (what the session prescribed) is kept alongside the sets: without it a
     // finished workout cannot say whether it hit its reps, and a timed session reads back
     // as "0 reps". It is what the progression engine works from.
-    entries: A.entries.map(e => ({ id: e.id, sets: e.sets, topW: e.topW || null, target: e.target || null })).filter(e => e.sets.some(s => s.done)),
+    entries: A.entries.map(e => ({ id: e.id, sets: e.sets, warmupSet: e.warmupSet || null, topW: e.topW || null, target: e.target || null })).filter(e => e.sets.some(s => s.done) || e.warmupSet?.done),
     prs
   }
-  w.vol = workoutVolume(w)
+  w.vol = workoutVolume(w, st.bodyweight)
   update(s => {
     w.entries.forEach(e => {
       const mx = Math.max(0, ...e.sets.filter(x => x.done).map(x => x.w || 0), e.topW || 0)

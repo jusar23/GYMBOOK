@@ -50,31 +50,32 @@ export function fmtSec(sec) {
 // 10-point scale from the top (RPE 8 ≈ RIR 2). A set logged on one scale is never silently
 // rewritten as the other — switching the setting changes what new sets ask for, nothing else.
 // `min`..`max` is the range the stepper walks. RIR bottoms out at 0 (a set taken to failure);
-// RPE bottoms out at 6, since the scale is only meaningful for working sets and anything
-// lighter is a warm-up nobody rates.
+// RPE accepts the full 1–10 scale, while a fresh cell still suggests the common working-set
+// starting point of 6.
 export const EFFORT = {
   rir: { f: 'rir', hd: 'RIR', step: 0.5, min: 0, max: 10 },
-  rpe: { f: 'rpe', hd: 'RPE', step: 0.5, min: 6, max: 10 }
+  rpe: { f: 'rpe', hd: 'RPE', step: 1, min: 1, start: 6, max: 10 }
 }
 // One tap of an effort stepper. Empty is not 0 — an unlogged effort must not become "went to
-// failure" from one stray tap — so − on an empty cell leaves it empty, and + starts at the
-// bottom of the scale and walks up from there in even steps. Stepping back off the bottom
-// clears the cell again, so a mistap is undoable. null means "nothing logged"; the caller
-// stores that by dropping the key rather than writing a null.
+// failure" from one stray tap — so − on an empty cell leaves it empty. + starts at the scale's
+// configured suggestion (6 for RPE) and the value can step down to its minimum. Stepping back
+// off the bottom clears the cell again, so a mistap is undoable. null means "nothing logged";
+// the caller stores that by dropping the key rather than writing a null.
 export function stepEffort(kind, cur, dir) {
   const e = EFFORT[kind]
   if (!e) return cur ?? null
-  if (cur == null) return dir < 0 ? null : e.min
-  const n = Math.round((cur + dir * e.step) * 100) / 100
+  if (cur == null) return dir < 0 ? null : (e.start ?? e.min)
+  const current = kind === 'rpe' ? Math.round(cur) : cur
+  const n = Math.round((current + dir * e.step) * 100) / 100
   if (dir < 0 && n < e.min) return null
-  // only the ceiling is enforced on the way up: a value typed below the floor (nothing stops
-  // someone entering RPE 3) still steps in even increments instead of snapping to the floor.
-  return dir > 0 ? Math.min(e.max, n) : Math.max(e.min, n)
+  return Math.min(e.max, Math.max(e.min, n))
 }
-// A typed effort is capped but not floored — clamping up while someone types "10" would turn
-// the first keystroke into the floor and fight the input.
-export const capEffort = (kind, v) =>
-  (v == null || !EFFORT[kind] ? v : Math.min(EFFORT[kind].max, v))
+// A typed effort stays within the selected scale's bounds.
+export const capEffort = (kind, v) => {
+  if (v == null || !EFFORT[kind]) return v
+  const bounded = Math.min(EFFORT[kind].max, Math.max(EFFORT[kind].min, v))
+  return kind === 'rpe' ? Math.round(bounded) : bounded
+}
 // Which scale a profile logs. `showRir` is the boolean this replaced and is only consulted
 // when the profile has no answer of its own — an explicit 'none' has to win over it, or a
 // backup or another device that still carries the old flag would switch the column back on.
@@ -94,13 +95,13 @@ export function setLabel(id, s, cfg) {
   const c = cfg || { id }
   const mode = modeOf(c)
   if (mode === 'cardio') return `${s.min || 0} min @ ${fmtNum(s.speed || 0)} km/h`
-  if (mode === 'time') return fmtSec(s.sec) + (s.w > 0 ? ` · ${fmtNum(s.w)}` : '')
+  if (mode === 'time') return fmtSec(s.sec) + (s.w ? ` · ${isBw({ ...c, id: c.id ?? id }) && s.w > 0 ? '+' : ''}${fmtNum(s.w)}` : '')
   // Bodyweight reads as what you did — "12", or "+10 × 12" once there is a belt involved —
   // rather than "0×12", which says a set was performed with no weight and means nothing.
   const limb = usesPairedSides(c) && s.side ? ` · ${t(s.side === 'left' ? 'Left' : 'Right')}` : ''
   const reps = s.r || 0
   if (isBw({ ...c, id: c.id ?? id })) {
-    const load = s.w > 0 ? `+${fmtNum(s.w)} × ` : ''
+    const load = s.w > 0 ? `+${fmtNum(s.w)} × ` : s.w < 0 ? `−${fmtNum(Math.abs(s.w))} × ` : ''
     return `${load}${reps}${limb}` + effortTail(s)
   }
   return `${fmtNum(s.w || 0)}×${reps}${limb}` + effortTail(s)
@@ -121,7 +122,7 @@ export function exLine(cfg, unit) {
   const mode = modeOf(cfg)
   const n = cfg.sets || 1
   // Added weight reads as added: "+10 kg" on a dip belt, "60 kg" on a barbell.
-  const load = cfg.weight ? ' · ' + (isBw(cfg) ? '+' : '') + fmtNum(cfg.weight) + ' ' + unit : ''
+  const load = cfg.weight ? ' · ' + (isBw(cfg) && cfg.weight > 0 ? '+' : '') + fmtNum(cfg.weight) + ' ' + unit : ''
   if (mode === 'cardio') return `${n} × ${cfg.min || 20} min @ ${fmtNum(cfg.speed || 8)} km/h`
   if (mode === 'time') return `${n} × ${fmtSec(cfg.sec || 45)}${load}`
   if (usesPairedSides(cfg)) return `${n * 2} × ${cfg.reps} ${t('per side')}${load}`
@@ -202,7 +203,10 @@ export function buildSets(S, cfg) {
       ? ([...(last?.sets || [])].reverse().find(s => s.side === side) || prevAt(Math.floor(i / 2)))
       : prevAt(i)
     const usable = prev && prev.r > 0 ? prev : null
-    const w = conf && conf.w > 0 ? conf.w : (usable ? usable.w : cfg.weight)
+    const w = isBw(cfg) && cfg.weight < 0
+      ? cfg.weight
+      : isBw(cfg) && usable && usable.w < 0 ? usable.w
+      : conf && conf.w > 0 ? conf.w : (usable ? usable.w : cfg.weight)
     // A legacy unilateral workout logged both limbs as one rep total. Convert only the seed
     // used for the next workout; the historical workout remains unchanged.
     const legacyTotal = pairedSides && (last?.target?.side === true || !last?.target)
@@ -217,20 +221,33 @@ export function buildSets(S, cfg) {
   }
   return sets
 }
-export function workoutVolume(w) {
+export function workoutVolume(w, bodyweightRecords = []) {
   let v = 0
+  const datedWeights = bodyweightRecords.filter(item => item?.w > 0).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0)
+  const beforeWorkout = datedWeights.filter(item => !w.d || item.d <= w.d)
+  const latestWeight = beforeWorkout.length ? beforeWorkout[beforeWorkout.length - 1] : datedWeights[datedWeights.length - 1]
+  const bodyweight = w.bw > 0 ? w.bw : latestWeight?.w || 0
+  const volumeFor = (entry, set) => {
+    const load = isBw({ ...(entry.target || {}), id: entry.id })
+      ? Math.max(0, bodyweight + (set.w || 0))
+      : (set.w || 0)
+    return load * (set.r || 0)
+  }
   // Paired-side work logs each limb independently, so both rows contribute to volume.
-  w.entries.forEach(e => e.sets.forEach(s => { if (s.done) v += (s.w || 0) * (s.r || 0) }))
+  w.entries.forEach(e => {
+    e.sets.forEach(s => { if (s.done) v += volumeFor(e, s) })
+    if (e.warmupSet?.done) v += volumeFor(e, e.warmupSet)
+  })
   return v
 }
 export function setsDone(w) {
   let n = 0
-  w.entries.forEach(e => e.sets.forEach(s => { if (s.done) n++ }))
+  w.entries.forEach(e => { e.sets.forEach(s => { if (s.done) n++ }); if (e.warmupSet?.done) n++ })
   return n
 }
 export function setsDoneActive(A) {
   let n = 0
-  if (A) A.entries.forEach(e => e.sets.forEach(s => { if (s.done) n++ }))
+  if (A) A.entries.forEach(e => { e.sets.forEach(s => { if (s.done) n++ }); if (e.warmupSet?.done) n++ })
   return n
 }
 export const lastBW = S => (S.bodyweight.length ? S.bodyweight[S.bodyweight.length - 1] : null)

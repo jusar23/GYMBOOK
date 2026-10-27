@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import { uid } from '../lib/format.js'
-import { beep, vibrate } from '../lib/sound.js'
+import { playTimerTone, unlockAudio, vibrate } from '../lib/sound.js'
 import { api } from '../lib/api.js'
 import { t } from '../lib/i18n.js'
-import { MOBILE } from '../lib/mobile.js'
+import { ANDROID_APP, MOBILE, clearNativeRestTimer, setNativeRestTimer } from '../lib/mobile.js'
 import { useStore } from './useStore.js'
 
 // Fire-and-forget: lets the server push a "rest over" alert if this tab gets suspended
@@ -14,6 +14,7 @@ const cancelPushRestTimer = () => { if (!MOBILE && useStore.getState().user) api
 let toastTm = null
 let timerInt = null
 let timerTick = null
+let nativeRestCleanup = null
 let workInt = null
 let workTick = null
 let workDone = null
@@ -23,6 +24,10 @@ export const useUI = create((set, get) => ({
   toastMsg: '',
   timer: null,         // rest countdown between sets — { left, total, endsAt }
   work: null,          // work countdown DURING a timed set (issue #16) — { left, total, endsAt, label }
+  recentSet: null,     // { entryIdx, setIdx } shown above the rest timer for quick corrections
+  workoutAdvance: null,
+  setRecentSet(recentSet) { set({ recentSet }) },
+  setWorkoutAdvance(workoutAdvance) { set({ workoutAdvance }) },
 
   openSheet(render, { kind = 'sheet', locked = false } = {}) {
     const id = uid()
@@ -41,21 +46,43 @@ export const useUI = create((set, get) => ({
 
   startRest(sec) {
     get().stopRest()
+    if (nativeRestCleanup) clearTimeout(nativeRestCleanup); nativeRestCleanup = null
+    unlockAudio()
     const duration = Math.min(360, Math.max(1, Math.round(Number(sec) || 1)))
     const endsAt = Date.now() + duration * 1000
-    set({ timer: { left: duration, total: duration, endsAt } })
+    const settings = useStore.getState().S
+    const nativeAlert = ANDROID_APP && !!settings.restBubble
+    set({ timer: { left: duration, total: duration, endsAt, nativeAlert } })
+    if (nativeAlert) setNativeRestTimer({ endsAt: String(endsAt), sound: !!settings.sound, tone: settings.soundTone || 'classic', continueLabel: t('Continue') })
     pushRestTimer(duration)
     timerTick = () => {
       const tm = get().timer
       if (!tm) return
       const left = Math.max(0, Math.round((tm.endsAt - Date.now()) / 1000))
       if (left === tm.left) return
-      const snd = useStore.getState().S.sound
+      const settings = useStore.getState().S
+      const snd = settings.sound
+      const tone = settings.soundTone || 'classic'
       if (left <= 0) {
-        beep(snd, 880, 0.15); beep(snd, 880, 0.15, 0.25); beep(snd, 1320, 0.4, 0.5)
+        if (tm.nativeAlert) {
+          // Hide the rest bar immediately. Keep the native schedule alive briefly so its
+          // finish cue can complete even if the WebView's tick wins the race at zero.
+          if (document.visibilityState === 'visible') playTimerTone(snd, tone, 'finish', true)
+          if (timerInt) clearInterval(timerInt); timerInt = null
+          if (timerTick) document.removeEventListener('visibilitychange', timerTick); timerTick = null
+          cancelPushRestTimer()
+          set({ timer: null })
+          get().toast(t('Rest over — next set!'))
+          if (!nativeRestCleanup) nativeRestCleanup = setTimeout(() => {
+            nativeRestCleanup = null
+            clearNativeRestTimer()
+          }, 1800)
+          return
+        }
+        playTimerTone(snd, tone, 'finish', true)
         vibrate([200, 100, 200]); get().toast(t('Rest over — next set!')); get().stopRest(); return
       }
-      if (left <= 3) beep(snd, 660, 0.1)
+      if (left <= 3 && (!tm.nativeAlert || document.visibilityState === 'visible')) playTimerTone(snd, tone, 'countdown')
       set({ timer: { ...tm, left } })
     }
     timerInt = setInterval(timerTick, 1000)
@@ -64,19 +91,37 @@ export const useUI = create((set, get) => ({
   addRest(sec) {
     const tm = get().timer
     if (!tm) return
+    if (nativeRestCleanup) clearTimeout(nativeRestCleanup); nativeRestCleanup = null
     const left = Math.min(360, tm.left + sec)
     // taking off more than is left means "I'm ready now" — same as skipping, and it keeps a
     // negative duration out of both the progress bar and the server-side push schedule
     if (left <= 0) { get().stopRest(); return }
     const added = left - tm.left
-    set({ timer: { ...tm, left, total: Math.min(360, tm.total + added), endsAt: tm.endsAt + added * 1000 } })
+    const updated = { ...tm, left, total: Math.min(360, tm.total + added), endsAt: tm.endsAt + added * 1000 }
+    set({ timer: updated })
+    if (tm.nativeAlert) {
+      const settings = useStore.getState().S
+      setNativeRestTimer({ endsAt: String(updated.endsAt), sound: !!settings.sound, tone: settings.soundTone || 'classic', continueLabel: t('Continue') })
+    }
     pushRestTimer(left)
   },
   stopRest() {
     if (timerInt) clearInterval(timerInt); timerInt = null
     if (timerTick) document.removeEventListener('visibilitychange', timerTick); timerTick = null
-    if (get().timer) cancelPushRestTimer()
+    if (nativeRestCleanup) clearTimeout(nativeRestCleanup); nativeRestCleanup = null
+    const current = get().timer
+    if (current) cancelPushRestTimer()
+    if (current?.nativeAlert) clearNativeRestTimer()
     set({ timer: null })
+  },
+  finishRestEarly() {
+    const current = get().timer
+    if (!current) return
+    const settings = useStore.getState().S
+    get().stopRest()
+    playTimerTone(settings.sound, settings.soundTone || 'classic', 'finish', true)
+    vibrate([200, 100, 200])
+    get().toast(t('Rest over — next set!'))
   },
 
   /* ---- work timer (issue #16) ----
@@ -90,6 +135,7 @@ export const useUI = create((set, get) => ({
   startWork(sec, label, onDone) {
     get().stopWork()
     get().stopRest()
+    unlockAudio()
     const total = Math.max(1, Math.round(sec) || 1)
     const endsAt = Date.now() + total * 1000
     workDone = onDone
@@ -99,16 +145,18 @@ export const useUI = create((set, get) => ({
       if (!wk) return
       const left = Math.max(0, Math.round((wk.endsAt - Date.now()) / 1000))
       if (left === wk.left) return
-      const snd = useStore.getState().S.sound
+      const settings = useStore.getState().S
+      const snd = settings.sound
+      const tone = settings.soundTone || 'classic'
       if (left <= 0) {
-        beep(snd, 880, 0.15); beep(snd, 880, 0.15, 0.25); beep(snd, 1320, 0.4, 0.5)
+        playTimerTone(snd, tone, 'finish')
         vibrate([200, 100, 200])
         const done = workDone
         get().stopWork()
         if (done) done(wk.total)
         return
       }
-      if (left <= 3) beep(snd, 660, 0.1)
+      if (left <= 3) playTimerTone(snd, tone, 'countdown')
       set({ work: { ...wk, left } })
     }
     workInt = setInterval(workTick, 1000)

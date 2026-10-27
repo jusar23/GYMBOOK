@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MUSCLES, INERT, MUSCLE_NAME, levelsOf } from '../lib/muscles.js'
 import { t } from '../lib/i18n.js'
+import { useStore } from '../store/useStore.js'
 
 // Front and back views of a body, each muscle shaded by how hard it was worked.
 //
@@ -45,14 +46,17 @@ function View({ view, levels, onMuscle, selected }) {
 }
 
 /**
- * <BodyMap load={{ chest: 12, … }} body="male" />
+ * <BodyMap load={{ chest: 12, … }} body="female" />
  * `load` is effective sets per muscle (see lib/muscles.js); shading is relative to
- * the hardest-worked muscle in that same load, so it always reads as a balance.
+ * the hardest-worked muscle in that same load, so it always reads as a balance. When
+ * `body` is omitted, the profile's body diagram preference is used.
  */
-export default function BodyMap({ load = {}, body = 'male', onMuscle, selected, className = '' }) {
+export default function BodyMap({ load = {}, body, onMuscle, selected, className = '' }) {
   const paths = useBodyPaths()
+  const profileBody = useStore(s => s.S.body)
   const levels = levelsOf(load)
-  const g = paths && (paths[body] || paths.male)
+  const selectedBody = body === 'female' || body === 'male' ? body : profileBody === 'female' ? 'female' : 'male'
+  const g = paths && (paths[selectedBody] || paths.male)
   return (
     <div className={'bodymap ' + className}>
       {g ? <>
