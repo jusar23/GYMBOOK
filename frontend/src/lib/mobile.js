@@ -74,6 +74,12 @@ export async function syncReminder(S, interactive = false) {
 export async function shareExport(json, filename) {
   const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem')
   const { Share } = await import('@capacitor/share')
-  const w = await Filesystem.writeFile({ path: filename, directory: Directory.Cache, data: json, encoding: Encoding.UTF8 })
+  const w = await Filesystem.writeFile({
+    path: `shared-exports/${filename}`,
+    directory: Directory.Cache,
+    data: json,
+    encoding: Encoding.UTF8,
+    recursive: true,
+  })
   await Share.share({ title: filename, url: w.uri })
 }
