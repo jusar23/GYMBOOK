@@ -34,7 +34,7 @@ export default function SubscriptionGate({ user, status, refresh }) {
       <h1>{errorState ? t('Check your subscription') : t('Keep your training going.')}</h1>
       <p className="subscription-lead">{errorState
         ? t('We could not verify your subscription or complimentary access. Reconnect and try again.')
-        : t('Your subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.')}</p>
+        : t('Your free access or subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.')}</p>
 
       {status.status === 'loading' ? <p className="subscription-note">{t('Checking your access…')}</p> : <>
         {status.packages?.length > 0 ? <div className="subscription-plans">

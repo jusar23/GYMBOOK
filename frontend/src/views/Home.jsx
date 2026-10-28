@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
-import { effectiveRoutine, effectiveRoutineId, streakWeeks, lastBW, setsDoneActive } from '../lib/history.js'
+import { effectiveRoutine, effectiveRoutineId, streakSummary, lastBW, setsDoneActive } from '../lib/history.js'
+import { ANDROID_APP, requestStreakWidgetPin } from '../lib/mobile.js'
 import { fmtNum, fmtDate, todayISO, isoOf, weekKey, DAYS } from '../lib/format.js'
 import { t, dateLocale } from '../lib/i18n.js'
 import { bwSheet, goalSheet, dayOverrideSheet, calendarSheet, startFlow, loadStarterPlan, bwDeltaColor } from '../sheets.jsx'
@@ -16,6 +17,7 @@ export default function Home() {
   const S = useStore(s => s.S)
   const user = useStore(s => s.user)
   const [weekOffset, setWeekOffset] = useState(0)
+  const [widgetMessage, setWidgetMessage] = useState('')
 
   const today = new Date()
   const routine = effectiveRoutine(S, todayISO())
@@ -40,10 +42,16 @@ export default function Home() {
 
   const wThisWeek = S.workouts.filter(w => weekKey(w.d) === weekKey(todayISO())).length
   const plannedPerWeek = Object.keys(S.week).filter(k => S.week[k]).length
+  const streak = streakSummary(S)
   const bwPoints = S.bodyweight.slice(-30).map(b => ({ t: b.t || new Date(b.d).getTime(), y: b.w, d: b.d }))
 
   // today's session shown right under the week strip
   const onToday = () => { if (S.active) nav('/workout'); else if (routine) startFlow(routine.id); else dayOverrideSheet(todayISO()) }
+  const addStreakWidget = async event => {
+    event.stopPropagation()
+    const pinned = await requestStreakWidgetPin()
+    setWidgetMessage(t(pinned ? 'Confirm the Android prompt to add the streak widget.' : 'This launcher does not support pinning. Add the widget from Android’s widget picker.'))
+  }
 
   return <div className="narrow">
     <div className="hdr">
@@ -52,9 +60,9 @@ export default function Home() {
 
     <div className="card">
       <div className="row between" style={{ marginBottom: 8 }}>
-        <button className="iconbtn" style={{ width: 30, height: 30, fontSize: 15 }} onClick={() => setWeekOffset(w => w - 1)} aria-label="Previous week"><Icon name="chevronLeft" /></button>
+        <button className="iconbtn" style={{ width: 30, height: 30, fontSize: 15 }} onClick={() => setWeekOffset(w => w - 1)} aria-label={t('Previous week')}><Icon name="chevronLeft" /></button>
         <div className="small muted" style={{ fontWeight: 500 }}>{wkLabel}</div>
-        <button className="iconbtn" style={{ width: 30, height: 30, fontSize: 15 }} onClick={() => setWeekOffset(w => w + 1)} aria-label="Next week"><Icon name="chevronRight" /></button>
+        <button className="iconbtn" style={{ width: 30, height: 30, fontSize: 15 }} onClick={() => setWeekOffset(w => w + 1)} aria-label={t('Next week')}><Icon name="chevronRight" /></button>
       </div>
       <div className="week">{strip}</div>
       <div className="today-row" onClick={onToday}>
@@ -117,15 +125,22 @@ export default function Home() {
 
     <div className="card tappable" style={{ cursor: 'pointer' }} onClick={() => calendarSheet()}>
       <div className="row between">
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div className="row" style={{ gap: 7, fontSize: 22, fontWeight: 600, letterSpacing: '-.021em' }}>
-            <Icon name="flame" style={{ color: 'var(--orange)' }} />
-            {t('{0} week streak', streakWeeks(S))}
+            <Icon name="flame" style={{ color: 'var(--acc)' }} />
+            {streak.days === 1 ? t('1-day streak') : t('{0}-day streak', streak.days)}
           </div>
           <div className="muted small" style={{ marginTop: 2 }}>{wThisWeek}{plannedPerWeek ? ' / ' + plannedPerWeek : ''} {t('this week')} · {t(S.workouts.length === 1 ? '{0} workout total' : '{0} workouts total', S.workouts.length)}</div>
+          <div className="muted small" style={{ marginTop: 5 }}>{t('Rest days pause the streak but do not add a day.')}</div>
+          <div className="muted small" style={{ marginTop: 3 }}>{t('The first missed training day each week is protected and does not add a streak day.')}</div>
+          <div className="small" style={{ color: 'var(--acc)', marginTop: 6, fontWeight: 600 }}><Icon name="shield" style={{ marginRight: 5 }} />{t(streak.shieldAvailable ? 'Weekly shield ready' : 'Weekly shield used')}</div>
         </div>
-        <Icon name="calendar" className="chev" style={{ fontSize: 20 }} />
       </div>
+      <div className="row" style={{ gap: 8, marginTop: 10 }}>
+        <Button size="sm" variant="tinted" icon="calendar" onClick={event => { event.stopPropagation(); nav('/plan') }}>{t('Schedule days')}</Button>
+        {ANDROID_APP && <Button size="sm" variant="plain" icon="plus" onClick={addStreakWidget}>{t('Add widget')}</Button>}
+      </div>
+      {widgetMessage && <div className="small muted" style={{ marginTop: 7 }} onClick={event => event.stopPropagation()}>{widgetMessage}</div>}
     </div>
   </div>
 }

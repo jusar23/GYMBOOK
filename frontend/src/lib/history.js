@@ -265,16 +265,33 @@ export function supersetUnits(items) {
 }
 export function unitOf(units, idx) { return units.find(u => u.includes(idx)) || [idx] }
 
-export function streakWeeks(S) {
-  if (!S.workouts.length) return 0
-  const weeks = new Set(S.workouts.map(w => weekKey(w.d)))
+export function streakSummary(S, today = todayISO()) {
+  const workouts = new Set((S.workouts || []).map(w => w.d))
+  const currentWeek = weekKey(today)
+  const shieldWeeks = new Set()
+  const unprotectedMisses = new Set()
   let streak = 0
-  const cur = new Date()
-  for (let i = 0; i < 520; i++) {
-    const wk = weekKey(isoOf(cur))
-    if (weeks.has(wk)) streak++
-    else if (i > 0) break
-    cur.setDate(cur.getDate() - 7)
+  const cursor = new Date(today + 'T12:00:00')
+
+  // Assign each weekly shield in calendar order; scanning backward alone would let the
+  // most recent missed day steal protection from an earlier miss in the same week.
+  for (let offset = 3650; offset >= 0; offset--) {
+    const day = new Date(cursor)
+    day.setDate(cursor.getDate() - offset)
+    const iso = isoOf(day)
+    if (iso === today || workouts.has(iso) || !effectiveRoutineId(S, iso)) continue
+    const week = weekKey(iso)
+    if (shieldWeeks.has(week)) unprotectedMisses.add(iso)
+    else shieldWeeks.add(week)
   }
-  return streak
+
+  for (let offset = 0; offset <= 3650; offset++) {
+    const day = new Date(cursor)
+    day.setDate(cursor.getDate() - offset)
+    const iso = isoOf(day)
+    if (unprotectedMisses.has(iso)) break
+    if (workouts.has(iso)) streak++
+  }
+
+  return { days: streak, shieldAvailable: !shieldWeeks.has(currentWeek), shieldUsed: shieldWeeks.has(currentWeek) }
 }

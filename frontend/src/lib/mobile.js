@@ -11,11 +11,13 @@
 // web bundles; the Capacitor plugins are only ever imported behind it.
 import { t } from './i18n.js'
 import { Capacitor } from '@capacitor/core'
+import { ACCENTS, DAYS } from './format.js'
 
 export const MOBILE = import.meta.env.MODE === 'mobile' || import.meta.env.VITE_MOBILE === '1'
 export const ANDROID_APP = MOBILE && Capacitor.getPlatform() === 'android'
 
 let restNotificationPlugin
+let streakWidgetPlugin
 async function getRestNotificationPlugin() {
   if (!ANDROID_APP) return null
   if (!restNotificationPlugin) {
@@ -23,6 +25,47 @@ async function getRestNotificationPlugin() {
     restNotificationPlugin = registerPlugin('RestNotification')
   }
   return restNotificationPlugin
+}
+
+async function getStreakWidgetPlugin() {
+  if (!ANDROID_APP) return null
+  if (!streakWidgetPlugin) {
+    const { registerPlugin } = await import('@capacitor/core')
+    streakWidgetPlugin = registerPlugin('StreakWidget')
+  }
+  return streakWidgetPlugin
+}
+
+export async function syncStreakWidget(S) {
+  try {
+    const plugin = await getStreakWidgetPlugin()
+    if (!plugin) return false
+    const dates = [...new Set((S.workouts || []).map(workout => workout.d).filter(Boolean))]
+    await plugin.update({
+      workoutDates: dates,
+      week: S.week || {},
+      dayPlan: S.dayPlan || {},
+      accentColor: ACCENTS[S.accent]?.color || '#B8F36B',
+      streakLabel: t('Daily streak'),
+      shieldReady: t('Weekly shield ready'),
+      shieldUsed: t('Weekly shield used'),
+      dayLabels: [1, 2, 3, 4, 5, 6, 0].map(day => t(DAYS[day])),
+    })
+    return true
+  } catch { return false }
+}
+
+export async function requestStreakWidgetPin() {
+  try {
+    const plugin = await getStreakWidgetPlugin()
+    if (!plugin) return false
+    const result = await plugin.pin()
+    return result?.supported === true
+  } catch { return false }
+}
+
+async function clearStreakWidget() {
+  try { const plugin = await getStreakWidgetPlugin(); await plugin?.clear() } catch { /* Widget support is optional. */ }
 }
 
 export async function setNativeRestTimer(options) {
@@ -81,6 +124,7 @@ export async function nativeClear() {
     const { LocalNotifications } = await import('@capacitor/local-notifications')
     await LocalNotifications.cancel({ notifications: [0, 1, 2, 3, 4, 5, 6].map(d => ({ id: 100 + d })) })
   } catch (e) { /* Account deletion still clears app data if notifications are unavailable. */ }
+  await clearStreakWidget()
 }
 
 // (Re)schedule the workout-day reminder: one repeating notification per weekday that has a

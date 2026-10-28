@@ -4,10 +4,11 @@ import { clearPendingRecoveryCode, getAuthSession, getPendingRecoveryCode, isPas
 import { localTZ } from '../lib/format.js'
 import { registerCustom } from '../lib/exercises.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
-import { MOBILE, nativeLoad, nativeSave, nativeClear, syncReminder } from '../lib/mobile.js'
+import { MOBILE, nativeLoad, nativeSave, nativeClear, syncReminder, syncStreakWidget } from '../lib/mobile.js'
 import { getCloudBackupConsent } from '../lib/supabaseBackup.js'
 import { needsLegalSetup } from '../lib/legalConsent.js'
 import { ageFromDateOfBirth } from '../lib/routine-recommendation.js'
+import { setLang } from '../lib/i18n.js'
 
 const KEY = 'gym_state_v1'
 const SIGNED_OUT_KEY = 'gym_signed_out_v1'
@@ -72,6 +73,7 @@ export const useStore = create((set, get) => {
   let pushTm = null
   let saveTm = null
   let reminderTm = null
+  let streakWidgetTm = null
   let stateRevision = 0
 
   // Mobile build: mirror state locally. Reminders are synced separately only when their
@@ -95,6 +97,14 @@ export const useStore = create((set, get) => {
     }, 800)
   }
 
+  const nativeStreakWidgetPersist = () => {
+    clearTimeout(streakWidgetTm)
+    streakWidgetTm = setTimeout(() => {
+      streakWidgetTm = null
+      syncStreakWidget(get().S)
+    }, 800)
+  }
+
   const persist = (S, push = true) => {
     const reminderChanged = MOBILE && reminderConfig(get().S) !== reminderConfig(S)
     migrateChosenExercises(S)
@@ -106,6 +116,7 @@ export const useStore = create((set, get) => {
     set({ S })
     if (MOBILE) {
       nativePersist()
+      nativeStreakWidgetPersist()
       if (reminderChanged) nativeReminderPersist()
     }
     if (push && get().user?.trainingDataConsent === true && !MOBILE) {
@@ -131,6 +142,11 @@ export const useStore = create((set, get) => {
       clearTimeout(reminderTm)
       reminderTm = null
       syncReminder(get().S)
+    }
+    if (MOBILE && streakWidgetTm) {
+      clearTimeout(streakWidgetTm)
+      streakWidgetTm = null
+      syncStreakWidget(get().S)
     }
     if (pushTm) {
       clearTimeout(pushTm)
@@ -262,6 +278,8 @@ export const useStore = create((set, get) => {
       saveTm = null
       clearTimeout(reminderTm)
       reminderTm = null
+      clearTimeout(streakWidgetTm)
+      streakWidgetTm = null
       clearTimeout(pushTm)
       pushTm = null
       await signOutSupabase(false).catch(() => {})
@@ -298,28 +316,42 @@ export const useStore = create((set, get) => {
         } else if (hasData(S)) {
           nativeSave(S)   // first run after an update from a file-less version: seed the mirror
         }
+        // The widget is optional UI. Never let a native widget call hold the app's first
+        // screen open if the Android provider is unavailable or slow to respond.
+        void syncStreakWidget(get().S)
         let authSession = null
         try { authSession = await processOAuthCallback() || await getAuthSession() }
         catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Sign-in failed. Please try again.') }
         if (authSession?.user) {
           const authUser = authSession.user
-          let trainingDataConsent = false
-          try { trainingDataConsent = (await getCloudBackupConsent(authSession)).accepted === true }
-          catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Could not check backup authorization.') }
-          get().setUser({
+          const language = authUser.user_metadata?.gymbook_language
+          if (language) {
+            get().update(state => { state.lang = language }, false)
+            await setLang(language)
+          }
+          const user = {
             id: authUser.id,
             email: authUser.email,
+            createdAt: authUser.created_at || '',
+            tutorialSeenAt: authUser.user_metadata?.gymbook_tutorial_seen_at || get().user?.tutorialSeenAt || null,
             name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
             dateOfBirth: authUser.user_metadata?.date_of_birth || '',
             needsLegalSetup: needsLegalSetup(authUser),
-            trainingDataConsent,
-          })
+            trainingDataConsent: false,
+          }
+          get().setUser(user)
+          // Backup authorization affects cloud backup only, not access to local workouts.
+          // Resolve it after the app is usable so a slow/offline Supabase request cannot
+          // leave Android on "Loading data..." indefinitely.
+          void getCloudBackupConsent(authSession).then(({ accepted }) => {
+            if (get().user?.id === user.id) get().setUser({ ...get().user, trainingDataConsent: accepted === true })
+          }).catch(() => {})
         } else {
           get().setUser(null)
         }
         clearTimeout(reminderTm)
         reminderTm = null
-        syncReminder(get().S)
+        void syncReminder(get().S)
         set({ ready: true, signingIn: false })
         return
       }
@@ -346,8 +378,14 @@ export const useStore = create((set, get) => {
 
       if (authSession?.user && needsLegalSetup(authSession.user)) {
         const authUser = authSession.user
+        const language = authUser.user_metadata?.gymbook_language
+        if (language) {
+          get().update(state => { state.lang = language }, false)
+          await setLang(language)
+        }
         get().setUser({
-          id: authUser.id, email: authUser.email,
+          id: authUser.id, email: authUser.email, createdAt: authUser.created_at || '',
+          tutorialSeenAt: authUser.user_metadata?.gymbook_tutorial_seen_at || get().user?.tutorialSeenAt || null,
           name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
           dateOfBirth: authUser.user_metadata?.date_of_birth || '',
           needsLegalSetup: true,
@@ -407,7 +445,8 @@ export const useStore = create((set, get) => {
         }
       }
       if (appUser) {
-        get().setUser(appUser)
+        const localUser = get().user
+        get().setUser({ ...appUser, tutorialSeenAt: appUser.tutorialSeenAt || authSession?.user?.user_metadata?.gymbook_tutorial_seen_at || localUser?.tutorialSeenAt || null })
         try { await get().pullState(initialState, initialStateFetched, true) }
         catch (e) {
           get().setUser(null)

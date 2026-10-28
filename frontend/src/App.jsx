@@ -22,6 +22,7 @@ import { needsLegalSetup } from './lib/legalConsent.js'
 import { openOnboarding, onboardingSeenKey } from './components/Onboarding.jsx'
 import SubscriptionGate from './views/SubscriptionGate.jsx'
 import { refreshNativeSubscription } from './lib/subscription.js'
+import { freeTrialEndsAt, hasFreeTrialAccess } from './lib/freeTrial.js'
 import { setWorkoutOrientationLocked } from './lib/workout-orientation.js'
 
 const Home = lazy(() => import('./views/Home.jsx'))
@@ -86,8 +87,27 @@ function Shell() {
     }
     setSubscription(current => ({ ...current, configured: true, status: 'loading' }))
     const next = await refreshNativeSubscription(user.id)
-    setSubscription(next)
-  }, [user?.id, user?.needsLegalSetup])
+    if (next.configured && next.granted && next.status !== 'unconfigured') {
+      setSubscription(next)
+      return
+    }
+    if (hasFreeTrialAccess(user.createdAt)) {
+      setSubscription({
+        ...next,
+        configured: true,
+        granted: true,
+        status: 'free-trial',
+        expiresAt: freeTrialEndsAt(user.createdAt).toISOString(),
+      })
+      return
+    }
+    setSubscription({
+      ...next,
+      configured: true,
+      granted: false,
+      status: next.status === 'error' ? 'error' : 'inactive',
+    })
+  }, [user?.id, user?.createdAt, user?.needsLegalSetup])
   const authed = !!user || (!MOBILE && isGuest)
   const loginRoute = loc.pathname === '/login'
 
@@ -142,25 +162,25 @@ function Shell() {
 
   if (signingOut) return (
     <div id="app">
-      <div className="loading-mark" role="status" aria-label="Signing out of GYMBOOK training">
+      <div className="loading-mark" role="status" aria-label={t('Signing out of GYMBOOK training')}>
         <Icon name="dumbbell" />
-        <div className="loading-label">Signing out…</div>
+        <div className="loading-label">{t('Signing out…')}</div>
       </div>
     </div>
   )
 
   if (!ready) return (
     <div id="app">
-      <div className="loading-mark" role="status" aria-label="Signing in to GYMBOOK training">
+      <div className="loading-mark" role="status" aria-label={t('Signing in to GYMBOOK training')}>
         <Icon name="dumbbell" />
-        <div className="loading-label">{signingIn ? 'Signing in…' : t('Loading data...')}</div>
+        <div className="loading-label">{signingIn ? t('Signing in…') : t('Loading data...')}</div>
       </div>
     </div>
   )
 
   if (loc.pathname === '/legal' || loc.pathname.startsWith('/legal/')) return (
     <div id="app" className="vfade">
-      <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading legal information"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
+      <Suspense fallback={<div className="loading-mark" role="status" aria-label={t('Loading legal information')}><Icon name="dumbbell" /><div className="loading-label">{t('Loading…')}</div></div>}>
         <Legal />
       </Suspense>
     </div>
@@ -169,9 +189,9 @@ function Shell() {
   return (
     <>
       {signingIn && <div className="app-loading-overlay">
-        <div className="loading-mark" role="status" aria-label="Signing in to GYMBOOK training">
+        <div className="loading-mark" role="status" aria-label={t('Signing in to GYMBOOK training')}>
           <Icon name="dumbbell" />
-          <div className="loading-label">Signing in…</div>
+          <div className="loading-label">{t('Signing in…')}</div>
         </div>
       </div>}
 
@@ -191,7 +211,7 @@ function Shell() {
             : !authed
               ? <Login />
               : (
-                <Suspense fallback={<div className="loading-mark" role="status" aria-label="Loading GYMBOOK training"><Icon name="dumbbell" /><div className="loading-label">Loading…</div></div>}>
+                <Suspense fallback={<div className="loading-mark" role="status" aria-label={t('Loading GYMBOOK training')}><Icon name="dumbbell" /><div className="loading-label">{t('Loading…')}</div></div>}>
                   <Routes>
                     <Route path="/home" element={<Home />} />
                     <Route path="/plan" element={<Plan />} />
@@ -232,6 +252,11 @@ export default function App() {
       try {
         const session = await processOAuthCallback(url)
         if (session?.user) {
+          const preferredLanguage = session.user.user_metadata?.gymbook_language
+          if (preferredLanguage) {
+            useStore.getState().update(state => { state.lang = preferredLanguage }, false)
+            await setLang(preferredLanguage)
+          }
           if (!useStore.getState().ready) await new Promise(resolve => {
             const unsubscribe = useStore.subscribe(state => {
               if (state.ready) { unsubscribe(); resolve() }
@@ -242,6 +267,8 @@ export default function App() {
           useStore.getState().setUser({
             id: authUser.id,
             email: authUser.email,
+            createdAt: authUser.created_at || '',
+            tutorialSeenAt: authUser.user_metadata?.gymbook_tutorial_seen_at || null,
             name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
             dateOfBirth: authUser.user_metadata?.date_of_birth || '',
             needsLegalSetup: needsLegalSetup(authUser),

@@ -8,7 +8,8 @@
 
 Plan your week, run guided workouts, track every set and your body weight over time —
 on your phone, synced across devices, behind your own passkey login.
-No account on someone else's server, no subscription, no ads. Just `docker compose up`.
+No account on someone else's server, no ads. Self-hosting stays free; the native Android app
+has a one-month free access period followed by monthly or annual plans. Just `docker compose up`.
 
 <br>
 
@@ -106,12 +107,14 @@ a build step locally either way.
 ## Mobile app (no server at all)
 
 The same codebase also builds a **standalone Android app** (Capacitor): workout data stays on
-the phone, with Supabase Auth for sign-in and an optional manual cloud backup from Settings.
-No workout data is synced automatically. Native workout-day reminders and JSON file
-backup/import are available offline.
+the phone, with Supabase Auth for sign-in and an optional server backup. If you authorize
+training-data backups, completed workouts update the backup automatically; restoring it is
+manual. Native workout-day reminders and JSON file backup/import are available offline.
 
-- **Android:** [**download the APK**](https://opengym.duarte-santos.ch) and sideload it —
-  GYMBOOK is deliberately not on the Play Store. Or build it yourself: **[docs/MOBILE.md](docs/MOBILE.md)**.
+- **Android:** [**download the APK**](https://opengym.duarte-santos.ch) and sideload it while
+  the Google Play release is being prepared. The Android app includes one month of access
+  after registration, then monthly or annual subscriptions. Or build it yourself:
+  **[docs/MOBILE.md](docs/MOBILE.md)**.
 - **iPhone:** Apple doesn't allow installing apps outside the App Store, so there is no iOS
   download. Self-host and add it to your home screen from Safari (it's a full PWA), or build
   the native app onto your own device from Xcode — see **[docs/MOBILE.md](docs/MOBILE.md)**.
@@ -201,9 +204,10 @@ React, the router and Zustand.
 Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Good first issues: more starter
 plans, exercise-data languages, import from other trackers. **A ⭐ helps more people find it.**
 
-GYMBOOK is free and stays free: AGPL, no subscription, no paid tier, nothing held back for
-sponsors. If it replaced a paid tracker for you and you want to chip in, the Sponsor button at the
-top of the page is there — a star, a bug report or a PR is worth just as much.
+The self-hosted edition stays free and open source under the AGPL. The native Android app
+includes one month of access after registration, followed by a monthly or annual subscription.
+There are no ads. If it replaced a paid tracker for you and you want to chip in, the Sponsor
+button at the top of the page is there — a star, a bug report or a PR is worth just as much.
 
 ## License
 

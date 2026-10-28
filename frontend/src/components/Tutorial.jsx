@@ -1,20 +1,18 @@
 import { useState } from 'react'
 import { t } from '../lib/i18n.js'
 import { useUI } from '../store/useUI.js'
+import { useStore } from '../store/useStore.js'
+import { getAuthSession, updateAuthUserMetadata } from '../lib/supabaseAuth.js'
+import { api } from '../lib/api.js'
 import { Button } from './ui.jsx'
 import Icon from './Icon.jsx'
 
 const GUIDE = [
-  { icon: 'house', nav: 'Home', title: 'guide.home.title', text: 'guide.home.text', hint: 'guide.home.hint' },
-  { icon: 'calendar', nav: 'Plan', title: 'guide.plan.title', text: 'guide.plan.text', hint: 'guide.plan.hint' },
-  { icon: 'list', nav: 'Exercises', title: 'guide.exercises.title', text: 'guide.exercises.text', hint: 'guide.exercises.hint' },
-  { icon: 'dumbbell', nav: 'Start', title: 'guide.start.title', text: 'guide.start.text', hint: 'guide.start.hint' },
-  { icon: 'plus', nav: 'Add exercise', title: 'guide.add.title', text: 'guide.add.text', hint: 'guide.add.hint' },
-  { icon: 'checkCircle', nav: 'Reps', title: 'guide.log.title', text: 'guide.log.text', hint: 'guide.log.hint' },
-  { icon: 'check', nav: 'Finish workout', title: 'guide.finish.title', text: 'guide.finish.text', hint: 'guide.finish.hint' },
-  { icon: 'chart', nav: 'Stats', title: 'guide.stats.title', text: 'guide.stats.text', hint: 'guide.stats.hint' },
-  { icon: 'history', nav: 'History', title: 'guide.history.title', text: 'guide.history.text', hint: 'guide.history.hint' },
-  { icon: 'gear', nav: 'Settings', title: 'guide.settings.title', text: 'guide.settings.text', hint: 'guide.settings.hint' },
+  { icon: 'house', nav: 'Home', title: 'Start on Home', text: 'Home is your dashboard. The next-workout card shows what you planned for today. Tap it to begin, or use the bottom bar to move around.', hint: 'Your weekly schedule and routines are under Plan.' },
+  { icon: 'calendar', nav: 'Plan', title: 'Build your weekly plan', text: 'In Plan, create a routine, add exercises, then assign it to one or more days. Your scheduled workout will appear on Home.', hint: 'Use Load starter plan if you want a ready-made example to edit.' },
+  { icon: 'list', nav: 'Exercises', title: 'Find and choose exercises', text: 'In Library, search by name or filter by muscle and equipment. Tap the star to save a favorite, or add an exercise to a routine.', hint: 'You can also create your own exercise from the Library screen.' },
+  { icon: 'dumbbell', nav: 'Start', title: 'Start and log a workout', text: 'Tap the center button marked Start. Choose today’s planned routine or a free workout. In the session, adjust weight and reps, then tap a set’s circle when you finish it.', hint: 'Completing a set starts the rest timer. Timed and cardio exercises show their own timer fields.' },
+  { icon: 'chart', nav: 'Stats', title: 'Save your session and track progress', text: 'Tap Finish workout to save the session. Stats shows your progress and records; History opens the details of past workouts.', hint: 'Settings lets you change language, units, appearance and training options. Reopen this guide there any time.' },
 ]
 
 export const tutorialSeenKey = userId => `gymbook_tutorial_seen_v1_${userId}`
@@ -26,13 +24,32 @@ export function openTutorial() {
 export default function Tutorial({ close }) {
   const [index, setIndex] = useState(0)
   const step = GUIDE[index]
+  const finish = () => {
+    const user = useStore.getState().user
+    const seenAt = user?.tutorialSeenAt || new Date().toISOString()
+    if (user?.id) localStorage.setItem(tutorialSeenKey(user.id), seenAt)
+    if (user) useStore.getState().setUser({ ...user, tutorialSeenAt: seenAt })
+    close()
+    if (!user?.id) return
+    void (async () => {
+      const session = await getAuthSession()
+      if (session?.user) {
+        const metadata = session.user.user_metadata || {}
+        if (!metadata.gymbook_tutorial_seen_at) {
+          await updateAuthUserMetadata({ ...metadata, gymbook_tutorial_seen_at: seenAt })
+        }
+        return
+      }
+      await api('/api/tutorial/seen', { method: 'PUT', body: '{}' })
+    })().catch(() => {})
+  }
   return <div className="tutorial-shell">
     <div className="sheet-full-head tutorial-header">
       <div className="tutorial-title-wrap">
         <div className="tutorial-kicker">{t('USAGE GUIDE')}</div>
         <h3 className="tutorial-heading">{t('Get to know Gym Book Training')}</h3>
       </div>
-      <button type="button" className="iconbtn tutorial-close" onClick={close} aria-label={t('Close tutorial')}><Icon name="xmark" /></button>
+      <button type="button" className="iconbtn tutorial-close" onClick={finish} aria-label={t('Close tutorial')}><Icon name="xmark" /></button>
     </div>
 
     <div className="tutorial-content">
@@ -57,7 +74,7 @@ export default function Tutorial({ close }) {
       {index > 0 ? <Button variant="ghost" icon="chevronLeft" onClick={() => setIndex(i => i - 1)}>{t('Previous')}</Button> : <span />}
       {index < GUIDE.length - 1
         ? <Button variant="primary" trailingIcon="chevronRight" onClick={() => setIndex(i => i + 1)}>{t('Next')}</Button>
-        : <Button variant="primary" icon="check" onClick={close}>{t('Got it')}</Button>}
+        : <Button variant="primary" icon="check" onClick={finish}>{t('Got it')}</Button>}
     </div>
   </div>
 }

@@ -30,8 +30,10 @@ export const allExercises = st => [...(st.customEx || []), ...EXDB]
 // Media normally sits next to the app (img/ and gif/, mounted into the web container).
 // A build can point them somewhere else — the demo build pulls them off a CDN instead of
 // shipping ~140 MB of images into the deployment.
-const IMG_BASE = import.meta.env.VITE_IMG_BASE || 'img/'
-const GIF_BASE = import.meta.env.VITE_GIF_BASE || 'gif/'
+// Use origin-root paths for bundled/local media. Relative paths such as `img/foo.webp`
+// resolve under the current SPA route (for example `/workout/img/foo.webp`) in WebView.
+const IMG_BASE = MOBILE ? '/img/' : (import.meta.env.VITE_IMG_BASE || '/img/')
+const GIF_BASE = MOBILE ? '/gif/' : (import.meta.env.VITE_GIF_BASE || '/gif/')
 // Catalogues may provide sex-specific demonstrations (imgFemale/gifFemale,
 // imgMale/gifMale). Older entries only have the shared img/gif, which remains
 // the fallback so exercises never lose their media.

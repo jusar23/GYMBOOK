@@ -104,7 +104,9 @@ export function makeRecommendedPlan({ days, minutes, goal, equipment, age, userI
   const selectedEquipment = equipment.filter(id => id !== 'bodyweight')
   const pool = exercisePool({ selectedEquipment, age })
   const recoveryPool = exercisePool({ selectedEquipment: [], age, recovery: true })
-  const exerciseCount = minutes <= 20 ? 4 : minutes <= 30 ? 5 : minutes <= 45 ? 6 : 7
+  // Longer availability should produce a correspondingly fuller routine, while
+  // keeping the generated plan bounded and readable in the preview.
+  const exerciseCount = minutes <= 20 ? 4 : minutes <= 30 ? 5 : minutes <= 45 ? 6 : Math.min(15, Math.max(7, Math.ceil(minutes / 12)))
   const sets = age >= 60 || goal === 'lose' ? 2 : 3
   const reps = age >= 60 ? 10 : goal === 'gain' ? 8 : goal === 'lose' ? 12 : 10
   const routines = []

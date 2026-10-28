@@ -4,6 +4,7 @@
 // Exercise instructions come from separately generated packs in src/instr/ (one per
 // language, from the upstream dataset) — also lazy-loaded on language switch.
 import { useSyncExternalStore } from 'react'
+import uiAdditions, { chromeTranslations, dynamicContentTranslations, guidedFlowTranslations } from '../locales/ui-additions.js'
 
 // UI languages. de/pt have no instruction pack upstream — instructions fall back to English.
 export const LANGS = {
@@ -153,6 +154,19 @@ const subscriptionTranslations = {
     'Checking purchases…': 'खरीदारी जाँची जा रही है…', 'Restore purchases': 'खरीदारियाँ पुनर्स्थापित करें', 'Manage subscription': 'सदस्यता प्रबंधित करें', 'Check again': 'फिर जाँचें', 'Sign out': 'साइन आउट'
   }
 }
+const accessEndedTranslations = {
+  de: 'Dein kostenloser Zugang oder dein Abonnement ist abgelaufen. Wähle einen Tarif, um Gym Book Training weiter zu nutzen. Deine Trainings bleiben auf diesem Telefon gespeichert.',
+  es: 'Tu acceso gratis o tu suscripción terminó. Elige un plan para seguir usando Gym Book Training. Tus entrenamientos permanecen guardados en este teléfono.',
+  fr: 'Votre accès gratuit ou votre abonnement a pris fin. Choisissez une offre pour continuer à utiliser Gym Book Training. Vos entraînements restent enregistrés sur ce téléphone.',
+  it: 'Il periodo gratuito o l’abbonamento è terminato. Scegli un piano per continuare a usare Gym Book Training. Gli allenamenti restano salvati su questo telefono.',
+  pt: 'Seu acesso gratuito ou sua assinatura terminou. Escolha um plano para continuar usando o Gym Book Training. Seus treinos continuam salvos neste celular.',
+  pl: 'Bezpłatny dostęp lub subskrypcja wygasły. Wybierz plan, aby nadal korzystać z Gym Book Training. Twoje treningi pozostają zapisane na tym telefonie.',
+  tr: 'Ücretsiz erişimin veya aboneliğin sona erdi. Gym Book Training’i kullanmaya devam etmek için bir plan seç. Antrenmanların bu telefonda kayıtlı kalır.',
+  ru: 'Бесплатный доступ или подписка закончились. Выберите план, чтобы продолжить пользоваться Gym Book Training. Тренировки останутся сохранены на этом телефоне.',
+  zh: '免费使用期或订阅已结束。请选择套餐以继续使用 Gym Book Training。训练记录仍保存在此手机上。',
+  ko: '무료 이용 기간 또는 구독이 종료되었습니다. Gym Book Training을 계속 사용하려면 요금제를 선택하세요. 운동 기록은 이 휴대전화에 저장되어 있습니다.',
+  hi: 'आपकी मुफ़्त अवधि या सदस्यता समाप्त हो गई है। Gym Book Training का उपयोग जारी रखने के लिए कोई योजना चुनें। आपके वर्कआउट इस फ़ोन पर सुरक्षित हैं।'
+}
 const subscriptionErrorTranslations = {
   de: ['Der Kauf konnte nicht abgeschlossen werden. Prüfe Google Play und versuche es erneut.', 'Käufe konnten nicht wiederhergestellt werden.', 'Die Abonnementverwaltung konnte nicht geöffnet werden.', 'Der Abonnementstatus konnte nicht überprüft werden. Bitte versuche es erneut.'],
   es: ['No se pudo completar la compra. Revisa Google Play e inténtalo de nuevo.', 'No se pudieron restaurar las compras.', 'No se pudo abrir la gestión de suscripciones.', 'No se pudo verificar el acceso a la suscripción. Inténtalo de nuevo.'],
@@ -233,7 +247,7 @@ export async function setLang(l) {
     ])
     if (request !== langRequest) return
     const translatedErrors = Object.fromEntries(subscriptionErrorKeys.map((key, index) => [key, subscriptionErrorTranslations[l]?.[index] || key]))
-    dict = { ...(basePack?.default || {}), ...(completionPack?.default || {}), ...(subscriptionTranslations[l] || {}), ...translatedErrors }
+    dict = { ...(basePack?.default || {}), ...(completionPack?.default || {}), ...(uiAdditions[l] || {}), ...(chromeTranslations[l] || {}), ...(dynamicContentTranslations[l] || {}), ...(guidedFlowTranslations[l] || {}), ...(subscriptionTranslations[l] || {}), 'Your free access or subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.': accessEndedTranslations[l] || 'Your free access or subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.', ...translatedErrors }
   } catch (e) {
     if (request !== langRequest) return
     dict = {}; instr = null

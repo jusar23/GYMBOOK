@@ -2,7 +2,7 @@ import { useStore, hasData } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { passkeyRegister, api, BIO, createAppSessionWithSupabase } from '../lib/api.js'
 import { cancelPasswordRecovery, clearPendingRecoveryCode, createEmailAccount, getAuthSession, getPendingRecoveryCode, isPasswordRecovery, requestPasswordReset, signInWithEmail, signInWithGoogle, supabaseAuthConfigured, updateAuthUserMetadata, updateRecoveredPassword } from '../lib/supabaseAuth.js'
-import { t } from '../lib/i18n.js'
+import { LANGS, setLang, t } from '../lib/i18n.js'
 import { countryOptions } from '../lib/countries.js'
 import { legalConsentMetadata, needsLegalSetup } from '../lib/legalConsent.js'
 import { ageFromDateOfBirth } from '../lib/routine-recommendation.js'
@@ -98,6 +98,7 @@ export default function Login({ legalSetup = false }) {
   const setUser = useStore(s => s.setUser)
   const pullState = useStore(s => s.pullState)
   const setSigningIn = useStore(s => s.setSigningIn)
+  const appLanguage = useStore(s => s.S.lang || 'en')
   const [mode, setMode] = useState('signin')
   const [recoveryMode, setRecoveryMode] = useState(isPasswordRecovery)
   const [name, setName] = useState('')
@@ -114,6 +115,18 @@ export default function Login({ legalSetup = false }) {
   const [notice, setNotice] = useState('')
   const authReady = supabaseAuthConfigured()
 
+  const chooseLanguage = async language => {
+    useStore.getState().update(state => { state.lang = language }, false)
+    await setLang(language)
+  }
+
+  const restoreAccountLanguage = async authUser => {
+    const language = authUser?.user_metadata?.gymbook_language
+    if (!LANGS[language]) return
+    useStore.getState().update(state => { state.lang = language }, false)
+    await setLang(language)
+  }
+
   useEffect(() => {
     const message = localStorage.getItem('gym_auth_error')
     if (message) { setError(message); localStorage.removeItem('gym_auth_error') }
@@ -127,12 +140,15 @@ export default function Login({ legalSetup = false }) {
 
   const finishLogin = async (session, trainingDataAccepted = false) => {
     if (!session?.access_token) throw new Error(t('Check your email to confirm your account, then sign in.'))
+    await restoreAccountLanguage(session.user)
     if (MOBILE) {
       const authUser = session.user || {}
       const needsSetup = needsLegalSetup(authUser)
       setUser({
         id: authUser.id,
         email: authUser.email,
+        createdAt: authUser.created_at || '',
+        tutorialSeenAt: authUser.user_metadata?.gymbook_tutorial_seen_at || null,
         name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
         dateOfBirth: authUser.user_metadata?.date_of_birth || '',
         needsLegalSetup: needsSetup,
@@ -144,7 +160,8 @@ export default function Login({ legalSetup = false }) {
     if (needsLegalSetup(session.user)) {
       const authUser = session.user
       setUser({
-        id: authUser.id, email: authUser.email,
+        id: authUser.id, email: authUser.email, createdAt: authUser.created_at || '',
+        tutorialSeenAt: authUser.user_metadata?.gymbook_tutorial_seen_at || null,
         name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
         dateOfBirth: authUser.user_metadata?.date_of_birth || '',
         needsLegalSetup: true,
@@ -155,6 +172,7 @@ export default function Login({ legalSetup = false }) {
     const result = await createAppSessionWithSupabase(session.access_token, getPendingRecoveryCode())
     clearPendingRecoveryCode()
     let { user, state } = result
+    user = { ...user, tutorialSeenAt: session.user?.user_metadata?.gymbook_tutorial_seen_at || user.tutorialSeenAt || null }
     if (trainingDataAccepted) {
       await api('/api/consent/training-data', { method: 'PUT', body: JSON.stringify({ accepted: true }) })
       user = { ...user, trainingDataConsent: true }
@@ -223,12 +241,16 @@ export default function Login({ legalSetup = false }) {
     if (!ofAdultAge(dateOfBirth)) throw new Error(t('You must be over 18 years old to create an account.'))
     if (!countryCode) throw new Error(t('Select your country.'))
     if (!termsAccepted) throw new Error(t('Accept the terms and privacy notice to continue.'))
-    return legalConsentMetadata({ dateOfBirth, countryCode, trainingDataAccepted })
+    return legalConsentMetadata({ dateOfBirth, countryCode, trainingDataAccepted, language: appLanguage })
   }
 
   const openLegal = (ids, title) => useUI.getState().openSheet(close => <LegalPreview close={close} ids={ids} title={title} />, { kind: 'full', locked: true })
 
   const legalFields = () => <>
+    <label className="signup-field-label" htmlFor="gymbook-language">{t('Language')}</label>
+    <select id="gymbook-language" className="input" value={appLanguage} onChange={event => { void chooseLanguage(event.target.value) }}>
+      {Object.entries(LANGS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+    </select>
     <label className="signup-field-label" htmlFor="gymbook-dob">{t('Date of birth')}</label>
     <input id="gymbook-dob" className="input" type="date" autoComplete="bday" max={maxBirthDate()} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} required />
     <label className="signup-field-label" htmlFor="gymbook-country">{t('Country of residence')}</label>
@@ -255,7 +277,7 @@ export default function Login({ legalSetup = false }) {
 
   const head = <>
     <h1 className="login-brand-heading"><Brand className="login-brand" /></h1>
-    <div className="login-brand-tagline">Your training, in your pocket</div>
+    <div className="login-brand-tagline">{t('Your training, in your pocket')}</div>
   </>
   const wrap = { display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '78vh', textAlign: 'center' }
 
@@ -305,8 +327,8 @@ export default function Login({ legalSetup = false }) {
         <Button variant="ghost" className="dim" onClick={() => { cancelPasswordRecovery(); setRecoveryMode(false); setPassword(''); setConfirmPassword(''); setError('') }}>{t('Back to sign in')}</Button>
       </> : <>
         {mode !== 'forgot' && <>
-        <Button className="google-btn" onClick={google} disabled={busy} aria-label="Continue with Google">
-          <span>Continue with</span><span className="google-word" aria-hidden="true"><b className="google-blue">G</b><b className="google-red">o</b><b className="google-yellow">o</b><b className="google-blue">g</b><b className="google-green">l</b><b className="google-red">e</b></span>
+        <Button className="google-btn" onClick={google} disabled={busy} aria-label={`${t('Continue with')} Google`}>
+          <span>{t('Continue with')}</span><span className="google-word" aria-hidden="true"><b className="google-blue">G</b><b className="google-red">o</b><b className="google-yellow">o</b><b className="google-blue">g</b><b className="google-green">l</b><b className="google-red">e</b></span>
         </Button>
         <div className="dim small" style={{ margin: '16px 0' }}>{t('or use email')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>

@@ -20,11 +20,11 @@ const ADDRESS = 'El Carmen de Viboral, Antioquia, Colombia'
 // Teléfono de contacto (recomendado por la normativa colombiana). Si lo dejas vacío no se muestra.
 const PHONE = '' // Completa este dato antes de publicar si corresponde a tu canal de contacto
 
-const VERSION = '1.7'
+const VERSION = '1.9'
 
-const UPDATED_EN = '18 October 2026'
+const UPDATED_EN = '28 October 2026'
 
-const UPDATED_ES = '18 de octubre de 2026'
+const UPDATED_ES = '28 de octubre de 2026'
 
 // Pon en true SOLO cuando exista el botón "Eliminar cuenta" dentro de la app (exigido por Google Play y Apple).
 const ACCOUNT_DELETION_IN_APP = true
@@ -108,27 +108,27 @@ const COPY = {
 
       ['Who receives your data', [
 
-        'Supabase Auth stores account identifiers and the registration details and consent versions you submit. Supabase Postgres stores a server backup of workout data after each completed workout when you have separately authorized it. Withdrawing authorization stops future uploads but retains the existing copy until you request deletion or delete your account. Supabase processes these data under its applicable service terms; the project region is the one configured by the operator.',
+        'Supabase Auth stores account identifiers and registration and consent details. Supabase Postgres stores the workout backup you explicitly authorize; the app uploads it after completed workouts and allows manual restoration. Supabase also processes network and security metadata needed to provide authentication and database services.',
 
-        'The web/server hosting provider actually used for the published instance. If Gym Book Training is self-hosted, this is the person or organization operating the server and its infrastructure provider, if any.',
+        'The Android app does not use the self-hosted Node.js server. The website or a self-hosted deployment may have separate hosting providers described in its own applicable notice.',
 
-        'Google: Google sign-in and, when subscriptions are enabled, Google Play for Android purchases. Google Play processes the payment and shares subscription status.',
+        'Google: Google sign-in returns basic profile details. Google Play processes Android subscription checkout, payment credentials, transaction records and purchase status.',
 
-        'RevenueCat: if subscription billing is enabled, purchase verification and cross-platform subscription status. It receives an account identifier and purchase/entitlement information, not card details.',
+        'RevenueCat: subscription offerings, purchase verification and subscription status. It receives the Gym Book Training account ID, app/SDK and purchase identifiers, and subscription/entitlement information. It does not receive card details from this app.',
 
         'Paddle: if website billing is enabled, subscription checkout, billing, taxes, receipts and customer-portal cancellation. Paddle acts as merchant of record and handles payment credentials.',
 
-        'Apple: App Store distribution and purchases if billing is enabled.',
+        'Apple: not used for distribution or purchases by the Android app. It may apply to a separately published iOS version.',
 
-        'jsDelivr (and its CDN partners Cloudflare, Fastly, Bunny and Gcore): delivery of exercise images and GIFs.',
+        'The Android app bundles exercise images and GIFs; it does not request them from a media CDN. The website may use jsDelivr and its CDN partners.',
 
         'Your browser or device push service, only if you enable web push notifications.',
 
-        "Each provider's role depends on the service and applicable arrangements: some may act as processors and others as independent controllers. The published list must identify only providers actually used by the version you are using. See Third-party services.",
+        'Google Play processes Android purchases and payment credentials. Google, Supabase and RevenueCat receive only information needed for the feature described above. Their privacy notices explain their independent processing and retention. Paddle, Apple, jsDelivr and browser push relate only to separate website or iOS versions, not the Android APK.',
 
       ]],
 
-      ['International transfers and transmissions', 'If the deployed version uses providers or servers outside Colombia, some account or technical data may be processed in those countries. Before publication, we will identify the actual providers, countries and purposes and apply the mechanism required by Colombian law for each transfer or transmission; general acceptance of this policy does not replace any consent or safeguards required by law. If the service is hosted exclusively in Colombia, this clause must be adjusted to reflect that fact.'],
+      ['International processing', 'Supabase, Google, RevenueCat, and the hosting or network providers used by the relevant feature may process data outside Colombia, including in the United States or other countries where they or their subprocessors operate. Cross-border processing is limited to the purposes described here and is subject to the providers’ applicable safeguards and Colombian data-protection requirements. The Android app’s exercise images are bundled with the app; it does not request them from a media CDN.'],
 
       ['Local storage and server backups', 'Workout history and settings are stored on your device. If you separately authorize processing of workout data, the app sends one updated backup to Supabase after each completed workout; restoration is started manually. Withdrawing authorization stops future uploads and blocks access to the existing server copy while authorization is off; that copy remains until you request deletion or delete your account. Clearing app data or uninstalling may erase the local copy.'],
 
@@ -136,13 +136,15 @@ const COPY = {
 
       ['Retention and account deletion', [
 
-        'We retain account and workout data while needed to provide the service and for a defined period after account deletion only where necessary for security, dispute handling or legal obligations. Before publication, the operator must set and follow actual retention periods for backups, logs and deleted accounts; data will not be kept indefinitely merely because it remains in a backup.',
+        'We keep account data while the account is active and workout backups while you keep them enabled and authorized. Deleting your account removes its Supabase Auth account and linked live backup. Residual provider backups and security logs may persist for the provider’s normal rotation or where law requires retention; they are not available for normal app use and are deleted or overwritten under the provider’s retention schedule. Purchase and tax records may be retained by Google Play as required for transactions and legal obligations. We do not use account deletion to cancel a subscription.',
 
         ACCOUNT_DELETION_IN_APP
 
           ? 'You can delete your account and its data at any time from Settings. Some records may be kept where the law requires it.'
 
           : `Account deletion is currently handled by request: write to ${CONTACT} from your account email. We will verify the request proportionately and process it within the applicable legal deadlines, deleting data that no longer needs to be retained and explaining any lawful retention exceptions.`,
+
+        `If you cannot sign in, request deletion at ${CONTACT} from your account email or use the public account-deletion page. We process these external requests within 30 days.`,
 
         'Resetting workout data in Settings clears your training data but does not delete your account.',
 
@@ -236,27 +238,27 @@ const COPY = {
 
       ['Quiénes reciben tus datos', [
 
-        'Supabase Auth guarda identificadores de cuenta y los datos de registro y versiones de consentimiento que envías. Supabase Postgres guarda una copia de entrenamiento al terminar cada sesión si autorizaste por separado ese tratamiento. Revocar la autorización detiene futuras subidas, pero conserva la copia existente hasta que solicites su eliminación o elimines tu cuenta. Supabase trata estos datos conforme a las condiciones aplicables del servicio; el proyecto usa la región configurada por el operador.',
+        'Supabase Auth guarda identificadores de cuenta y datos de registro y consentimiento. Supabase Postgres guarda la copia de entrenamiento que autorizas por separado; la app la actualiza después de entrenamientos completados y permite restaurarla manualmente. Supabase también trata metadatos de red y seguridad necesarios para prestar autenticación y base de datos.',
 
-        'Proveedor de infraestructura: el proveedor real del servidor o alojamiento puede procesar registros técnicos. Debe identificarse según el despliegue publicado.',
+        'La app Android no usa el servidor Node.js autoalojado. El sitio web o una instalación autoalojada puede tener proveedores de alojamiento independientes sujetos a su aviso aplicable.',
 
-        'Google: inicio de sesión con Google y Google Play para compras Android. Google Play procesa el pago y comparte el estado de la suscripción.',
+        'Google: el inicio de sesión devuelve datos básicos del perfil. Google Play procesa la compra de suscripciones Android, los datos de pago, registros de transacción y estado de compra.',
 
-        'RevenueCat: si se habilitan las suscripciones, verifica compras y el estado entre plataformas. Recibe un identificador de cuenta e información de compra/derechos, no datos de tarjeta.',
+        'RevenueCat: muestra planes, verifica compras y comunica el estado de la suscripción. Recibe el ID de tu cuenta Gym Book Training, identificadores de app/SDK y compra, e información de suscripción/derechos. Esta app no le entrega datos de tarjeta.',
 
         'Paddle: si se habilitan pagos web, procesa suscripciones, facturación, impuestos, recibos y cancelación desde su portal. Paddle actúa como comerciante registrado y gestiona los datos de pago.',
 
-        'Apple: distribución en App Store y, si se habilita la facturación, compras.',
+        'Apple: la app Android no se distribuye por App Store ni usa compras de Apple. Podría aplicar a una versión iOS distribuida por separado.',
 
-        'jsDelivr (y sus socios de CDN Cloudflare, Fastly, Bunny y Gcore): entrega de imágenes y GIF de ejercicios.',
+        'El APK Android incluye imágenes y GIF de ejercicios; no los solicita a un CDN de medios. El sitio web puede usar jsDelivr y sus socios de CDN.',
 
         'El servicio de notificaciones de tu navegador o dispositivo, solo si activas las notificaciones web.',
 
-        'El papel de cada proveedor depende del servicio concreto y de los acuerdos aplicables: algunos pueden actuar como encargados y otros como responsables independientes. La lista publicada debe identificar únicamente los proveedores realmente utilizados en la versión que estás usando. Consulta Servicios de terceros.',
+        'Google Play procesa las compras Android y los datos de pago. Google, Supabase y RevenueCat reciben únicamente la información necesaria para las funciones descritas. Consulta sus avisos vigentes para conocer sus tratamientos y plazos. Paddle, Apple, jsDelivr y las notificaciones web corresponden solo a versiones web o iOS independientes, no al APK Android.',
 
       ]],
 
-      ['Transferencias y transmisiones internacionales', 'Si la versión desplegada utiliza proveedores o servidores fuera de Colombia, algunos datos técnicos o de cuenta podrían tratarse en esos países. Antes de publicar, identificaremos los proveedores, países y finalidades reales y aplicaremos el mecanismo exigido por la normativa colombiana para cada transferencia o transmisión; una aceptación genérica de esta política no reemplaza las autorizaciones o garantías que legalmente se requieran. Si el servicio está alojado exclusivamente en Colombia, esta cláusula deberá ajustarse a esa realidad.'],
+      ['Tratamiento internacional', 'Supabase, Google, RevenueCat y los proveedores de alojamiento o red que usa cada función pueden tratar datos fuera de Colombia, incluido Estados Unidos u otros países donde ellos o sus subencargados operen. El tratamiento se limita a las finalidades aquí descritas y se sujeta a las garantías aplicables de cada proveedor y a la normativa colombiana. Las imágenes de ejercicios del APK Android vienen incluidas en la app; no se solicitan a un CDN de medios.'],
 
       ['Almacenamiento local y copias en el servidor', 'El historial de entrenamiento y la configuración se guardan en tu dispositivo. Si autorizas por separado el tratamiento de datos de entrenamiento, la app envía una copia actualizada a Supabase al terminar cada entrenamiento; la restauración se inicia manualmente. Revocar la autorización detiene futuras subidas y bloquea el acceso a la copia existente mientras esté desactivada; la copia permanece hasta que solicites su eliminación o elimines tu cuenta. Borrar los datos de la app o desinstalarla puede eliminar la copia local.'],
 
@@ -264,13 +266,15 @@ const COPY = {
 
       ['Conservación y eliminación de cuenta', [
 
-        'Conservamos los datos de cuenta y entrenamiento mientras sean necesarios para prestar el servicio y, tras eliminar una cuenta, solo durante un plazo definido cuando resulte necesario por seguridad, gestión de disputas u obligaciones legales. Antes de publicar, el operador debe fijar y cumplir plazos reales para copias de seguridad, registros técnicos y cuentas eliminadas; los datos no se conservarán indefinidamente solo por permanecer en una copia.',
+        'Conservamos los datos de cuenta mientras la cuenta esté activa y las copias de entrenamiento mientras las mantengas habilitadas y autorizadas. Al eliminar tu cuenta, se elimina la cuenta Auth de Supabase y su copia activa vinculada. Copias residuales del proveedor y registros de seguridad pueden persistir durante la rotación normal del proveedor o cuando la ley exija conservarlos; no están disponibles para el uso normal de la app y se eliminan o sobrescriben según el calendario de conservación del proveedor. Google Play puede conservar registros de compras e impuestos según las obligaciones transaccionales y legales. Eliminar la cuenta no cancela una suscripción.',
 
         ACCOUNT_DELETION_IN_APP
 
           ? 'Puedes eliminar tu cuenta y tus datos en cualquier momento desde Ajustes. Algunos registros podrían conservarse cuando la ley lo exija.'
 
           : `Por ahora la eliminación de cuenta se gestiona por solicitud: escribe a ${CONTACT} desde el correo de tu cuenta. Verificaremos la solicitud de forma proporcional y la tramitaremos dentro de los plazos legales aplicables, suprimiendo los datos que ya no deban conservarse y explicando cualquier excepción legal.`,
+
+        `Si no puedes iniciar sesión, solicita la eliminación en ${CONTACT} desde el correo asociado a tu cuenta o usa la página pública de eliminación. Atendemos estas solicitudes externas dentro de 30 días.`,
 
         'Restablecer los datos de entrenamiento en Ajustes borra tu información de entrenamiento, pero no elimina tu cuenta.',
 
@@ -318,13 +322,13 @@ const COPY = {
 
     en: [
 
-      ['Collected when you register', 'Email, name, date of birth, country and account identifiers. The app records the versions and time of your acceptance of the Terms and Conditions, Privacy policy and separate workout-data authorization. Sign-in credentials are handled by Supabase Auth.'],
+      ['Collected when you register', 'Email, name, date of birth, country, account ID and legal-consent records are sent to Supabase Auth to create and manage your account.'],
 
-      ['Created by your use of Gym Book Training', 'Training routines and logs, exercise selections, dates, sets, repetitions, weights, body-weight entries, effort ratings, custom exercises, preferences and the name attached to your profile. This information may reveal aspects of your physical condition and may constitute sensitive data depending on its content and context. Signed-in server backups are enabled only after separate authorization.'],
+      ['Created by your use of Gym Book Training', 'Routines, workouts, exercise selections, dates, sets, repetitions, lifted weights, body-weight entries, effort ratings, custom exercises and preferences are stored locally. They are sent to Supabase only when you separately authorize a cloud backup. Workout and body-weight data may reveal health or fitness information.'],
 
-      ['Collected by the device or service', 'Session and storage data on your device. IP address, browser/device details, request times and diagnostic or security logs may be processed by our hosting, authentication, database, CDN and push providers. If you enable web push, a push endpoint and notification settings are stored to deliver alerts; you can turn them off at any time from your browser or device settings.'],
+      ['Collected by services and subscription SDK', 'Supabase and Google may process IP address, account/session identifiers and security metadata for sign-in, backups and purchases. RevenueCat processes the app user ID, purchase and subscription identifiers/status to verify access. The configured app does not call RevenueCat’s optional device-identifier collection method.'],
 
-      ['Not collected', 'The app does not request precise GPS location, contact list, microphone, camera, advertising identifier or third-party analytics events. Exercise photos/GIFs are content requests to the CDN, not uploads of your workouts.'],
+      ['Not collected by the Android app', 'The Android app does not request location, contacts, microphone or camera and does not include an advertising or analytics SDK. Exercise media is bundled in the APK. The release manifest does not declare the Android Advertising ID permission.'],
 
       ['Local-only storage', 'Workout data can remain on the device when server backup authorization has not been granted. It is not sent to the account backup service without that separate authorization.'],
 
@@ -332,13 +336,13 @@ const COPY = {
 
     es: [
 
-      ['Al registrarte', 'Correo, nombre, fecha de nacimiento, país e identificadores de cuenta. La app registra las versiones y la fecha de aceptación de los Términos y condiciones, la Política de privacidad y la autorización separada para datos de entrenamiento. Supabase Auth gestiona las credenciales de inicio de sesión.'],
+      ['Al registrarte', 'Correo, nombre, fecha de nacimiento, país, ID de cuenta y constancias de autorización se envían a Supabase Auth para crear y gestionar tu cuenta.'],
 
-      ['Generados por el uso de Gym Book Training', 'Rutinas y entrenamientos, ejercicios elegidos, fechas, series, repeticiones, pesos, registros de peso corporal, esfuerzo percibido, ejercicios personalizados, preferencias y el nombre asociado al perfil. Esta información puede revelar aspectos de tu condición física y constituir datos sensibles según su contenido y contexto. Las copias en el servidor solo se habilitan después de una autorización separada.'],
+      ['Generados por el uso de Gym Book Training', 'Rutinas, entrenamientos, ejercicios elegidos, fechas, series, repeticiones, pesos levantados, registros de peso corporal, esfuerzo percibido, ejercicios personalizados y preferencias se guardan localmente. Se envían a Supabase solo si autorizas por separado la copia en la nube. Estos datos pueden revelar información de salud o condición física.'],
 
-      ['Procesados por el dispositivo o los servicios', 'Datos de sesión y almacenamiento en tu dispositivo. Dirección IP, detalles del navegador o dispositivo, horas de solicitud y registros de diagnóstico o seguridad pueden ser tratados por nuestros proveedores de alojamiento, autenticación, base de datos, CDN y notificaciones. Si activas notificaciones web, se almacena un endpoint de notificación y sus preferencias para entregar alertas; puedes desactivarlas en cualquier momento desde los ajustes de tu navegador o dispositivo.'],
+      ['Tratados por servicios y SDK de suscripción', 'Supabase y Google pueden tratar IP, identificadores de cuenta/sesión y metadatos de seguridad para acceso, copias y compras. RevenueCat trata el ID de usuario de la app e identificadores y estado de compra/suscripción para verificar acceso. La app configurada no llama al método opcional de RevenueCat para recopilar identificadores del dispositivo.'],
 
-      ['No recopilados', 'La app no solicita ubicación GPS precisa, contactos, micrófono, cámara, identificador publicitario ni eventos de analítica de terceros. Las imágenes y GIF de ejercicios son solicitudes de contenido al CDN, no cargas de tus entrenamientos.'],
+      ['No recopilados por la app Android', 'La app Android no solicita ubicación, contactos, micrófono ni cámara y no incluye SDK de publicidad o analítica. Los medios de ejercicios vienen incluidos en el APK. El manifiesto release no declara el permiso Android Advertising ID.'],
 
       ['Almacenamiento solo local', 'Los datos de entrenamiento pueden permanecer en el dispositivo si no se ha otorgado la autorización para copias en el servidor. No se envían al servicio de copias de la cuenta sin esa autorización separada.'],
 
@@ -350,49 +354,49 @@ const COPY = {
 
     en: [
 
-      ['Self-hosted Node.js API and data storage', 'In the self-hosted deployment, the Node.js API and configured data volume process account and workout data. The server operator and infrastructure provider, if any, may process technical logs.'],
+      ['Supabase', 'Supabase Auth and Postgres process account details, consent records and workout backups when the user separately authorizes cloud backup. Supabase also processes network and security metadata needed to operate these services.'],
 
-      ['Server infrastructure', 'The server operator and the infrastructure provider actually used for the published instance may process IP address, device/browser information, request paths, timestamps and errors. The identity of the real infrastructure provider must be disclosed in the deployed policy.'],
+      ['Android infrastructure', 'The native Android app uses Supabase for account and optional backup services. It does not use the self-hosted Node.js API. Website/self-host deployments may use separate hosting providers.'],
 
-      ['Google', 'Google OAuth sign-in receives your authorization request and returns basic identity details such as name and email, subject to the permissions shown on Google’s consent screen. Android purchases, if enabled in the future, are processed by Google Play.'],
+      ['Google and Google Play', 'Google OAuth receives your sign-in request and returns basic identity details such as name and email, subject to the consent screen. Google Play processes Android subscription checkout, payment credentials, transaction records and purchase status.'],
 
-      ['Apple', 'iOS distribution and, if enabled in the future, purchases are handled by Apple and the App Store. Apple may share transaction identifiers and subscription status with Gym Book Training; payment credentials are handled by Apple.'],
+      ['RevenueCat', 'The Android RevenueCat SDK receives the Gym Book Training account ID and processes app/SDK and purchase identifiers, subscription transactions and entitlement status to present plans and verify access. It does not receive card details from the app. This app does not call RevenueCat’s optional device-identifier collection method.'],
 
-      ['jsDelivr and exercise media', 'Exercise images and GIFs are requested from jsDelivr’s CDN. A CDN request can reveal network and device metadata such as IP address, browser, referrer domain, requested asset and time.'],
+      ['Exercise media', 'Exercise images and GIFs are packaged in the Android app and do not require an external media CDN. The website version may use jsDelivr and its CDN network partners.'],
 
       ['CDN network partners', 'jsDelivr lists Cloudflare, Fastly, Bunny and Gcore as providers in its multi-CDN delivery network. They may route or serve asset requests and process request metadata. The delivery route may vary.'],
 
       ['Browser/device push service', 'If you enable web push, your browser/device’s push provider routes notifications using the subscription endpoint. This varies by browser and device. Native workout reminders are scheduled locally on your device.'],
 
-      ['Payments', 'When subscription billing is enabled, Android purchases are handled by Google Play and website purchases by Paddle. RevenueCat checks subscription status across platforms. Payment credentials are handled by Google Play or Paddle and are not received by Gym Book Training. No payment is due unless an offer is displayed and you confirm a purchase.'],
+      ['Payments', 'Android subscriptions are purchased and managed through Google Play; RevenueCat verifies purchase status. Google Play handles payment credentials, which Gym Book Training does not receive. Website purchases, if offered, use Paddle separately. No charge is made until you select a plan and confirm the purchase in Google Play.'],
 
-      ['International processing', 'These providers may process data in countries outside Colombia, including the United States. See “International transfers and transmissions” in the Privacy policy.'],
+      ['International processing', 'Supabase, Google and RevenueCat may process the information described above in countries where they or their providers operate, including the United States. See “International processing” in the Privacy policy.'],
 
-      ['Provider notices', 'Consult the current privacy notices of each provider actually used in the deployed version, including Google, Apple or jsDelivr only if those services are enabled. The operator must add the name and privacy notice of the actual hosting/infrastructure provider.'],
+      ['Provider notices', 'For Android features, consult the current privacy notices of Google, Supabase and RevenueCat. Paddle, Apple and jsDelivr apply only to separate web or iOS versions if those services are enabled.'],
 
     ],
 
     es: [
 
-      ['Supabase', 'Supabase Auth guarda identificadores de cuenta y los datos de registro y versiones de consentimiento que envías. Supabase Postgres guarda una copia de entrenamiento al terminar cada sesión si autorizaste por separado ese tratamiento. Supabase trata estos datos conforme a las condiciones aplicables del servicio; el proyecto usa la región configurada por el operador.'],
+      ['Supabase', 'Supabase Auth y Postgres tratan datos de cuenta, constancias de autorización y copias de entrenamiento cuando autorizas por separado el respaldo en la nube. Supabase también trata metadatos de red y seguridad necesarios para operar esos servicios.'],
 
-      ['Infraestructura del servidor', 'El operador del servidor y el proveedor de infraestructura realmente utilizado en la versión publicada pueden tratar IP, datos de dispositivo/navegador, rutas solicitadas, fechas y errores. La política desplegada debe identificar al proveedor de infraestructura real.'],
+      ['Infraestructura Android', 'La app Android nativa usa Supabase para cuenta y copias opcionales. No usa la API Node.js autoalojada. Las versiones web o autoalojadas pueden tener proveedores de alojamiento independientes.'],
 
-      ['Google', 'Google OAuth procesa tu solicitud de acceso y entrega datos básicos de identidad, como nombre y correo, de acuerdo con los permisos que muestra la pantalla de autorización de Google. Las compras Android, si se habilitan en el futuro, las procesará Google Play.'],
+      ['Google y Google Play', 'Google OAuth recibe tu solicitud de acceso y entrega datos básicos de identidad, como nombre y correo, según los permisos que muestra su pantalla. Google Play procesa el pago de las suscripciones Android, los datos de pago, registros de transacción y estado de compra.'],
 
-      ['Apple', 'La distribución iOS y, si se habilitan en el futuro, las compras las gestionan Apple y App Store. Apple puede compartir identificadores de transacción y estado de suscripción con Gym Book Training; Apple gestiona los datos de pago.'],
+      ['RevenueCat', 'El SDK Android de RevenueCat recibe el ID de cuenta Gym Book Training y trata identificadores de app/SDK y compra, transacciones y estado de suscripción para mostrar planes y verificar acceso. La app no le entrega datos de tarjeta y no llama al método opcional de RevenueCat para recopilar identificadores del dispositivo.'],
 
-      ['jsDelivr y contenido de ejercicios', 'Las imágenes y GIF de ejercicios se solicitan al CDN de jsDelivr. Una solicitud al CDN puede revelar metadatos de red y dispositivo como IP, navegador, dominio de referencia, archivo solicitado y hora.'],
+      ['Contenido de ejercicios', 'Las imágenes y GIF de ejercicios están incluidos en la app Android y no requieren un CDN externo. La versión web puede usar jsDelivr y su red de distribución CDN.'],
 
       ['Socios de la red CDN', 'jsDelivr identifica a Cloudflare, Fastly, Bunny y Gcore como proveedores de su red de distribución multi-CDN. Pueden enrutar o servir solicitudes de archivos y tratar metadatos de esas solicitudes. La ruta de entrega puede variar.'],
 
       ['Servicio de notificaciones del navegador/dispositivo', 'Si activas notificaciones web, el proveedor de notificaciones de tu navegador o dispositivo las entrega usando el endpoint de suscripción. Varía según el navegador y dispositivo. Los recordatorios nativos de entrenamiento se programan localmente en tu dispositivo.'],
 
-      ['Pagos', 'Cuando se habiliten suscripciones, Google Play gestionará las compras Android y Paddle las compras desde la web. RevenueCat comprobará el estado de la suscripción entre plataformas. Google Play o Paddle gestionan los datos de pago; Gym Book Training no recibe los datos de tu tarjeta. No hay cobro salvo que se muestre una oferta y confirmes una compra.'],
+      ['Pagos', 'Las suscripciones Android se compran y gestionan mediante Google Play; RevenueCat verifica su estado. Google Play gestiona los datos de pago, que Gym Book Training no recibe. Las compras web, si se ofrecen, usan Paddle por separado. No se cobra hasta que eliges un plan y confirmas la compra en Google Play.'],
 
-      ['Tratamiento internacional', 'Estos proveedores pueden tratar datos en países fuera de Colombia, incluido Estados Unidos. Consulta “Transferencias y transmisiones internacionales” en la Política de privacidad.'],
+      ['Tratamiento internacional', 'Supabase, Google y RevenueCat pueden tratar la información descrita en países donde operan ellos o sus proveedores, incluido Estados Unidos. Consulta “Tratamiento internacional” en la Política de privacidad.'],
 
-      ['Avisos de los proveedores', 'Consulta los avisos de privacidad vigentes de cada proveedor que realmente use la versión desplegada, incluidos Google, Apple o jsDelivr solo si esos servicios están habilitados. El operador debe añadir el nombre y aviso de privacidad del proveedor real de alojamiento/infraestructura.'],
+      ['Avisos de los proveedores', 'Para las funciones Android, consulta los avisos vigentes de Google, Supabase y RevenueCat. Paddle, Apple y jsDelivr corresponden solo a versiones web o iOS independientes si se habilitan.'],
 
     ],
 
@@ -408,7 +412,7 @@ const COPY = {
 
       ['Fitness use only; no medical advice', 'Gym Book Training is a workout logging and planning tool, not a medical service. Estimates and progress summaries are informational and may be inaccurate. You choose your exercises and loads. Stop if you feel pain or unwell and consult a qualified health professional before exercising if you have a condition or concern. The complete Fitness and health notice is included below.'],
 
-      ['Paid plans', 'Planned subscriptions are USD 1 per month or USD 9 for the first year with annual renewal at USD 12. They are purchasable only when a plan is displayed at checkout. Before confirming, Google Play or Paddle shows the applicable localized price and currency, taxes, renewal amount and frequency, cancellation method and refund terms. See the Subscription terms below.'],
+      ['Paid plans', 'The native Android app includes one month of access from account registration without a payment method. After that, users can choose a monthly or annual plan. The planned monthly subscription is USD 1/month; the annual plan is USD 9 for the first year and renews at USD 12/year. Google Play displays the localized price, renewal terms and cancellation method before purchase. The self-hosted edition remains free and open source.'],
 
       ['Availability and changes', 'We may maintain, update, suspend or discontinue features for operational, security or legal reasons. We will make reasonable efforts to notify users of material changes to these terms. If we discontinue the service, we will give reasonable notice and a reasonable opportunity to export or retrieve your data where feasible.'],
 
@@ -446,13 +450,13 @@ const COPY = {
 
     en: [
 
-      ['Plans and prices', 'The planned monthly subscription is USD 1 per month. Eligible new subscribers may receive the planned annual introductory offer of USD 9 for the first year, then USD 12 per year. If you are not eligible, checkout shows the price available to you. These plans are available only when displayed at checkout. Google Play and Paddle localize price and currency by country; the exact amount, taxes and renewal terms shown at checkout control your purchase. There is no free trial unless the checkout explicitly says otherwise.'],
+      ['Plans, free access and prices', 'One month of free access starts when you register, with no payment method required. The app does not show or start a paid plan during this period. When the month ends, training features are locked and you can choose a monthly or annual plan to continue. The monthly plan is USD 1/month. Eligible new subscribers may receive USD 9 for the first year on the annual plan, then USD 12/year. Google Play localizes price and currency; the amount, taxes and renewal terms shown at checkout control. This app-provided free access is not a Google Play free-trial offer.'],
 
       ['Renewal, management and cancellation', [
 
         'By confirming a plan, you authorize recurring charges at the price and frequency disclosed by the checkout. The annual introductory offer charges USD 9 for the first year and renews at USD 12 each following year, unless the localized checkout displays different converted amounts.',
 
-        'Android purchases are billed and managed through Google Play. Website purchases are billed and managed through the Paddle customer portal. Cancel before the next renewal to stop future charges. After cancellation, access continues until the end of the paid period. Uninstalling the app or deleting your Gym Book Training account does not cancel a subscription; cancel it with the provider separately.',
+        'Android purchases are billed and managed through Google Play. Website purchases, if offered, are managed separately through Paddle. Cancel before renewal to stop future charges. After cancellation, access continues until the end of the paid period. Uninstalling the app or deleting your Gym Book Training account does not cancel a subscription; cancel it separately with Google Play.',
 
         'Google Play or Paddle handles payment credentials and applicable refund requests. Gym Book Training receives purchase and subscription status to provide or restrict access. Any mandatory consumer rights remain unaffected.',
 
@@ -466,13 +470,13 @@ const COPY = {
 
     es: [
 
-      ['Planes y precios', 'El plan mensual previsto cuesta USD 1 al mes. Los nuevos suscriptores que cumplan los requisitos pueden recibir la oferta anual introductoria prevista de USD 9 el primer año y luego USD 12 al año. Si no cumples los requisitos, el pago muestra el precio que te corresponde. Solo se pueden contratar cuando aparezcan en la pantalla de pago. Google Play y Paddle adaptan precio y moneda al país; el importe exacto, los impuestos y las condiciones de renovación que aparezcan en el pago rigen tu compra. No hay prueba gratuita salvo que el pago la indique expresamente.'],
+      ['Planes, acceso gratis y precios', 'El mes de acceso gratis empieza al registrarte y no requiere método de pago. La app no muestra ni inicia un plan de pago durante ese periodo. Al terminar el mes, las funciones de entrenamiento se bloquean y puedes elegir un plan mensual o anual para continuar. El plan mensual cuesta USD 1/mes. Los nuevos suscriptores que cumplan los requisitos pueden recibir USD 9 el primer año del plan anual y luego USD 12/año. Google Play adapta precio y moneda; rigen el importe, los impuestos y la renovación que aparezcan en el pago. Este acceso gratis lo concede la app; no es una prueba gratuita de Google Play.'],
 
       ['Renovación, gestión y cancelación', [
 
         'Al confirmar un plan, autorizas cobros recurrentes al precio y frecuencia informados por el pago. La oferta anual introductoria cobra USD 9 el primer año y se renueva a USD 12 cada año siguiente, salvo que el pago localizado muestre otros importes convertidos.',
 
-        'Las compras Android se cobran y gestionan mediante Google Play. Las compras de la web se cobran y gestionan desde el portal de clientes de Paddle. Cancela antes de la siguiente renovación para detener cobros futuros. Tras cancelar, el acceso continúa hasta finalizar el periodo pagado. Desinstalar la app o eliminar tu cuenta de Gym Book Training no cancela la suscripción; debes cancelarla por separado con el proveedor.',
+        'Las compras Android se cobran y gestionan mediante Google Play. Las compras web, si se ofrecen, se gestionan por separado desde Paddle. Cancela antes de la renovación para detener los siguientes cobros. Tras cancelar, el acceso continúa hasta finalizar el periodo pagado. Desinstalar la app o eliminar tu cuenta de Gym Book Training no cancela la suscripción; debes cancelarla por separado en Google Play.',
 
         'Google Play o Paddle gestionan los datos de pago y las solicitudes de reembolso que correspondan. Gym Book Training recibe el estado de compra y suscripción para habilitar o limitar el acceso. Se respetan los derechos imperativos que te otorgue la ley de protección al consumidor.',
 
@@ -544,7 +548,7 @@ function LegalText({ id }) {
       </section>)}
     </div>)}
 
-    {(id === 'third-parties' || id === 'terms') && <p className="small dim">{lang === 'es' ? 'Avisos de privacidad (consulta solo los servicios que estén habilitados): ' : 'Privacy notices (consult only services that are enabled): '}<a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google</a> · <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noreferrer">Apple</a> · <a href="https://www.jsdelivr.com/terms/privacy-policy" target="_blank" rel="noreferrer">jsDelivr</a></p>}
+    {(id === 'third-parties' || id === 'terms') && <p className="small dim">{lang === 'es' ? 'Avisos de privacidad de proveedores Android: ' : 'Android provider privacy notices: '}<a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google</a> · <a href="https://supabase.com/privacy" target="_blank" rel="noreferrer">Supabase</a> · <a href="https://www.revenuecat.com/privacy/" target="_blank" rel="noreferrer">RevenueCat</a></p>}
 
     {id === 'privacy' && <p className="small dim">{lang === 'es' ? 'Autoridad colombiana de protección de datos: ' : 'Colombian data protection authority: '}<a href="https://www.sic.gov.co/" target="_blank" rel="noreferrer">Superintendencia de Industria y Comercio (SIC)</a></p>}
 

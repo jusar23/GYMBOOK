@@ -19,4 +19,25 @@
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
     </style>
+    <style name="StreakWidgetDay">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center</item>
+    </style>
+    <style name="StreakWidgetDayLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">#89919B</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:maxLines">1</item>
+    </style>
+    <style name="StreakWidgetDayMark">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">18dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">#B8F36B</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 </resources>

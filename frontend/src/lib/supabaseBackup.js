@@ -1,5 +1,5 @@
 import { getAuthSession } from './supabaseAuth.js'
-import { LEGAL_VERSION } from './legalConsent.js'
+import { TRAINING_DATA_CONSENT_VERSION, hasTrainingDataConsent } from './legalConsent.js'
 
 const URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '').replace(/\/rest\/v1$/i, '')
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
@@ -20,21 +20,19 @@ async function rpc(name, body, activeSession = null) {
 }
 
 export async function setCloudBackupConsent(accepted, activeSession = null) {
-  const { result } = await rpc('gymbook_set_backup_consent', { p_accepted: accepted, p_version: LEGAL_VERSION }, activeSession)
+  const { result } = await rpc('gymbook_set_backup_consent', { p_accepted: accepted, p_version: TRAINING_DATA_CONSENT_VERSION }, activeSession)
   return result
 }
 
 export async function getCloudBackupConsent(activeSession = null) {
   const { session, result } = await rpc('gymbook_get_backup_consent', {}, activeSession)
   const row = Array.isArray(result) ? result[0] : result
-  if (row) return row.accepted === true && row.consent_version === LEGAL_VERSION
+  if (row) return { ...row, accepted: row.accepted === true && row.consent_version === TRAINING_DATA_CONSENT_VERSION }
   const metadata = session.user.user_metadata || {}
-  const accepted = metadata.gymbook_sensitive_training_consent === true
-    && metadata.gymbook_sensitive_training_consent_version === LEGAL_VERSION
-    && metadata.gymbook_sensitive_training_consent_text_version === LEGAL_VERSION
+  const accepted = hasTrainingDataConsent(metadata)
   if (!accepted) return { accepted: false, consent_version: null }
   await setCloudBackupConsent(true, session)
-  return { accepted: true, consent_version: LEGAL_VERSION }
+  return { accepted: true, consent_version: TRAINING_DATA_CONSENT_VERSION }
 }
 
 async function request(path, options = {}, activeSession = null) {
@@ -42,9 +40,7 @@ async function request(path, options = {}, activeSession = null) {
   const session = activeSession || await getAuthSession()
   if (!session?.access_token || !session.user?.id) throw new Error('Sign in to use cloud backup.')
   const metadata = session.user.user_metadata || {}
-  if (metadata.gymbook_sensitive_training_consent !== true
-    || metadata.gymbook_sensitive_training_consent_version !== LEGAL_VERSION
-    || metadata.gymbook_sensitive_training_consent_text_version !== LEGAL_VERSION) {
+  if (!hasTrainingDataConsent(metadata)) {
     throw new Error('Authorize workout-data processing before using server backups.')
   }
   const consent = await getCloudBackupConsent(session)
@@ -70,9 +66,7 @@ export async function saveCloudBackup(state, { skipWithoutConsent = false } = {}
   const row = { user_id: session?.user?.id, state, updated_at: new Date().toISOString() }
   if (!row.user_id) throw new Error('Sign in to use cloud backup.')
   const metadata = session.user.user_metadata || {}
-  const consentGiven = metadata.gymbook_sensitive_training_consent === true
-    && metadata.gymbook_sensitive_training_consent_version === LEGAL_VERSION
-    && metadata.gymbook_sensitive_training_consent_text_version === LEGAL_VERSION
+  const consentGiven = hasTrainingDataConsent(metadata)
   if (!consentGiven && skipWithoutConsent) return { skipped: true }
   await request(`${TABLE}?on_conflict=user_id`, {
     method: 'POST',

@@ -6,7 +6,7 @@ import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { Button } from './ui.jsx'
 import Icon from './Icon.jsx'
-import { openTutorial } from './Tutorial.jsx'
+import { openTutorial, tutorialSeenKey } from './Tutorial.jsx'
 
 const STEPS = [
   { title: 'Which days can you train?', subtitle: 'Choose the days you want to set aside for exercise.', icon: 'calendar' },
@@ -38,7 +38,6 @@ const EQUIPMENT = [
   { value: 'kettlebells', title: 'Kettlebells', icon: 'kettlebell' },
 ]
 
-const DURATIONS = [20, 30, 45, 60]
 export const onboardingSeenKey = userId => `gymbook_onboarding_v1_${userId}`
 
 export function openOnboarding() {
@@ -78,7 +77,9 @@ function Onboarding({ close }) {
     : [...current, value])
   const closeWithTour = () => {
     close()
-    window.setTimeout(() => openTutorial(), 180)
+    const user = useStore.getState().user
+    const seen = user?.tutorialSeenAt || (user?.id && localStorage.getItem(tutorialSeenKey(user.id)))
+    if (!seen) window.setTimeout(() => openTutorial(), 180)
   }
   const skip = () => {
     if (user?.id) localStorage.setItem(onboardingSeenKey(user.id), 'skipped')
@@ -131,11 +132,12 @@ function Onboarding({ close }) {
         <div className="setup-selection-note">{t('Days selected: {0}', days.length)}</div>
       </>}
 
-      {stepIndex === 1 && <div className="setup-duration-grid">
-        {DURATIONS.map(value => <button type="button" key={value} className={`setup-duration${minutes === value ? ' selected' : ''}`}
-          aria-pressed={minutes === value} onClick={() => setMinutes(value)}>
-          <strong>{value}</strong><span>{t('minutes per workout')}</span>
-        </button>)}
+      {stepIndex === 1 && <div className="setup-duration-picker">
+        <div className="setup-duration-current"><Icon name="clock" /><div><strong>{t('{0} min each', minutes)}</strong><small>{t('minutes per workout')}</small></div></div>
+        <input className="setup-duration-range" type="range" min="15" max="180" step="15" value={minutes}
+          style={{ '--duration-progress': `${((minutes - 15) / 165) * 100}%` }}
+          aria-label={t('How long is each workout?')} onChange={event => setMinutes(Number(event.target.value))} />
+        <div className="setup-duration-scale"><span>{t('{0} min each', 15)}</span><span>{t('Up to 3 hours')}</span></div>
       </div>}
 
       {stepIndex === 2 && <div className="setup-choice-list">

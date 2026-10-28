@@ -294,9 +294,17 @@ const routes = {
     const trainingDataConsent = user.trainingDataConsent?.accepted === true
       && user.trainingDataConsent?.version === TRAINING_CONSENT_VERSION;
     json(res, 200, {
-      user: { id: user.id, name: user.name, admin: isAdmin(user), trainingDataConsent },
+      user: { id: user.id, name: user.name, admin: isAdmin(user), trainingDataConsent, tutorialSeenAt: user.tutorialSeenAt || null },
       state: trainingDataConsent ? readState(user.id) : null,
     });
+  },
+
+  'PUT /api/tutorial/seen': async (req, res) => {
+    const user = readSession(req);
+    if (!user) return json(res, 401, { error: 'not signed in' });
+    user.tutorialSeenAt ||= new Date().toISOString();
+    saveDb();
+    json(res, 200, { tutorialSeenAt: user.tutorialSeenAt });
   },
 
   // Exchange a Supabase Auth access token for the app's existing HttpOnly session cookie.
@@ -354,9 +362,16 @@ const routes = {
     // Preserve the explicit optional choice already recorded during sign-up, including
     // accounts that had to confirm their email before the app could create a server session.
     const acceptedAt = metadata.gymbook_sensitive_training_consent_at;
+    const consentVersion = metadata.gymbook_sensitive_training_consent_version;
+    const consentTextVersion = metadata.gymbook_sensitive_training_consent_text_version;
+    const currentConsentMetadata = consentVersion === TRAINING_CONSENT_VERSION
+      && consentTextVersion === TRAINING_CONSENT_VERSION;
+    // Older client builds mistakenly recorded data-consent versions using the
+    // terms version (1.9). Preserve those timestamped explicit choices when the
+    // account is opened on another device, then normalize the profile to 1.7.
+    const legacyConsentMetadata = consentVersion === '1.9' && consentTextVersion === '1.9';
     if (!user.trainingDataConsent && metadata.gymbook_sensitive_training_consent === true
-        && metadata.gymbook_sensitive_training_consent_version === TRAINING_CONSENT_VERSION
-        && metadata.gymbook_sensitive_training_consent_text_version === TRAINING_CONSENT_VERSION
+        && (currentConsentMetadata || legacyConsentMetadata)
         && typeof acceptedAt === 'string' && Number.isFinite(Date.parse(acceptedAt))) {
       user.trainingDataConsent = {
         accepted: true,
@@ -368,7 +383,7 @@ const routes = {
     const trainingDataConsent = user.trainingDataConsent?.accepted === true
       && user.trainingDataConsent?.version === TRAINING_CONSENT_VERSION;
     json(res, 200, {
-      user: { id: user.id, name: user.name, admin: isAdmin(user), trainingDataConsent },
+      user: { id: user.id, name: user.name, admin: isAdmin(user), trainingDataConsent, tutorialSeenAt: metadata.gymbook_tutorial_seen_at || user.tutorialSeenAt || null },
       state: trainingDataConsent ? readState(user.id) : null,
     }, { 'Set-Cookie': sessionCookie(user) });
   },
@@ -444,6 +459,7 @@ const routes = {
       id: user.id, name: user.name, admin: isAdmin(user),
       trainingDataConsent: user.trainingDataConsent?.accepted === true
         && user.trainingDataConsent?.version === TRAINING_CONSENT_VERSION,
+      tutorialSeenAt: user.tutorialSeenAt || null,
     } }, { 'Set-Cookie': sessionCookie(user) });
   },
 
@@ -487,6 +503,7 @@ const routes = {
       id: user.id, name: user.name, admin: isAdmin(user),
       trainingDataConsent: user.trainingDataConsent?.accepted === true
         && user.trainingDataConsent?.version === TRAINING_CONSENT_VERSION,
+      tutorialSeenAt: user.tutorialSeenAt || null,
     } }, { 'Set-Cookie': sessionCookie(user) });
   },
 

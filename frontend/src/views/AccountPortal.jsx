@@ -4,7 +4,7 @@ import Icon from '../components/Icon.jsx'
 import { getLang, LANGS, setLang, t, useLang } from '../lib/i18n.js'
 import { DEF } from '../store/useStore.js'
 import { getAuthSession, processOAuthCallback, signInWithEmail, signInWithGoogle, signOutSupabase, updateAuthUserMetadata } from '../lib/supabaseAuth.js'
-import { LEGAL_VERSION, legalConsentMetadata, needsLegalSetup } from '../lib/legalConsent.js'
+import { TRAINING_DATA_CONSENT_VERSION, hasTrainingDataConsent, legalConsentMetadata, needsLegalSetup } from '../lib/legalConsent.js'
 import { loadCloudBackup, saveCloudBackup, setCloudBackupConsent } from '../lib/supabaseBackup.js'
 import { mergePlan } from '../lib/plan-share.js'
 import { createTrainingFile, parseTrainingFile, trainingFileText, TRAINING_FILE_MAX_BYTES } from '../lib/training-file.js'
@@ -118,8 +118,8 @@ export default function AccountPortal() {
     try {
       const updated = await updateAuthUserMetadata({ ...metadata,
         gymbook_sensitive_training_consent: true,
-        gymbook_sensitive_training_consent_version: LEGAL_VERSION,
-        gymbook_sensitive_training_consent_text_version: LEGAL_VERSION,
+        gymbook_sensitive_training_consent_version: TRAINING_DATA_CONSENT_VERSION,
+        gymbook_sensitive_training_consent_text_version: TRAINING_DATA_CONSENT_VERSION,
         gymbook_sensitive_training_consent_at: new Date().toISOString(),
       })
       await setCloudBackupConsent(true)
@@ -187,8 +187,7 @@ export default function AccountPortal() {
   const user = session?.user
   const metadata = user?.user_metadata || {}
   const currentTerms = !needsLegalSetup(user)
-  const hasBackupConsent = metadata.gymbook_sensitive_training_consent === true
-    && metadata.gymbook_sensitive_training_consent_version === LEGAL_VERSION
+  const hasBackupConsent = hasTrainingDataConsent(metadata)
 
   return <main className="account-page" key={languageVersion}>
     <div className="account-top-actions"><button className="account-back" onClick={() => navigate('/')}><Icon name="chevronLeft" /> {L('Back to Gym Book Training', 'Volver a Gym Book Training')}</button><label className="account-language"><Icon name="globe" /><select aria-label={L('Language', 'Idioma')} value={language} onChange={event => { localStorage.setItem('gymbook_site_lang', event.target.value); void setLang(event.target.value) }}>{Object.entries(LANGS).map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></label></div>

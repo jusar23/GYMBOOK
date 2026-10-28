@@ -15,7 +15,7 @@ import { api, createAppSessionWithSupabase, webauthnOK, passkeyLogin, passkeyReg
 
 import { deleteSupabaseAccount, getAuthSession, updateAuthUserMetadata } from '../lib/supabaseAuth.js'
 import { loadCloudBackup, saveCloudBackup, setCloudBackupConsent } from '../lib/supabaseBackup.js'
-import { LEGAL_VERSION } from '../lib/legalConsent.js'
+import { TRAINING_DATA_CONSENT_VERSION } from '../lib/legalConsent.js'
 import { mergePlan } from '../lib/plan-share.js'
 import { parseTrainingFile, trainingFileText } from '../lib/training-file.js'
 import { openSubscriptionManagement } from '../lib/subscription.js'
@@ -29,7 +29,7 @@ import { t, LANGS, INSTR_LANGS } from '../lib/i18n.js'
 
 import { DEMO } from '../lib/demo.js'
 
-import { ANDROID_APP, MOBILE, clearNativeRestTimer, requestRestNotificationPermission, setNativeRestTimer, shareExport, syncReminder } from '../lib/mobile.js'
+import { ANDROID_APP, MOBILE, clearNativeRestTimer, requestRestNotificationPermission, requestStreakWidgetPin, setNativeRestTimer, shareExport, syncReminder } from '../lib/mobile.js'
 
 import { loadStarterPlan, confirmSheet, importFromApp } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
@@ -114,6 +114,12 @@ export default function Settings() {
   const [cloudBusy, setCloudBusy] = useState(false)
   const [accountDeleting, setAccountDeleting] = useState(false)
   const [trainingConsentBusy, setTrainingConsentBusy] = useState(false)
+  const [widgetMessage, setWidgetMessage] = useState('')
+
+  const addStreakWidget = async () => {
+    const pinned = await requestStreakWidgetPin()
+    setWidgetMessage(t(pinned ? 'Confirm the Android prompt to add the streak widget.' : 'This launcher does not support pinning. Add the widget from Android’s widget picker.'))
+  }
 
   useEffect(() => {
     const scrollY = location.state?.restoreScrollY
@@ -127,8 +133,8 @@ export default function Settings() {
     const metadata = session.user.user_metadata || {}
     const updated = await updateAuthUserMetadata({ ...metadata,
       gymbook_sensitive_training_consent: true,
-      gymbook_sensitive_training_consent_version: LEGAL_VERSION,
-      gymbook_sensitive_training_consent_text_version: LEGAL_VERSION,
+      gymbook_sensitive_training_consent_version: TRAINING_DATA_CONSENT_VERSION,
+      gymbook_sensitive_training_consent_text_version: TRAINING_DATA_CONSENT_VERSION,
       gymbook_sensitive_training_consent_at: new Date().toISOString(),
     })
     await setCloudBackupConsent(true)
@@ -163,8 +169,8 @@ export default function Settings() {
                 const metadata = session?.user?.user_metadata || {}
                 const updated = await updateAuthUserMetadata({ ...metadata,
                   gymbook_sensitive_training_consent: false,
-                  gymbook_sensitive_training_consent_version: LEGAL_VERSION,
-                  gymbook_sensitive_training_consent_text_version: LEGAL_VERSION,
+                  gymbook_sensitive_training_consent_version: TRAINING_DATA_CONSENT_VERSION,
+                  gymbook_sensitive_training_consent_text_version: TRAINING_DATA_CONSENT_VERSION,
                   gymbook_sensitive_training_consent_revoked_at: new Date().toISOString(),
                 })
                 setUser({ ...user, email: updated.email, trainingDataConsent: false })
@@ -188,6 +194,16 @@ export default function Settings() {
     } catch (e) {
       toast(e.message || t('Could not update server-sync consent'))
     } finally { setTrainingConsentBusy(false) }
+  }
+
+  const changeAppLanguage = async language => {
+    update(state => { state.lang = language })
+    try {
+      const session = await getAuthSession()
+      if (session?.user) {
+        await updateAuthUserMetadata({ ...(session.user.user_metadata || {}), gymbook_language: language })
+      }
+    } catch { /* Keep the device preference even if account sync is temporarily unavailable. */ }
   }
 
   const showAccountNotice = (title, message, success = false) => useUI.getState().openSheet(close => (
@@ -443,7 +459,7 @@ export default function Settings() {
 
         icon="globe" iconTint="var(--blue)" title={t('Language')}
 
-        value={S.lang || 'en'} onChange={v => update(s => { s.lang = v })}
+        value={S.lang || 'en'} onChange={changeAppLanguage}
 
         options={Object.entries(LANGS).map(([k, name]) => ({
 
@@ -624,7 +640,15 @@ export default function Settings() {
 
         </div>)}
 
-      </div>
+      </div>
+
+      {ANDROID_APP && <Row icon="fire" iconTint="var(--acc)" title={t('Streak widget')}
+        subtitle={t('Add your workout streak to the Android home screen.')}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          <Button size="sm" variant="tinted" icon="plus" onClick={addStreakWidget}>{t('Add widget')}</Button>
+          {widgetMessage && <span className="small muted" style={{ maxWidth: 220, textAlign: 'right' }}>{widgetMessage}</span>}
+        </div>
+      </Row>}
 
     </Section>
 

@@ -51,13 +51,14 @@
     <li>Your browser will ask whether it may install apps — allow it. This is standard for
         any app installed outside the Play Store (called <i>sideloading</i>), and you can
         revoke the permission right after.</li>
-    <li>Open the downloaded <code>openGym.apk</code>, confirm, done. No account, no setup.</li>
+    <li>Open the downloaded <code>openGym.apk</code> and create an account. The Android app is free to use for one month after registration; after that, choose a monthly or annual plan to continue.</li>
   </ol>
-  <div class="note">openGym is deliberately <b>not</b> on the Play Store — no store account
-    between you and an open-source app. The APK is signed; updates install over the old
+  <div class="note">The Google Play release is being prepared. Until it is available, use the
+    signed APK download. Updates install over the old
     version and keep your data.</div>
-  <p>Everything is stored on the phone itself. The only things fetched from the internet are
-     the exercise images and animations (from a CDN, on demand).</p>
+  <p>Training data stays on the phone unless you authorize an optional server backup.
+     Sign-in and subscription checks need an internet connection. Exercise images and
+     animations are packaged in the app for offline workouts.</p>
 
   <h2 id="iphone">Use on iPhone</h2>
   <p>Apple does not allow installing apps outside the App Store, so there is no iOS download —
@@ -123,16 +124,15 @@ docker compose up -d</code></pre>
 
   <h2 id="faq">FAQ</h2>
   <h3>Is it really free?</h3>
-  <p>Yes — free as in cost <i>and</i> as in freedom (AGPL-3.0). No pro tier, no locked
-     features, no ads, and the license keeps every fork open source too.</p>
+  <p>The self-hosted edition is free and open source under AGPL-3.0. The Android app includes
+     one month of access after registration, then offers monthly or annual subscriptions.
+     There are no ads, and the license keeps every fork open source too.</p>
   <h3>What data does openGym collect?</h3>
-  <p>None. There is no telemetry, no analytics, no crash reporting. The mobile app's only
-     network traffic is fetching exercise media from a CDN; a self-hosted instance talks only
-     to your own server.</p>
+  <p>There are no ads or crash-reporting SDKs. The Android app uses Supabase for account
+     sign-in and optional workout backups, and RevenueCat/Google Play for subscription status
+     and purchases. A self-hosted instance stores data on your own server.</p>
   <h3>Why isn't it on the Play Store / App Store?</h3>
-  <p>By choice (and on iOS, by Apple's rules for sideloading). Store accounts cost money,
-     impose terms that sit badly with the AGPL, and put a gatekeeper between you and an app
-     whose whole point is that your data is yours.</p>
+  <p>The Google Play release is being prepared. There is no iOS App Store release at this time.</p>
   <h3>Mobile app or self-hosted — which one should I pick?</h3>
   <p>If you just want to track your training: the mobile app. If you want your data on your
      own hardware, synced across devices, with profiles for the people you train with: self-host.

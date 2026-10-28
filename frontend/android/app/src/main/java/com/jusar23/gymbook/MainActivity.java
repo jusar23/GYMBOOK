@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(WorkoutOrientationPlugin.class);
         registerPlugin(TimerAudioPlugin.class);
         registerPlugin(RestNotificationPlugin.class);
+        registerPlugin(StreakWidgetPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
