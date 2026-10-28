@@ -32,9 +32,10 @@ Signing in alone does not copy workout data from the old web deployment.
 
 ## Prerequisites
 
-- Node 20+
-- **Android:** Android Studio (bundles the SDK). Java 21 for Gradle.
-- **iOS:** a Mac with Xcode 15+ and CocoaPods (`brew install cocoapods`). A free Apple ID
+- Node 22+
+- **Android:** Android Studio Otter 2025.2.1+, Android SDK Platform 36 and build tools
+  (bundled through SDK Manager). Java 21 for Gradle.
+- **iOS:** a Mac with Xcode 26+ and CocoaPods (`brew install cocoapods`). A free Apple ID
   is enough to run the app on your own iPhone (see below); paid membership is only needed
   for App Store distribution, which openGym doesn't do.
 
@@ -57,27 +58,20 @@ into both native projects — re-run it after every web-code change before build
 
 ## App icons & splash screens
 
-`frontend/resources/icon.svg` is the 1024×1024 source (the app's dumbbell glyph on the
-app background). Generate all platform assets from it on a machine with the tooling:
+The Android and iOS icon and splash assets are checked into their native projects. The
+optional `@capacitor/assets` generator is not included in the app toolchain; update those
+assets with a separately reviewed image workflow if the branding changes.
 
-```sh
-cd frontend
-npx @capacitor/assets generate --iconBackgroundColor '#0c0e12' --splashBackgroundColor '#0c0e12'
-```
+## Distribution
 
-(If the generator won't take the SVG directly, export it to `resources/icon.png` at
-1024×1024 first — any image tool can do it.)
-
-## Distribution — deliberately no app stores
-
-openGym's mobile app is not on the Play Store or App Store, and that's a choice: no store
-accounts, no store rules, no yearly fees between you and an open-source app.
+GYMBOOK is being prepared for Google Play distribution. Before release, use the current
+Play Console requirements, complete the health-app and Data safety declarations, publish
+the account deletion page, and configure a private upload keystore outside the repository.
 
 ### Android — sideload the APK
 
-The official signed APK is at **[opengym.duarte-santos.ch](https://opengym.duarte-santos.ch)**.
-Android asks you to allow installs from the browser the first time — that's standard for any
-app outside the Play Store.
+For local installation, build a debug APK with `./gradlew assembleDebug`. For Play Console,
+build a release AAB and sign it with the upload keystore configured outside the repository.
 
 To build and sign your own:
 
@@ -110,7 +104,7 @@ that would simply install. Your free options:
 - Bump `versionName`/`versionCode` in `android/app/build.gradle` per release; keep them in
   step with `frontend/package.json`. `versionCode` must strictly increase or updates won't
   install over an existing APK.
-- **License:** openGym is AGPL-3.0, which by itself sits badly with app-store terms of
+- **License:** the project is AGPL-3.0, which by itself sits badly with app-store terms of
   service. `NOTICE.md` carries an app-store exception (an additional permission under
   AGPL §7) granted by the copyright holder — relevant only if store distribution ever happens.
 - The app requests notification permission only when the workout-day reminder is switched

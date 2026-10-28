@@ -13,6 +13,7 @@ const GUIDE = [
   { icon: 'checkCircle', nav: 'Reps', title: 'guide.log.title', text: 'guide.log.text', hint: 'guide.log.hint' },
   { icon: 'check', nav: 'Finish workout', title: 'guide.finish.title', text: 'guide.finish.text', hint: 'guide.finish.hint' },
   { icon: 'chart', nav: 'Stats', title: 'guide.stats.title', text: 'guide.stats.text', hint: 'guide.stats.hint' },
+  { icon: 'history', nav: 'History', title: 'guide.history.title', text: 'guide.history.text', hint: 'guide.history.hint' },
   { icon: 'gear', nav: 'Settings', title: 'guide.settings.title', text: 'guide.settings.text', hint: 'guide.settings.hint' },
 ]
 

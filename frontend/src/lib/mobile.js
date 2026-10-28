@@ -15,19 +15,19 @@ import { Capacitor } from '@capacitor/core'
 export const MOBILE = import.meta.env.MODE === 'mobile' || import.meta.env.VITE_MOBILE === '1'
 export const ANDROID_APP = MOBILE && Capacitor.getPlatform() === 'android'
 
-let restBubblePlugin
-async function getRestBubblePlugin() {
+let restNotificationPlugin
+async function getRestNotificationPlugin() {
   if (!ANDROID_APP) return null
-  if (!restBubblePlugin) {
+  if (!restNotificationPlugin) {
     const { registerPlugin } = await import('@capacitor/core')
-    restBubblePlugin = registerPlugin('RestBubble')
+    restNotificationPlugin = registerPlugin('RestNotification')
   }
-  return restBubblePlugin
+  return restNotificationPlugin
 }
 
 export async function setNativeRestTimer(options) {
   try {
-    const plugin = await getRestBubblePlugin()
+    const plugin = await getRestNotificationPlugin()
     if (!plugin) return false
     await plugin.setRestTimer(options)
     return true
@@ -35,30 +35,24 @@ export async function setNativeRestTimer(options) {
 }
 
 export async function clearNativeRestTimer() {
-  try { const plugin = await getRestBubblePlugin(); await plugin?.clearRestTimer() } catch { /* Native timer is optional. */ }
+  try { const plugin = await getRestNotificationPlugin(); await plugin?.clearRestTimer() } catch { /* Native timer is optional. */ }
 }
 
-export async function requestRestBubblePermission() {
+export async function requestRestNotificationPermission() {
   try {
-    const plugin = await getRestBubblePlugin()
-    if (!plugin) return false
-    const result = await plugin.requestOverlayPermission()
-    return !!result.granted
+    if (!ANDROID_APP) return false
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    let result = await LocalNotifications.checkPermissions()
+    if (result.display !== 'granted') result = await LocalNotifications.requestPermissions()
+    return result.display === 'granted'
   } catch { return false }
 }
 
-export async function listenRestBubblePermission(onChange) {
-  const plugin = await getRestBubblePlugin()
+export async function listenRestNotificationEvents(onFinished) {
+  const plugin = await getRestNotificationPlugin()
   if (!plugin) return null
-  return plugin.addListener('overlayPermissionChanged', result => onChange(!!result.granted))
-}
-
-export async function listenRestBubbleEvents(onContinue, onFinished) {
-  const plugin = await getRestBubblePlugin()
-  if (!plugin) return null
-  const continueHandle = await plugin.addListener('continueRest', onContinue)
   const finishedHandle = await plugin.addListener('restFinished', onFinished)
-  return { remove: () => { continueHandle.remove(); finishedHandle.remove() } }
+  return { remove: () => finishedHandle.remove() }
 }
 
 const FILE = 'opengym-state.json'

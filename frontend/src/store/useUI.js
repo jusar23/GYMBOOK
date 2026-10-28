@@ -5,6 +5,7 @@ import { api } from '../lib/api.js'
 import { t } from '../lib/i18n.js'
 import { ANDROID_APP, MOBILE, clearNativeRestTimer, setNativeRestTimer } from '../lib/mobile.js'
 import { useStore } from './useStore.js'
+import { EXIDX } from '../lib/exercises.js'
 
 // Fire-and-forget: lets the server push a "rest over" alert if this tab gets suspended
 // before the local timer completes. No-ops for guests / offline.
@@ -18,6 +19,21 @@ let nativeRestCleanup = null
 let workInt = null
 let workTick = null
 let workDone = null
+
+const restNotificationOptions = (endsAt, settings, recent) => {
+  const S = useStore.getState().S
+  const entry = recent && S.active?.entries?.[recent.entryIdx]
+  const set = entry?.sets?.[recent.setIdx]
+  const name = entry ? (EXIDX[entry.id]?.n || entry.id) : ''
+  const values = []
+  if (Number.isFinite(set?.w)) values.push(`${set.w} ${entry.weightUnit || S.unit}`)
+  if (Number.isFinite(set?.r)) values.push(`× ${set.r}`)
+  return {
+    endsAt: String(endsAt), sound: !!settings.sound, tone: settings.soundTone || 'classic',
+    title: t('Rest timer'), detail: name ? `${name}${values.length ? ` · ${values.join(' ')}` : ''}` : t('Rest'),
+    adjustLabel: t('Adjust last set'),
+  }
+}
 
 export const useUI = create((set, get) => ({
   sheets: [],          // { id, render:(close)=>JSX, kind:'sheet'|'center'|'full', locked }
@@ -51,9 +67,9 @@ export const useUI = create((set, get) => ({
     const duration = Math.min(360, Math.max(1, Math.round(Number(sec) || 1)))
     const endsAt = Date.now() + duration * 1000
     const settings = useStore.getState().S
-    const nativeAlert = ANDROID_APP && !!settings.restBubble
+    const nativeAlert = ANDROID_APP && !!settings.restNotification
     set({ timer: { left: duration, total: duration, endsAt, nativeAlert } })
-    if (nativeAlert) setNativeRestTimer({ endsAt: String(endsAt), sound: !!settings.sound, tone: settings.soundTone || 'classic', continueLabel: t('Continue') })
+    if (nativeAlert) setNativeRestTimer(restNotificationOptions(endsAt, settings, get().recentSet))
     pushRestTimer(duration)
     timerTick = () => {
       const tm = get().timer
@@ -101,7 +117,7 @@ export const useUI = create((set, get) => ({
     set({ timer: updated })
     if (tm.nativeAlert) {
       const settings = useStore.getState().S
-      setNativeRestTimer({ endsAt: String(updated.endsAt), sound: !!settings.sound, tone: settings.soundTone || 'classic', continueLabel: t('Continue') })
+      setNativeRestTimer(restNotificationOptions(updated.endsAt, settings, get().recentSet))
     }
     pushRestTimer(left)
   },

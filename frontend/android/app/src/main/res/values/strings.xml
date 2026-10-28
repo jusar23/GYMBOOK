@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">GYMBOOKtraining</string>
-    <string name="title_activity_main">GYMBOOKtraining</string>
+    <string name="app_name">GYMBOOK Training</string>
+    <string name="title_activity_main">GYMBOOK Training</string>
     <string name="package_name">com.jusar23.gymbook</string>
     <string name="custom_url_scheme">com.jusar23.gymbook</string>
+    <string name="rest_timer_channel_name">Rest timer</string>
 </resources>

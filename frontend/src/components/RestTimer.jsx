@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useUI } from '../store/useUI.js'
 import { useStore } from '../store/useStore.js'
-import { listenRestBubbleEvents } from '../lib/mobile.js'
+import { listenRestNotificationEvents } from '../lib/mobile.js'
 import { playTimerTone } from '../lib/sound.js'
 import { t } from '../lib/i18n.js'
 import { Button, NumberField } from './ui.jsx'
@@ -84,8 +84,7 @@ export default function RestTimer() {
   useEffect(() => {
     let mounted = true
     let listener = null
-    listenRestBubbleEvents(
-      () => useUI.getState().stopRest(),
+    listenRestNotificationEvents(
       event => {
         const ui = useUI.getState()
         if (ui.timer) {

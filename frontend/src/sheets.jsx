@@ -863,39 +863,10 @@ export function WorkoutRow({ w, onClick }) {
 /* ============================ workout lifecycle ============================ */
 export function startFlow(routineId) {
   bwSheet({ required: true, onDone: bw => {
-    warmupSheet(routineId, bw)
-  } })
-}
-function WarmupPrompt({ routineId, bw, close }) {
-  const [remaining, setRemaining] = useState(300)
-  const advanced = useRef(false)
-  const continueToPicker = () => {
-    if (advanced.current) return
-    advanced.current = true
-    close()
     const routine = routineId ? S().routines.find(x => x.id === routineId) : null
     if (routine?.ex?.length) exerciseStartSheet(routineId, bw)
     else beginWorkout(routineId, bw)
-  }
-  useEffect(() => {
-    if (remaining <= 0) { continueToPicker(); return }
-    const timer = setTimeout(() => setRemaining(value => Math.max(0, value - 1)), 1000)
-    return () => clearTimeout(timer)
-  }, [remaining])
-  const change = amount => setRemaining(value => Math.max(0, Math.min(1800, value + amount)))
-  return <>
-    <h3>{t('Warm-up recommendation')}</h3>
-    <p className="muted">{t('Take a few minutes to warm up before lifting. This timer is a recommendation; use a warm-up that suits you.')}</p>
-    <div className="bw-read" style={{ textAlign: 'center', fontSize: 42, margin: '16px 0' }}>{fmtSec(remaining)}</div>
-    <div className="row between">
-      <Button icon="minus" onClick={() => change(-30)}>{t('30 seconds')}</Button>
-      <Button icon="plus" onClick={() => change(30)}>{t('30 seconds')}</Button>
-    </div>
-    <div style={{ height: 10 }} /><Button variant="primary" onClick={continueToPicker}>{t('Choose starting exercise')}</Button>
-  </>
-}
-export function warmupSheet(routineId, bw) {
-  ui().openSheet(close => <WarmupPrompt routineId={routineId} bw={bw} close={close} />)
+  } })
 }
 function ExerciseStartPicker({ routineId, bw, close }) {
   const routine = useStore(s => s.S.routines.find(x => x.id === routineId))
@@ -947,7 +918,11 @@ export function beginWorkout(routineId, bw, selectedIndex = 0) {
     }
   }
   update(s => {
-    s.active = { id: uid(), d: todayISO(), start: Date.now(), routineId, name: r ? r.name : t('Freestyle'), bw: bw || null, cur: 0, entries }
+    const startedAt = Date.now()
+    s.active = {
+      id: uid(), d: todayISO(), start: startedAt, routineId, name: r ? r.name : t('Freestyle'), bw: bw || null, cur: 0, entries,
+      ...(st.warmupEnabled ? { warmupStage: { total: 300, endsAt: startedAt + 300000 } } : {}),
+    }
   })
   useUI.getState().stopRest()
   nav('/workout')

@@ -8,7 +8,7 @@ import { fmtNum, fmtDate, todayISO, exCount, DAYN } from '../lib/format.js'
 import { beep, vibrate } from '../lib/sound.js'
 import { t } from '../lib/i18n.js'
 import { api } from '../lib/api.js'
-import Media from '../components/Media.jsx'
+import Media, { Thumb } from '../components/Media.jsx'
 import { startFlow, exercisePicker, exConfigSheet, exerciseDetailSheet, topWeightSheet, finishWorkout, workoutCompleteSheet, nextWorkoutExerciseSheet, confirmSheet } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
 import { Button, Check, NumberField, Segmented } from '../components/ui.jsx'
@@ -130,8 +130,8 @@ function ExerciseBlock({ entryIdx, compact, focusMode = false, onToggle, onToggl
   )
   return <>
     {!focusMode && <Media ex={ex} key={entry.id} compact={compact} minimizable />}
-    <div className="row between" style={{ marginBottom: 6 }}>
-      <div style={{ fontSize: compact ? 17 : 20, fontWeight: 600, letterSpacing: '-.02em', textTransform: 'capitalize', lineHeight: 1.2 }}>{ex.n}</div>
+    <div className="row between workout-exercise-heading" style={{ marginBottom: 6 }}>
+      <div className="row workout-exercise-name"><Thumb ex={ex} eager /><div style={{ fontSize: compact ? 17 : 20, fontWeight: 600, letterSpacing: '-.02em', textTransform: 'capitalize', lineHeight: 1.2 }}>{ex.n}</div></div>
       <div className="row" style={{ gap: 6 }}>
         {!cardio && <div style={{ width: 104 }}><Segmented options={[{ value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' }]} value={weightUnit} onChange={onUnitChange} /></div>}
         <button className="iconbtn" aria-label={t('Details')} onClick={() => exerciseDetailSheet(ex, { initialUnit: weightUnit, onUnitChange })}><Icon name="info" /></button>
@@ -456,7 +456,65 @@ function ActiveWorkout() {
   </div>
 }
 
+function WorkoutWarmup({ active }) {
+  const stage = active.warmupStage
+  const nav = useNavigate()
+  const update = useStore(s => s.update)
+  const [remaining, setRemaining] = useState(() => Math.max(0, Math.ceil((stage.endsAt - Date.now()) / 1000)))
+  const finishWarmup = () => update(state => {
+    if (state.active?.warmupStage?.endsAt === stage.endsAt) state.active.warmupStage = null
+  })
+
+  useEffect(() => {
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((stage.endsAt - Date.now()) / 1000))
+      setRemaining(left)
+      if (left === 0) useStore.getState().update(state => {
+        if (state.active?.warmupStage?.endsAt === stage.endsAt) state.active.warmupStage = null
+      })
+    }
+    tick()
+    const timer = setInterval(tick, 1000)
+    return () => clearInterval(timer)
+  }, [stage.endsAt])
+
+  const adjust = amount => update(state => {
+    const current = state.active?.warmupStage
+    if (!current) return
+    current.total = Math.max(0, Math.min(1800, current.total + amount))
+    current.endsAt += amount * 1000
+  })
+  const total = Math.max(1, stage.total || 300)
+  const progress = Math.max(0, Math.min(100, remaining / total * 100))
+
+  return <div className="narrow active-workout workout-warmup-stage">
+    <div className="hdr">
+      <button className="iconbtn" aria-label={t('Discard')} onClick={() => confirmSheet({
+        title: t('Discard workout?'), message: t('The sets you logged in this session will be lost.'),
+        confirmText: t('Discard'), danger: true,
+        onConfirm: () => { update(state => { state.active = null }); nav('/home') },
+      })}><Icon name="xmark" /></button>
+      <div style={{ textAlign: 'center' }}><div style={{ fontWeight: 600 }}>{t('Warm-up')}</div><div className="sub"><Elapsed start={active.start} /> · {active.name}</div></div>
+      <div style={{ width: 38 }} />
+    </div>
+    <div className="warmup-stage-content">
+      <div className="warmup-copy">
+        <h1>{t('Prepare for your workout')}</h1>
+        <p className="muted">{t('Warm up at your own pace. Your workout timer has already started.')}</p>
+      </div>
+      <div className="warmup-clock" role="timer" aria-live="off">{fmtSec(remaining)}</div>
+      <div className="warmup-progress"><i style={{ width: `${progress}%` }} /></div>
+      <div className="row between warmup-adjust">
+        <Button icon="minus" onClick={() => adjust(-30)}>{t('30 seconds')}</Button>
+        <Button icon="plus" onClick={() => adjust(30)}>{t('30 seconds')}</Button>
+      </div>
+      <Button variant="primary" icon="play" onClick={finishWarmup}>{t('Start workout')}</Button>
+    </div>
+  </div>
+}
+
 export default function Workout() {
   const active = useStore(s => s.S.active)
-  return active ? <ActiveWorkout /> : <StartChooser />
+  if (!active) return <StartChooser />
+  return active.warmupStage ? <WorkoutWarmup key={active.warmupStage.endsAt} active={active} /> : <ActiveWorkout />
 }

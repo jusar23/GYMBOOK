@@ -36,9 +36,9 @@ export default function Media({ ex, id, compact, minimizable }) {
   )
 }
 
-export function Thumb({ ex }) {
+export function Thumb({ ex, eager = false }) {
   const body = useStore(s => s.S.body === 'female' ? 'female' : 'male')
   const img = imgSrc(ex, body)
   if (!img) return <div className="thumb thumb-x"><Icon name="dumbbell" /></div>
-  return <img className="thumb" loading="lazy" decoding="async" src={img} alt="" />
+  return <img className="thumb" loading={eager ? 'eager' : 'lazy'} decoding="async" src={img} alt="" />
 }

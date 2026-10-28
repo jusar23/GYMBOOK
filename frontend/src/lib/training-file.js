@@ -5,7 +5,7 @@ export const TRAINING_FILE_VERSION = 1
 export const TRAINING_FILE_MAX_BYTES = 10 * 1024 * 1024
 
 const STATE_KEYS = new Set([
-  'unit', 'restSec', 'sound', 'keepAwake', 'lockOrientation', 'warmupEnabled', 'lang', 'theme', 'accent', 'body', 'targetW',
+  'unit', 'restSec', 'sideRestSec', 'sound', 'soundTone', 'restNotification', 'restBubble', 'keepAwake', 'lockOrientation', 'warmupEnabled', 'lang', 'theme', 'accent', 'body', 'targetW',
   'bodyweight', 'routines', 'week', 'dayPlan', 'exWeights', 'workouts', 'customEx',
   'favoriteEx', 'favoritesMigrated', 'gifSize', 'reminder', 'effort', 'showRir', 'active', '_ts',
 ])
@@ -25,13 +25,13 @@ function validateState(state) {
   assert(isRecord(state.week || {}) && isRecord(state.dayPlan || {}) && isRecord(state.exWeights || {}), 'The training settings are invalid.')
   assert(Array.isArray(state.customEx || []) && (state.customEx || []).length <= 2000, 'The custom exercise list is invalid or too large.')
   assert(Array.isArray(state.favoriteEx || []) && (state.favoriteEx || []).length <= 10000, 'The favorites list is invalid or too large.')
-  for (const key of ['unit', 'lang', 'theme', 'accent', 'body', 'gifSize']) {
+  for (const key of ['unit', 'soundTone', 'lang', 'theme', 'accent', 'body', 'gifSize']) {
     if (state[key] != null) assert(isText(state[key], 32), `The setting (${key}) is invalid.`)
   }
-  for (const key of ['sound', 'keepAwake', 'lockOrientation', 'warmupEnabled', 'favoritesMigrated', 'showRir']) {
+  for (const key of ['sound', 'restNotification', 'restBubble', 'keepAwake', 'lockOrientation', 'warmupEnabled', 'favoritesMigrated', 'showRir']) {
     if (state[key] != null) assert(typeof state[key] === 'boolean', `The setting (${key}) is invalid.`)
   }
-  for (const key of ['restSec', 'targetW']) {
+  for (const key of ['restSec', 'sideRestSec', 'targetW']) {
     if (state[key] != null) assert(isFiniteNumber(state[key]) && state[key] >= 0 && state[key] <= 100000, `The setting (${key}) is invalid.`)
   }
   for (const [day, routineId] of Object.entries(state.week || {})) {
@@ -146,6 +146,8 @@ export function parseTrainingFile(raw, { allowLegacy = true } = {}) {
     return { kind: 'routines', data: plan, legacy: false }
   }
   const data = { ...validateState(file.data), active: null }
+  if (data.restNotification == null) data.restNotification = data.restBubble === true
+  delete data.restBubble
   delete data._ts
   return { kind: 'history', data, legacy: false }
 }

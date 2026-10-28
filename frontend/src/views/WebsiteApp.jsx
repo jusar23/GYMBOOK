@@ -5,6 +5,7 @@ import Website from './Website.jsx'
 const AccountPortal = lazy(() => import('./AccountPortal.jsx'))
 
 const Legal = lazy(() => import('./Legal.jsx'))
+const DeleteAccount = lazy(() => import('./DeleteAccount.jsx'))
 
 export default function WebsiteApp() {
   useEffect(() => {
@@ -16,6 +17,7 @@ export default function WebsiteApp() {
   }, [])
   return <HashRouter><Routes>
     <Route path="/account" element={<Suspense fallback={<div className="site-loading">Loading your account…</div>}><AccountPortal /></Suspense>} />
+    <Route path="/delete-account" element={<Suspense fallback={<div className="site-loading">Loading…</div>}><DeleteAccount /></Suspense>} />
     <Route path="/legal/*" element={<Suspense fallback={<div className="site-loading">Cargando información legal…</div>}><Legal /></Suspense>} />
     <Route path="*" element={<Website />} />
   </Routes></HashRouter>

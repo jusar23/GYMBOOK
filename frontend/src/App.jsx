@@ -19,7 +19,7 @@ import Login from './views/Login.jsx'
 import { MOBILE } from './lib/mobile.js'
 import { NATIVE_OAUTH_REDIRECT, processOAuthCallback } from './lib/supabaseAuth.js'
 import { needsLegalSetup } from './lib/legalConsent.js'
-import { openTutorial, tutorialSeenKey } from './components/Tutorial.jsx'
+import { openOnboarding, onboardingSeenKey } from './components/Onboarding.jsx'
 import SubscriptionGate from './views/SubscriptionGate.jsx'
 import { refreshNativeSubscription } from './lib/subscription.js'
 import { setWorkoutOrientationLocked } from './lib/workout-orientation.js'
@@ -37,6 +37,7 @@ const Legal = lazy(() => import('./views/Legal.jsx'))
 
 bindUI(useUI)
 const MAIN_TABS = new Set(['/home', '/plan', '/workout', '/stats', '/library'])
+const DEFAULT_ROUTE = MOBILE ? '/workout' : '/home'
 
 function accentTextColor(hex) {
   const channels = hex.match(/[\da-f]{2}/gi).map(value => parseInt(value, 16) / 255)
@@ -77,7 +78,7 @@ function Shell() {
     : { configured: false, status: 'unconfigured', granted: true, packages: [] })
   const isGuest = useStore(s => s.isGuest())
   const langV = useLang()
-  const tutorialOpenedFor = useRef('')
+  const onboardingOpenedFor = useRef('')
   const checkSubscription = useCallback(async () => {
     if (!MOBILE || !user?.id || user.needsLegalSetup) {
       setSubscription({ configured: false, status: 'unconfigured', granted: true, packages: [] })
@@ -131,13 +132,13 @@ function Shell() {
 
   useEffect(() => {
     if (!MOBILE || !ready || !user?.id || user.needsLegalSetup) return
+    if (subscription.configured && (!subscription.granted || subscription.status === 'loading')) return
     if (hasTrainingHistory) return
-    const key = tutorialSeenKey(user.id)
-    if (tutorialOpenedFor.current === user.id || localStorage.getItem(key) === '1') return
-    tutorialOpenedFor.current = user.id
-    localStorage.setItem(key, '1')
-    openTutorial()
-  }, [ready, user?.id, user?.needsLegalSetup, hasTrainingHistory])
+    const key = onboardingSeenKey(user.id)
+    if (onboardingOpenedFor.current === user.id || localStorage.getItem(key)) return
+    onboardingOpenedFor.current = user.id
+    openOnboarding()
+  }, [ready, user?.id, user?.needsLegalSetup, hasTrainingHistory, subscription.configured, subscription.granted, subscription.status])
 
   if (signingOut) return (
     <div id="app">
@@ -182,7 +183,7 @@ function Shell() {
 
         <ErrorBoundary>
           {loginRoute
-            ? (user && !user.needsLegalSetup ? <Navigate to="/home" replace /> : <Login legalSetup={!!user?.needsLegalSetup} />)
+            ? (user && !user.needsLegalSetup ? <Navigate to={DEFAULT_ROUTE} replace /> : <Login legalSetup={!!user?.needsLegalSetup} />)
             : user?.needsLegalSetup
               ? <Login legalSetup />
             : MOBILE && !!user?.id && subscription.configured && (!subscription.granted || subscription.status === 'loading')
@@ -201,7 +202,7 @@ function Shell() {
                     <Route path="/library" element={<Library />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/admin" element={user?.admin ? <Admin /> : <Navigate to="/home" replace />} />
-                    <Route path="*" element={<Navigate to="/home" replace />} />
+                    <Route path="*" element={<Navigate to={DEFAULT_ROUTE} replace />} />
                   </Routes>
                 </Suspense>
               )}
@@ -242,6 +243,7 @@ export default function App() {
             id: authUser.id,
             email: authUser.email,
             name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
+            dateOfBirth: authUser.user_metadata?.date_of_birth || '',
             needsLegalSetup: needsLegalSetup(authUser),
           })
         }

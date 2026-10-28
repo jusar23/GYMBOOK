@@ -9,6 +9,7 @@ import { useUI } from '../store/useUI.js'
 import { ACCENTS, todayISO, localTZ } from '../lib/format.js'
 
 import { effortOf, fmtSec } from '../lib/history.js'
+import { EXIDX } from '../lib/exercises.js'
 
 import { api, createAppSessionWithSupabase, webauthnOK, passkeyLogin, passkeyRegister, IS_ANDROID } from '../lib/api.js'
 
@@ -28,7 +29,7 @@ import { t, LANGS, INSTR_LANGS } from '../lib/i18n.js'
 
 import { DEMO } from '../lib/demo.js'
 
-import { ANDROID_APP, MOBILE, listenRestBubblePermission, requestRestBubblePermission, shareExport, syncReminder } from '../lib/mobile.js'
+import { ANDROID_APP, MOBILE, clearNativeRestTimer, requestRestNotificationPermission, setNativeRestTimer, shareExport, syncReminder } from '../lib/mobile.js'
 
 import { loadStarterPlan, confirmSheet, importFromApp } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
@@ -38,6 +39,29 @@ const ACCENT_TONES = [
   { id: 'vivid', label: 'Vivid' },
   { id: 'light-intense', label: 'Light intense' },
 ]
+
+async function syncActiveRestNotification() {
+  const { S } = useStore.getState()
+  const { timer, recentSet } = useUI.getState()
+  if (!ANDROID_APP || !S.restNotification || !timer) {
+    await clearNativeRestTimer()
+    return
+  }
+  const entry = recentSet && S.active?.entries?.[recentSet.entryIdx]
+  const set = entry?.sets?.[recentSet.setIdx]
+  const name = entry ? (EXIDX[entry.id]?.n || entry.id) : ''
+  const values = []
+  if (Number.isFinite(set?.w)) values.push(`${set.w} ${entry.weightUnit || S.unit}`)
+  if (Number.isFinite(set?.r)) values.push(`× ${set.r}`)
+  await setNativeRestTimer({
+    endsAt: String(timer.endsAt),
+    sound: !!S.sound,
+    tone: S.soundTone || 'classic',
+    title: t('Rest timer'),
+    detail: name ? `${name}${values.length ? ` · ${values.join(' ')}` : ''}` : t('Rest'),
+    adjustLabel: t('Adjust last set'),
+  })
+}
 
 import { Section, Row, SelectRow, Switch, Segmented, Button, TextField } from '../components/ui.jsx'
 
@@ -96,23 +120,6 @@ export default function Settings() {
     if (!Number.isFinite(scrollY)) return
     requestAnimationFrame(() => window.scrollTo(0, scrollY))
   }, [location.key, location.state?.restoreScrollY])
-
-  useEffect(() => {
-    if (!ANDROID_APP) return
-    let mounted = true
-    let listener = null
-    listenRestBubblePermission(granted => {
-      if (!mounted) return
-      if (!granted && useStore.getState().S.restBubble) {
-        update(s => { s.restBubble = false })
-        toast(t('Allow Gymbook to display over other apps to use the rest bubble.'))
-      }
-    }).then(handle => {
-      if (mounted) listener = handle
-      else handle?.remove()
-    })
-    return () => { mounted = false; listener?.remove() }
-  }, [update, toast])
 
   const saveTrainingDataConsent = async () => {
     const session = await getAuthSession()
@@ -262,7 +269,7 @@ export default function Settings() {
 
     if (MOBILE) {
 
-      try { await shareExport(json, name); toast(t('Backup exported')) } catch (e) { /* share sheet dismissed */ }
+      try { await shareExport(json, name); toast(t('Backup exported')) } catch (e) { if (e?.message !== 'Share canceled') toast(t('Export failed: {0}', e.message || 'Unknown error')) }
 
       return
 
@@ -331,6 +338,10 @@ export default function Settings() {
       } catch (e) { toast(t('Import failed: {0}', e.message)) }
 
     }
+
+    rd.onerror = () => toast(t('Import failed: {0}', rd.error?.message || 'Could not read the selected file.'))
+
+    rd.onloadend = () => { ev.target.value = '' }
 
     rd.readAsText(f)
 
@@ -481,12 +492,17 @@ export default function Settings() {
           playTimerTone(true, v, 'countdown')
         }} />}
 
-      {ANDROID_APP && <Row icon="clock" iconTint="var(--teal)" title={t('Rest bubble over other apps')}
-        subtitle={t('Show the movable rest timer when you switch to another app.')}>
-        <Switch checked={!!S.restBubble} onChange={async enabled => {
-          update(s => { s.restBubble = enabled })
+      {ANDROID_APP && <Row icon="clock" iconTint="var(--teal)" title={t('Rest timer notification')}
+        subtitle={t('Show the countdown and last set when you switch apps.')}>
+        <Switch checked={!!S.restNotification} onChange={async enabled => {
           if (enabled) {
-            await requestRestBubblePermission()
+            const granted = await requestRestNotificationPermission()
+            if (!granted) { toast(t('Allow notifications to show the rest timer.')); return }
+            update(s => { s.restNotification = true })
+            await syncActiveRestNotification()
+          } else {
+            update(s => { s.restNotification = false })
+            await clearNativeRestTimer()
           }
         }} />
       </Row>}
@@ -513,8 +529,8 @@ export default function Settings() {
         value={S.sideRestSec ?? 30} onChange={v => update(s => { s.sideRestSec = v })}
         options={Array.from({ length: 6 }, (_, i) => (i + 1) * 30).map(v => ({ value: v, label: fmtSec(v) }))} />
 
-      <Row icon="dumbbell" iconTint="var(--orange)" title={t('Approach set')}
-        subtitle={t('Add a separate half-weight approach set to the first exercise of a workout.') }>
+      <Row icon="dumbbell" iconTint="var(--orange)" title={t('Warm-up timer and approach set')}
+        subtitle={t('Start workouts with a full-screen warm-up and a half-weight approach set.') }>
         <Switch checked={!!S.warmupEnabled} onChange={v => update(s => { s.warmupEnabled = v })} />
       </Row>
 

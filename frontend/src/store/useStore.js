@@ -7,13 +7,14 @@ import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
 import { MOBILE, nativeLoad, nativeSave, nativeClear, syncReminder } from '../lib/mobile.js'
 import { getCloudBackupConsent } from '../lib/supabaseBackup.js'
 import { needsLegalSetup } from '../lib/legalConsent.js'
+import { ageFromDateOfBirth } from '../lib/routine-recommendation.js'
 
 const KEY = 'gym_state_v1'
 const SIGNED_OUT_KEY = 'gym_signed_out_v1'
 const timeoutSignal = ms => typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
   ? AbortSignal.timeout(ms) : undefined
 export const DEF = {
-  unit: 'kg', restSec: 90, sideRestSec: 30, warmupEnabled: false, sound: true, soundTone: 'classic', restBubble: false, keepAwake: true, lockOrientation: false, lang: 'en',
+  unit: 'kg', restSec: 90, sideRestSec: 30, warmupEnabled: false, sound: true, soundTone: 'classic', restNotification: false, keepAwake: true, lockOrientation: false, lang: 'en',
   theme: 'dark', accent: 'lime', body: 'male', targetW: null,
   bodyweight: [], routines: [], week: {}, dayPlan: {},
   exWeights: {}, workouts: [], active: null, customEx: [], favoriteEx: [], favoritesMigrated: false, gifSize: 'full',
@@ -28,9 +29,9 @@ const clone = o => JSON.parse(JSON.stringify(o))
 function loadState() {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return migratePerSideRoutines(migrateChosenExercises(Object.assign(clone(DEF), JSON.parse(raw))))
+    if (raw) return migrateRestNotification(migratePerSideRoutines(migrateChosenExercises(Object.assign(clone(DEF), JSON.parse(raw)))))
   } catch (e) { /* ignore */ }
-  return migratePerSideRoutines(migrateChosenExercises(clone(DEF)))
+  return migrateRestNotification(migratePerSideRoutines(migrateChosenExercises(clone(DEF))))
 }
 
 // Older routines stored both limbs' reps as one even total (`side: true`). Convert only
@@ -56,6 +57,12 @@ function migrateChosenExercises(state) {
   ;(state.active?.entries || []).forEach(e => e.id && favorites.add(e.id))
   state.favoriteEx = [...favorites]
   state.favoritesMigrated = true
+  return state
+}
+
+function migrateRestNotification(state) {
+  if (state.restNotification == null) state.restNotification = false
+  delete state.restBubble
   return state
 }
 
@@ -92,6 +99,7 @@ export const useStore = create((set, get) => {
     const reminderChanged = MOBILE && reminderConfig(get().S) !== reminderConfig(S)
     migrateChosenExercises(S)
     migratePerSideRoutines(S)
+    migrateRestNotification(S)
     S._ts = Date.now()
     registerCustom(S.customEx)
     localStorage.setItem(KEY, JSON.stringify(S))
@@ -164,7 +172,13 @@ export const useStore = create((set, get) => {
     setGuest(v) { if (v) localStorage.setItem('gym_guest', '1'); else localStorage.removeItem('gym_guest'); set({}) },
 
     setUser(u) {
-      if (u) { localStorage.setItem('gym_user', JSON.stringify(u)); localStorage.removeItem('gym_guest'); localStorage.removeItem(SIGNED_OUT_KEY) }
+      if (u) {
+        const { dateOfBirth, ...userFields } = u
+        const user = { ...userFields, age: u.age ?? ageFromDateOfBirth(dateOfBirth) }
+        localStorage.setItem('gym_user', JSON.stringify(user)); localStorage.removeItem('gym_guest'); localStorage.removeItem(SIGNED_OUT_KEY)
+        set({ user })
+        return
+      }
       else localStorage.removeItem('gym_user')
       set({ user: u })
     },
@@ -296,6 +310,7 @@ export const useStore = create((set, get) => {
             id: authUser.id,
             email: authUser.email,
             name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
+            dateOfBirth: authUser.user_metadata?.date_of_birth || '',
             needsLegalSetup: needsLegalSetup(authUser),
             trainingDataConsent,
           })
@@ -334,6 +349,7 @@ export const useStore = create((set, get) => {
         get().setUser({
           id: authUser.id, email: authUser.email,
           name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
+          dateOfBirth: authUser.user_metadata?.date_of_birth || '',
           needsLegalSetup: true,
         })
         set({ ready: true, signingIn: false })

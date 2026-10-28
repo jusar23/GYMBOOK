@@ -5,6 +5,7 @@ import { cancelPasswordRecovery, clearPendingRecoveryCode, createEmailAccount, g
 import { t } from '../lib/i18n.js'
 import { countryOptions } from '../lib/countries.js'
 import { legalConsentMetadata, needsLegalSetup } from '../lib/legalConsent.js'
+import { ageFromDateOfBirth } from '../lib/routine-recommendation.js'
 import { LegalContent } from './Legal.jsx'
 import { DEMO } from '../lib/demo.js'
 import { MOBILE } from '../lib/mobile.js'
@@ -133,6 +134,7 @@ export default function Login({ legalSetup = false }) {
         id: authUser.id,
         email: authUser.email,
         name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
+        dateOfBirth: authUser.user_metadata?.date_of_birth || '',
         needsLegalSetup: needsSetup,
       })
       clearPendingRecoveryCode()
@@ -144,6 +146,7 @@ export default function Login({ legalSetup = false }) {
       setUser({
         id: authUser.id, email: authUser.email,
         name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
+        dateOfBirth: authUser.user_metadata?.date_of_birth || '',
         needsLegalSetup: true,
       })
       clearPendingRecoveryCode()
@@ -189,7 +192,12 @@ export default function Login({ legalSetup = false }) {
       } else if (legalSetup) {
         const legalMetadata = validatedLegalMetadata()
         const authUser = await updateAuthUserMetadata(legalMetadata)
-        let currentUser = { ...useStore.getState().user, needsLegalSetup: needsLegalSetup(authUser) }
+        let currentUser = {
+          ...useStore.getState().user,
+          dateOfBirth: authUser.user_metadata?.date_of_birth || '',
+          age: ageFromDateOfBirth(authUser.user_metadata?.date_of_birth),
+          needsLegalSetup: needsLegalSetup(authUser),
+        }
         if (!MOBILE) {
           const session = await getAuthSession()
           if (!session?.access_token) throw new Error(t('Please sign in again to finish setting up your account.'))
@@ -203,7 +211,7 @@ export default function Login({ legalSetup = false }) {
           await pullState(trainingDataAccepted ? undefined : result.state, trainingDataAccepted ? false : Object.hasOwn(result, 'state'), true)
         }
         setUser(currentUser)
-        navigate('/home', { replace: true })
+        navigate(MOBILE ? '/workout' : '/home', { replace: true })
       } else {
         await finishLogin(await signInWithEmail({ email, password }))
       }

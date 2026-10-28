@@ -10,7 +10,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 
-/** Soft, short notification-stream chimes shared by the in-app timer and rest bubble. */
+/** Soft, short notification-stream chimes shared by the in-app timer and rest notification. */
 final class NotificationChime {
     private static final int RATE = 44100;
     private static final Handler HANDLER = new Handler(Looper.getMainLooper());
