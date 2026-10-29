@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getLang, LANGS, useLang, setLang } from '../lib/i18n.js'
 import Icon from '../components/Icon.jsx'
 import Brand from '../components/Brand.jsx'
+import { getAuthSession } from '../lib/supabaseAuth.js'
 import { WEBSITE_COPY } from './websiteCopy.js'
 import './Website.css'
 
@@ -21,6 +22,13 @@ function safeSocialUrl(value) {
     const url = new URL(value)
     return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : ''
   } catch { return '' }
+}
+
+function SiteBrand() {
+  return <span className="site-brand-lockup" role="img" aria-label="GYMBOOK training">
+    <img className="site-brand-symbol" src="/icons/icon-192.webp" alt="" />
+    <span className="site-brand-name"><strong>GYMBOOK</strong><small>training</small></span>
+  </span>
 }
 const EXTRA_FEATURES = {
   en: [
@@ -194,15 +202,37 @@ export default function Website() {
 
   const featureCopy = [...copy.features[4], ...(EXTRA_FEATURES[language] || EXTRA_FEATURES.en)]
   const phone = copy.phone
+  const [siteUser, setSiteUser] = useState(null)
+  const [contactCategory, setContactCategory] = useState('support')
+  const [contactSubject, setContactSubject] = useState('')
+  const [contactMessage, setContactMessage] = useState('')
+
+  useEffect(() => {
+    let current = true
+    void getAuthSession().then(session => { if (current) setSiteUser(session?.user || null) }).catch(() => {})
+    return () => { current = false }
+  }, [])
+
+  const sendContact = event => {
+    event.preventDefault()
+    const categories = {
+      support: language === 'es' ? 'Soporte' : 'Support',
+      contact: language === 'es' ? 'Contacto' : 'Contact',
+      admin: 'Admin',
+      suggestions: language === 'es' ? 'Sugerencias' : 'Suggestions',
+    }
+    const subject = `[${categories[contactCategory]}] ${contactSubject.trim()}`
+    const body = `${language === 'es' ? 'Cuenta' : 'Account'}: ${siteUser?.email || ''}\n\n${contactMessage.trim()}`
+    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  }
 
   return <div className="site">
     <header className="site-nav">
-      <a className="site-brand" href="#inicio" aria-label="GYMBOOK training, home"><Brand /></a>
+      <a className="site-brand" href="#inicio" aria-label="GYMBOOK training, home"><SiteBrand /></a>
       <nav aria-label={copy.nav[0]}>
         <a href="#funciones">{copy.nav[0]}</a>
         <a href="#legal">{copy.nav[1]}</a>
         <a href="#contacto">{copy.nav[2]}</a>
-        <a className="site-account-link" href="/?app=1">{language === 'es' ? 'Abrir la app web' : 'Open web app'}</a>
         <a className="site-account-link" href="/#/account">{language === 'es' ? 'Iniciar sesión' : 'Sign in'}</a>
       </nav>
       <div className="site-nav-actions">
@@ -224,7 +254,6 @@ export default function Website() {
           <h1>{copy.hero[1]}<br /><span>{copy.hero[2]}</span></h1>
           <p>{copy.hero[3]}</p>
           <div className="site-hero-actions">
-            <a className="site-button primary" href="/?app=1"><Icon name="dumbbell" /> {language === 'es' ? 'Entrenar en la web' : 'Train on the web'}</a>
             {downloadButton('site-button primary', copy.download[3])}
             <a className="site-text-link" href="#funciones">{copy.hero[4]} <Icon name="arrowDown" /></a>
           </div>
@@ -280,7 +309,6 @@ export default function Website() {
         <span className="site-eyebrow">{copy.download[0]}</span>
         <h2>{copy.download[1]}</h2>
         <p>{copy.download[2]}</p>
-        <a className="site-button primary" href="/?app=1"><Icon name="dumbbell" /> {language === 'es' ? 'Abrir la app web' : 'Open the web app'}</a>
         {downloadButton('site-button primary', copy.download[3])}
         <small>{copy.download[4]}</small>
       </section>
@@ -294,7 +322,23 @@ export default function Website() {
 
       <section className="site-contact" id="contacto">
         <span className="site-eyebrow">{copy.contact[0]}</span><h2>{copy.contact[1]}</h2><p>{copy.contact[2]}</p>
-        <a className="site-contact-link" href={`mailto:${CONTACT_EMAIL}`}><Icon name="link" />{CONTACT_EMAIL}<Icon name="arrowUp" /></a>
+        {siteUser
+          ? <form className="site-contact-form" onSubmit={sendContact}>
+            <label>{language === 'es' ? 'Área' : 'Department'}
+              <select value={contactCategory} onChange={event => setContactCategory(event.target.value)}>
+                <option value="support">{language === 'es' ? 'Soporte' : 'Support'}</option>
+                <option value="contact">{language === 'es' ? 'Contacto' : 'Contact'}</option>
+                <option value="admin">Admin</option>
+                <option value="suggestions">{language === 'es' ? 'Sugerencias' : 'Suggestions'}</option>
+              </select>
+            </label>
+            <label>{language === 'es' ? 'Tu correo de cuenta' : 'Account email'}<input type="email" value={siteUser.email || ''} readOnly /></label>
+            <label>{language === 'es' ? 'Asunto' : 'Subject'}<input value={contactSubject} onChange={event => setContactSubject(event.target.value)} maxLength={120} required /></label>
+            <label className="site-contact-message">{language === 'es' ? 'Mensaje' : 'Message'}<textarea value={contactMessage} onChange={event => setContactMessage(event.target.value)} rows={5} maxLength={5000} required /></label>
+            <button className="site-button primary" type="submit"><Icon name="link" />{language === 'es' ? 'Preparar correo' : 'Compose email'}</button>
+            <small>{language === 'es' ? 'Se abrirá tu aplicación de correo para que revises y envíes el mensaje.' : 'Your email app will open so you can review and send the message.'}</small>
+          </form>
+          : <div className="site-contact-gate"><Icon name="lock" /><span>{language === 'es' ? 'Inicia sesión para escribir al equipo.' : 'Sign in to contact the team.'}</span><a className="site-button primary" href="/#/account">{language === 'es' ? 'Iniciar sesión' : 'Sign in'}</a></div>}
         <div className="site-social-section">
           <span className="site-social-heading">{copy.contact[3]}</span>
           <div className="site-social-grid">
@@ -310,6 +354,6 @@ export default function Website() {
       </section>
     </main>
 
-    <footer className="site-footer"><a className="site-brand" href="#inicio" aria-label="GYMBOOK training, home"><Brand /></a><span>{copy.footer[0]}</span><div><a href="#legal">{copy.footer[1]}</a><a href="#contacto">{copy.nav[2]}</a><span>© {new Date().getFullYear()} GYMBOOK</span></div></footer>
+    <footer className="site-footer"><a className="site-brand" href="#inicio" aria-label="GYMBOOK training, home"><SiteBrand /></a><span>{copy.footer[0]}</span><div><a href="#legal">{copy.footer[1]}</a><a href="#contacto">{copy.nav[2]}</a><span>© {new Date().getFullYear()} GYMBOOK</span></div></footer>
   </div>
 }
