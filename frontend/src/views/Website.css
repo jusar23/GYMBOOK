@@ -125,6 +125,15 @@
 .site-contact-link .icn:last-child{width:13px;height:13px;margin-left:9px;color:#777}
 .site-social-note{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;color:#77777e;font-size:10px}
 .site-social-note span+span{padding:4px 8px;border:1px solid var(--site-line);border-radius:99px;color:#aaaab0}
+.site-social-section{margin:24px auto 0;display:grid;justify-items:center;gap:12px}
+.site-social-heading{color:#a4a4ab;font-size:12px}
+.site-social-grid{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.site-social-link{width:104px;min-height:90px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1px solid var(--site-line);border-radius:16px;background:#121414;color:#c8f169!important;text-decoration:none;transition:transform .16s ease,border-color .16s ease,background .16s ease}
+.site-social-link[href]:hover{transform:translateY(-3px);border-color:rgba(200,241,105,.42);background:#181b16}
+.site-social-link>.icn{width:23px;height:23px}
+.site-social-link>span{color:#f4f4ef;font-size:12px;font-weight:600}
+.site-social-link>small{color:#83838a;font-size:9px}
+.site-social-link.is-unavailable{opacity:.72;cursor:default}
 .site-footer{max-width:var(--site-max);margin:auto;padding:20px 28px 26px;border-top:1px solid var(--site-line);display:flex;align-items:center;gap:20px;color:#808087;font-size:10px}
 .site-footer .site-brand{color:#f8f8f6;font-size:16px}
 .site-footer .site-brand .brand-lockup{gap:.4em}

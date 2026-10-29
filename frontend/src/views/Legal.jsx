@@ -20,11 +20,11 @@ const ADDRESS = 'El Carmen de Viboral, Antioquia, Colombia'
 // Teléfono de contacto (recomendado por la normativa colombiana). Si lo dejas vacío no se muestra.
 const PHONE = '' // Completa este dato antes de publicar si corresponde a tu canal de contacto
 
-const VERSION = '1.9'
+const VERSION = '1.10'
 
-const UPDATED_EN = '28 October 2026'
+const UPDATED_EN = '29 October 2026'
 
-const UPDATED_ES = '28 de octubre de 2026'
+const UPDATED_ES = '29 de octubre de 2026'
 
 // Pon en true SOLO cuando exista el botón "Eliminar cuenta" dentro de la app (exigido por Google Play y Apple).
 const ACCOUNT_DELETION_IN_APP = true
@@ -130,7 +130,9 @@ const COPY = {
 
       ['International processing', 'Supabase, Google, RevenueCat, and the hosting or network providers used by the relevant feature may process data outside Colombia, including in the United States or other countries where they or their subprocessors operate. Cross-border processing is limited to the purposes described here and is subject to the providers’ applicable safeguards and Colombian data-protection requirements. The Android app’s exercise images are bundled with the app; it does not request them from a media CDN.'],
 
-      ['Local storage and server backups', 'Workout history and settings are stored on your device. If you separately authorize processing of workout data, the app sends one updated backup to Supabase after each completed workout; restoration is started manually. Withdrawing authorization stops future uploads and blocks access to the existing server copy while authorization is off; that copy remains until you request deletion or delete your account. Clearing app data or uninstalling may erase the local copy.'],
+      ['Android workout notification and widget', 'During an active workout, the app can show a persistent notification with the current exercise and a rest countdown. The widget displays the current streak and completed training days using local workout history and the selected language. These features process data on the device and do not add a category of data sent to the server.'],
+
+      ['Local storage and server backups', 'Workout history and settings are stored on your device. On Android, if you separately authorize processing of workout data, the app replaces your previous Supabase backup with a current copy after each completed workout; it includes app preferences (such as language, sounds and rest duration), routines, exercise data and workout history. You can also save or restore a server copy manually. Restoring replaces local app settings and training data with the latest server copy. JSON exports can include settings, routines, exercise data and training history. Withdrawing authorization stops future uploads and blocks access to the existing server copy while authorization is off; that copy remains until you request deletion or delete your account. Clearing app data or uninstalling may erase the local copy.'],
 
       ['Minors', 'Gym Book Training is intended for people over 18 and is not directed at children or teenagers. We do not knowingly collect data from minors. If we learn that a minor has created an account, we will delete the account and its data. If you believe a minor is using the app, write to us at the email above.'],
 
@@ -260,7 +262,9 @@ const COPY = {
 
       ['Tratamiento internacional', 'Supabase, Google, RevenueCat y los proveedores de alojamiento o red que usa cada función pueden tratar datos fuera de Colombia, incluido Estados Unidos u otros países donde ellos o sus subencargados operen. El tratamiento se limita a las finalidades aquí descritas y se sujeta a las garantías aplicables de cada proveedor y a la normativa colombiana. Las imágenes de ejercicios del APK Android vienen incluidas en la app; no se solicitan a un CDN de medios.'],
 
-      ['Almacenamiento local y copias en el servidor', 'El historial de entrenamiento y la configuración se guardan en tu dispositivo. Si autorizas por separado el tratamiento de datos de entrenamiento, la app envía una copia actualizada a Supabase al terminar cada entrenamiento; la restauración se inicia manualmente. Revocar la autorización detiene futuras subidas y bloquea el acceso a la copia existente mientras esté desactivada; la copia permanece hasta que solicites su eliminación o elimines tu cuenta. Borrar los datos de la app o desinstalarla puede eliminar la copia local.'],
+      ['Notificaciones y widget Android', 'Durante un entrenamiento en curso, la app puede mostrar una notificación persistente con el ejercicio activo y, durante el descanso, una cuenta regresiva. El widget muestra la racha y los días de entrenamiento completados usando el historial local y el idioma configurado. Estas funciones procesan los datos en el dispositivo; no añaden una categoría de datos transmitidos al servidor.'],
+
+      ['Almacenamiento local y copias en el servidor', 'El historial de entrenamiento y la configuración se guardan en tu dispositivo. En Android, si autorizas por separado el tratamiento de datos de entrenamiento, la app reemplaza la copia anterior de Supabase con una copia actualizada al terminar cada entrenamiento. Incluye preferencias de la app (como idioma, sonidos y tiempo de descanso), rutinas, datos de ejercicios e historial. También puedes guardar o restaurar una copia manualmente. La restauración reemplaza la configuración y los datos de entrenamiento locales con la copia más reciente del servidor. Las exportaciones JSON pueden incluir configuración, rutinas, datos de ejercicios e historial. Revocar la autorización detiene futuras subidas y bloquea el acceso a la copia existente mientras esté desactivada; la copia permanece hasta que solicites su eliminación o elimines tu cuenta. Borrar los datos de la app o desinstalarla puede eliminar la copia local.'],
 
       ['Menores de edad', 'Gym Book Training está dirigida a personas mayores de 18 años y no a niños, niñas o adolescentes. No recopilamos a sabiendas datos de menores. Si detectamos que un menor creó una cuenta, la eliminaremos junto con sus datos. Si crees que un menor usa la app, escríbenos al correo indicado.'],
 
