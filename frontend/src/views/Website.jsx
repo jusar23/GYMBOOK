@@ -25,7 +25,7 @@ function safeSocialUrl(value) {
 
 function SiteBrand() {
   return <span className="site-brand-lockup" role="img" aria-label="GYMBOOK training">
-    <img className="site-brand-symbol" src="/icons/icon-192.webp" alt="" />
+    <Icon className="site-brand-symbol" name="dumbbell" />
     <span className="site-brand-name"><strong>GYMBOOK</strong><small>training</small></span>
   </span>
 }
