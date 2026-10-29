@@ -58,6 +58,7 @@ public class StreakWidgetProvider extends AppWidgetProvider {
         Set<String> workoutDates = data.workouts;
         JSONObject week = data.week;
         JSONObject dayPlan = data.dayPlan;
+        Set<String> routineIds = getRoutineIds(prefs);
         int muted = Color.rgb(135, 143, 153);
 
         for (int i = 0; i < 7; i++) {
@@ -66,7 +67,7 @@ public class StreakWidgetProvider extends AppWidgetProvider {
             String iso = formatDate(day);
             String label = labels.optString(i, new String[] {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"}[i]);
             boolean trained = workoutDates.contains(iso);
-            boolean planned = isPlanned(dayPlan, week, iso, day.get(Calendar.DAY_OF_WEEK) - 1);
+            boolean planned = isPlanned(dayPlan, week, routineIds, iso, day.get(Calendar.DAY_OF_WEEK) - 1);
             int labelId = dayLabelId(i);
             int markId = dayMarkId(i);
             views.setTextViewText(labelId, label);
@@ -86,6 +87,7 @@ public class StreakWidgetProvider extends AppWidgetProvider {
     private static StreakData calculate(SharedPreferences prefs) {
         JSONObject week = parseObject(prefs.getString("week", "{}"));
         JSONObject dayPlan = parseObject(prefs.getString("dayPlan", "{}"));
+        Set<String> routineIds = getRoutineIds(prefs);
         Set<String> workouts = new HashSet<>();
         JSONArray workoutDates = parseArray(prefs.getString("workoutDates", "[]"));
         for (int i = 0; i < workoutDates.length(); i++) {
@@ -110,7 +112,7 @@ public class StreakWidgetProvider extends AppWidgetProvider {
             day.add(Calendar.DATE, -offset);
             String iso = formatDate(day);
             if (iso.equals(today) || workouts.contains(iso)) continue;
-            boolean planned = isPlanned(dayPlan, week, iso, day.get(Calendar.DAY_OF_WEEK) - 1);
+            boolean planned = isPlanned(dayPlan, week, routineIds, iso, day.get(Calendar.DAY_OF_WEEK) - 1);
             if (!planned) continue;
 
             String weekKey = weekStart(day);
@@ -127,16 +129,25 @@ public class StreakWidgetProvider extends AppWidgetProvider {
         return new StreakData(streak, shieldWeeks.contains(currentWeek), workouts, week, dayPlan);
     }
 
-    private static boolean isPlanned(JSONObject dayPlan, JSONObject week, String iso, int weekday) {
+    private static Set<String> getRoutineIds(SharedPreferences prefs) {
+        Set<String> ids = new HashSet<>();
+        JSONArray routines = parseArray(prefs.getString("routineIds", "[]"));
+        for (int i = 0; i < routines.length(); i++) {
+            String id = routines.optString(i, "");
+            if (!id.isEmpty()) ids.add(id);
+        }
+        return ids;
+    }
+
+    private static boolean isPlanned(JSONObject dayPlan, JSONObject week, Set<String> routineIds, String iso, int weekday) {
         if (dayPlan.has(iso)) {
             Object override = dayPlan.opt(iso);
-            if (override == null || JSONObject.NULL.equals(override)) return false;
-            String value = String.valueOf(override);
-            if ("rest".equals(value) || value.isEmpty()) return false;
-            return true;
+            if ("rest".equals(String.valueOf(override))) return false;
+            String value = override == null || JSONObject.NULL.equals(override) ? "" : String.valueOf(override);
+            if (routineIds.contains(value)) return true;
         }
         Object routine = week.opt(String.valueOf(weekday));
-        return routine != null && !JSONObject.NULL.equals(routine) && !String.valueOf(routine).isEmpty();
+        return routine != null && !JSONObject.NULL.equals(routine) && routineIds.contains(String.valueOf(routine));
     }
 
     private static String formatDate(Calendar date) {

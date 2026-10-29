@@ -7,7 +7,6 @@ import { lastEntryFor, bestWeightFor, buildSets, effectiveRoutineId, workoutVolu
 import { beep, vibrate } from './lib/sound.js'
 import { t, instrFor, getLang, INSTR_LANGS, loadInstructions, useLang } from './lib/i18n.js'
 import { nav } from './lib/nav.js'
-import { starterRoutines } from './lib/starter.js'
 import Media, { Thumb } from './components/Media.jsx'
 import Stepper from './components/Stepper.jsx'
 import Icon from './components/Icon.jsx'
@@ -19,7 +18,7 @@ import { parseImport, mergeImport } from './lib/import-csv.js'
 import { buildPlanBundle, parsePlan, mergePlan, printPlan } from './lib/plan-share.js'
 import { estimate1RM, best1RM, is1RMRecord, REP_CAP } from './lib/onerm.js'
 import { nextPrescription, applyPrescription, policyFor, defaultIncrement, POLICIES_FOR, POLICY_NAME, POLICY_DESC, MAX_BW_SETS } from './lib/progression.js'
-import { MOBILE, shareExport } from './lib/mobile.js'
+import { ANDROID_APP, MOBILE, requestRestNotificationPermission, shareExport, syncNativeWorkoutNotification } from './lib/mobile.js'
 import { convertWeight } from './lib/units.js'
 import { saveCloudBackup } from './lib/supabaseBackup.js'
 
@@ -42,16 +41,6 @@ function ConfirmDialog({ title, message, confirmText, cancelText, danger, onConf
 // Themed replacement for window.confirm — callback-based (no blocking).
 export function confirmSheet(opts) {
   ui().openSheet(close => <ConfirmDialog {...opts} close={close} />, { kind: 'center' })
-}
-
-/* ============================ starter plan ============================ */
-export function loadStarterPlan() {
-  const [push, pull, legs] = starterRoutines()
-  update(st => {
-    st.routines.push(push, pull, legs)
-    st.week[1] = push.id; st.week[3] = pull.id; st.week[5] = legs.id
-  })
-  toast(t('Starter plan loaded — Mon Push · Wed Pull · Fri Legs'))
 }
 
 /* ============================ weight picker (shared: body weight + goal) ============================ */
@@ -886,7 +875,12 @@ function ExerciseStartPicker({ routineId, bw, close }) {
 export function exerciseStartSheet(routineId, bw) {
   ui().openSheet(close => <ExerciseStartPicker routineId={routineId} bw={bw} close={close} />)
 }
-export function beginWorkout(routineId, bw, selectedIndex = 0) {
+export async function beginWorkout(routineId, bw, selectedIndex = 0) {
+  if (ANDROID_APP) {
+    const allowed = await requestRestNotificationPermission()
+    if (!allowed) toast(t('Enable notifications in Android settings to see your workout status.'))
+    else if (!S().restNotification) update(s => { s.restNotification = true }, false)
+  }
   const st = S()
   const r = routineId ? st.routines.find(x => x.id === routineId) : null
   // The prescription is applied as the session is built, so you walk up to the bar with the
@@ -924,6 +918,12 @@ export function beginWorkout(routineId, bw, selectedIndex = 0) {
       ...(st.warmupEnabled ? { warmupStage: { total: 300, endsAt: startedAt + 300000 } } : {}),
     }
   })
+  if (ANDROID_APP && S().restNotification) {
+    const active = S().active
+    const current = active?.entries?.[active.cur]
+    const posted = await syncNativeWorkoutNotification(S(), current ? (EXIDX[current.id]?.n || current.id) : '')
+    if (!posted) toast(t('The workout started, but Android did not display its notification. Enable notifications for GYMBOOK in Android settings.'))
+  }
   useUI.getState().stopRest()
   nav('/workout')
 }
@@ -1030,7 +1030,7 @@ function FinishSummary({ w, prs, e1prs = [], close, backupResult = null }) {
   const retryBackup = async () => {
     setBackupStatus('saving')
       try {
-        const result = await saveCloudBackup(st, { skipWithoutConsent: true })
+        const result = await saveCloudBackup(useStore.getState().S, { skipWithoutConsent: true })
         setBackupStatus(result.skipped ? 'skipped' : 'saved')
       }
     catch { setBackupStatus('failed') }

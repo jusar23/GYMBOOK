@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
 import { effectiveRoutine, effectiveRoutineId, streakSummary, lastBW, setsDoneActive } from '../lib/history.js'
-import { ANDROID_APP, requestStreakWidgetPin } from '../lib/mobile.js'
 import { fmtNum, fmtDate, todayISO, isoOf, weekKey, DAYS } from '../lib/format.js'
 import { t, dateLocale } from '../lib/i18n.js'
-import { bwSheet, goalSheet, dayOverrideSheet, calendarSheet, startFlow, loadStarterPlan, bwDeltaColor } from '../sheets.jsx'
+import { bwSheet, goalSheet, dayOverrideSheet, calendarSheet, startFlow, bwDeltaColor } from '../sheets.jsx'
+import { openOnboarding } from '../components/Onboarding.jsx'
 import LineChart from '../components/LineChart.jsx'
 import Icon from '../components/Icon.jsx'
 import { Button } from '../components/ui.jsx'
@@ -17,8 +17,6 @@ export default function Home() {
   const S = useStore(s => s.S)
   const user = useStore(s => s.user)
   const [weekOffset, setWeekOffset] = useState(0)
-  const [widgetMessage, setWidgetMessage] = useState('')
-  const [widgetBusy, setWidgetBusy] = useState(false)
 
   const today = new Date()
   const routine = effectiveRoutine(S, todayISO())
@@ -48,19 +46,6 @@ export default function Home() {
 
   // today's session shown right under the week strip
   const onToday = () => { if (S.active) nav('/workout'); else if (routine) startFlow(routine.id); else dayOverrideSheet(todayISO()) }
-  const addStreakWidget = async event => {
-    event.stopPropagation()
-    if (widgetBusy) return
-    setWidgetBusy(true)
-    setWidgetMessage('')
-    try {
-      const result = await requestStreakWidgetPin()
-      setWidgetMessage(t(result === 'requested'
-        ? 'Android is asking where to add the widget.'
-        : 'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.'))
-    } finally { setWidgetBusy(false) }
-  }
-
   return <div className="narrow">
     <div className="hdr">
       <div><h1>{user ? t('Hi {0}', user.name) : 'Gym Book Training'}</h1><div className="sub">{today.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</div></div>
@@ -96,7 +81,7 @@ export default function Home() {
           <div className="big" style={{ fontSize: 22 }}>{t('Welcome!')}</div>
         </div>
         <div className="muted small" style={{ marginBottom: 12 }}>{t('Set up your weekly routine to get going — or load a ready-made Push / Pull / Legs plan.')}</div>
-        <Button variant="primary" icon="sparkles" onClick={loadStarterPlan}>{t('Load starter plan (PPL)')}</Button>
+        <Button variant="primary" icon="sparkles" onClick={openOnboarding}>{t('Create my plan')}</Button>
         <div style={{ height: 8 }} /><Button onClick={() => nav('/plan')}>{t('Build my own plan')}</Button>
       </div>
     )}
@@ -146,9 +131,7 @@ export default function Home() {
       </div>
       <div className="row" style={{ gap: 8, marginTop: 10 }}>
         <Button size="sm" variant="tinted" icon="calendar" onClick={event => { event.stopPropagation(); nav('/plan') }}>{t('Schedule days')}</Button>
-        {ANDROID_APP && <Button size="sm" variant="plain" icon="plus" onClick={addStreakWidget} disabled={widgetBusy} aria-busy={widgetBusy}>{t('Add widget')}</Button>}
       </div>
-      {widgetMessage && <div className="small muted" role="status" style={{ marginTop: 7 }} onClick={event => event.stopPropagation()}>{widgetMessage}</div>}
     </div>
   </div>
 }

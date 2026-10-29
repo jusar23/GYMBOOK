@@ -24,6 +24,16 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="@string/custom_url_scheme" android:host="auth-callback" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="application/json" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" android:mimeType="application/json" />
+            </intent-filter>
         </activity>
 
         <receiver

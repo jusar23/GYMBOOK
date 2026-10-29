@@ -21,6 +21,11 @@ const restNotificationPlugin = registerPlugin('RestNotification')
 // Register this at module load like the other foreground native controls. Creating
 // the proxy only on first tap can race Capacitor's bridge setup on Android.
 const streakWidgetPlugin = registerPlugin('StreakWidget')
+const trainingFilePlugin = registerPlugin('TrainingFile')
+export async function readPendingTrainingFile() {
+  if (!ANDROID_APP) return null
+  return trainingFilePlugin.readPending()
+}
 async function getRestNotificationPlugin() {
   if (!ANDROID_APP) return null
   return restNotificationPlugin
@@ -40,28 +45,21 @@ export async function syncStreakWidget(S) {
       workoutDates: dates,
       week: S.week || {},
       dayPlan: S.dayPlan || {},
+      routineIds: (S.routines || []).map(routine => routine.id),
       accentColor: ACCENTS[S.accent]?.color || '#B8F36B',
       streakLabel: t('Daily streak'),
       shieldReady: t('Weekly shield ready'),
       shieldUsed: t('Weekly shield used'),
       // Intl uses the active app locale and abbreviates all seven days, even in
       // languages whose UI pack only translates a subset of the English day keys.
-      dayLabels: [1, 2, 3, 4, 5, 6, 0].map(day => {
-        const date = new Date(2024, 0, 1 + day, 12)
+      dayLabels: Array.from({ length: 7 }, (_, index) => {
+        // Jan 1, 2024 was a Monday; the native widget displays Monday first.
+        const date = new Date(2024, 0, 1 + index, 12)
         return new Intl.DateTimeFormat(dateLocale(), { weekday: 'short' }).format(date)
       }),
     })
     return true
   } catch { return false }
-}
-
-export async function requestStreakWidgetPin() {
-  try {
-    const plugin = await getStreakWidgetPlugin()
-    if (!plugin) return 'unavailable'
-    const result = await plugin.pin()
-    return result?.requested === true ? 'requested' : result?.supported === false ? 'unsupported' : 'failed'
-  } catch { return 'failed' }
 }
 
 async function clearStreakWidget() {
@@ -81,7 +79,7 @@ export async function clearNativeRestTimer() {
   try { const plugin = await getRestNotificationPlugin(); await plugin?.clearRestTimer() } catch { /* Native timer is optional. */ }
 }
 
-export async function syncNativeWorkoutNotification(S) {
+export async function syncNativeWorkoutNotification(S, currentExerciseName = '') {
   try {
     const plugin = await getRestNotificationPlugin()
     const active = S?.active
@@ -92,9 +90,10 @@ export async function syncNativeWorkoutNotification(S) {
     const entries = active.entries || []
     const total = entries.reduce((sum, entry) => sum + (entry.sets || []).length + (entry.warmupSet ? 1 : 0), 0)
     const done = entries.reduce((sum, entry) => sum + (entry.sets || []).filter(set => set.done).length + (entry.warmupSet?.done ? 1 : 0), 0)
+    const exerciseName = currentExerciseName ? t(currentExerciseName) : ''
     const detail = total
-      ? t('{0} · {1}/{2} sets', active.name || t('Workout in progress'), done, total)
-      : (active.name || t('Workout in progress'))
+      ? t('{0} · {1}/{2} sets', exerciseName || active.name || t('Workout in progress'), done, total)
+      : (exerciseName || active.name || t('Workout in progress'))
     await plugin.setWorkoutState({ title: t('Workout in progress'), detail })
     return true
   } catch { return false }

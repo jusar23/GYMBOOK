@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { api, createAppSessionWithSupabase } from '../lib/api.js'
 import { clearPendingRecoveryCode, getAuthSession, getPendingRecoveryCode, isPasswordRecovery, processOAuthCallback, signOutSupabase } from '../lib/supabaseAuth.js'
 import { localTZ } from '../lib/format.js'
-import { registerCustom } from '../lib/exercises.js'
+import { EXIDX, registerCustom } from '../lib/exercises.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
 import { MOBILE, nativeLoad, nativeSave, nativeClear, syncReminder, syncStreakWidget, syncNativeWorkoutNotification, clearNativeWorkoutNotification } from '../lib/mobile.js'
 import { getCloudBackupConsent } from '../lib/supabaseBackup.js'
@@ -67,6 +67,12 @@ function migrateRestNotification(state) {
   return state
 }
 
+const workoutExerciseName = S => {
+  const entries = S?.active?.entries || []
+  const current = entries[Math.min(Math.max(0, S.active?.cur || 0), Math.max(0, entries.length - 1))]
+  return current ? (EXIDX[current.id]?.n || current.id) : ''
+}
+
 const hasData = st => !!((st.workouts || []).length || (st.routines || []).length || (st.bodyweight || []).length)
 
 export const useStore = create((set, get) => {
@@ -125,7 +131,7 @@ export const useStore = create((set, get) => {
     }
     workoutNotificationTm = setTimeout(() => {
       workoutNotificationTm = null
-      void syncNativeWorkoutNotification(get().S)
+      void syncNativeWorkoutNotification(get().S, workoutExerciseName(get().S))
     }, 120)
   }
 
@@ -176,7 +182,7 @@ export const useStore = create((set, get) => {
     if (MOBILE && workoutNotificationTm) {
       clearTimeout(workoutNotificationTm)
       workoutNotificationTm = null
-      void syncNativeWorkoutNotification(get().S)
+      void syncNativeWorkoutNotification(get().S, workoutExerciseName(get().S))
     }
     if (pushTm) {
       clearTimeout(pushTm)
@@ -352,7 +358,7 @@ export const useStore = create((set, get) => {
         // The widget is optional UI. Never let a native widget call hold the app's first
         // screen open if the Android provider is unavailable or slow to respond.
         void syncStreakWidget(get().S)
-        void syncNativeWorkoutNotification(get().S)
+        void syncNativeWorkoutNotification(get().S, workoutExerciseName(get().S))
         let authSession = null
         try { authSession = await processOAuthCallback() || await getAuthSession() }
         catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Sign-in failed. Please try again.') }
@@ -371,7 +377,8 @@ export const useStore = create((set, get) => {
             name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
             dateOfBirth: authUser.user_metadata?.date_of_birth || '',
             needsLegalSetup: needsLegalSetup(authUser),
-            trainingDataConsent: false,
+            trainingDataConsent: null,
+            lastSignInAt: authUser.last_sign_in_at || '',
           }
           get().setUser(user)
           // Backup authorization affects cloud backup only, not access to local workouts.
@@ -379,7 +386,9 @@ export const useStore = create((set, get) => {
           // leave Android on "Loading data..." indefinitely.
           void getCloudBackupConsent(authSession).then(({ accepted }) => {
             if (get().user?.id === user.id) get().setUser({ ...get().user, trainingDataConsent: accepted === true })
-          }).catch(() => {})
+          }).catch(() => {
+            if (get().user?.id === user.id) get().setUser({ ...get().user, trainingDataConsent: false })
+          })
         } else {
           get().setUser(null)
         }

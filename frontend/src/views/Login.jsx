@@ -5,6 +5,7 @@ import { cancelPasswordRecovery, clearPendingRecoveryCode, createEmailAccount, g
 import { LANGS, setLang, t } from '../lib/i18n.js'
 import { countryOptions } from '../lib/countries.js'
 import { legalConsentMetadata, needsLegalSetup } from '../lib/legalConsent.js'
+import { getCloudBackupConsent } from '../lib/supabaseBackup.js'
 import { ageFromDateOfBirth } from '../lib/routine-recommendation.js'
 import { LegalContent } from './Legal.jsx'
 import { DEMO } from '../lib/demo.js'
@@ -144,6 +145,10 @@ export default function Login({ legalSetup = false }) {
     if (MOBILE) {
       const authUser = session.user || {}
       const needsSetup = needsLegalSetup(authUser)
+      let trainingDataConsent = false
+      if (!needsSetup) {
+        try { trainingDataConsent = (await getCloudBackupConsent(session)).accepted === true } catch { /* Offline: keep local data available. */ }
+      }
       setUser({
         id: authUser.id,
         email: authUser.email,
@@ -152,6 +157,8 @@ export default function Login({ legalSetup = false }) {
         name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Gym Book Training user',
         dateOfBirth: authUser.user_metadata?.date_of_birth || '',
         needsLegalSetup: needsSetup,
+        trainingDataConsent,
+        lastSignInAt: authUser.last_sign_in_at || '',
       })
       clearPendingRecoveryCode()
       if (!needsSetup) useUI.getState().toast(t('Signed in. Your workout data stays on this phone.'))
@@ -215,6 +222,7 @@ export default function Login({ legalSetup = false }) {
           dateOfBirth: authUser.user_metadata?.date_of_birth || '',
           age: ageFromDateOfBirth(authUser.user_metadata?.date_of_birth),
           needsLegalSetup: needsLegalSetup(authUser),
+          lastSignInAt: authUser.last_sign_in_at || '',
         }
         if (!MOBILE) {
           const session = await getAuthSession()
@@ -227,6 +235,10 @@ export default function Login({ legalSetup = false }) {
           currentUser = { ...result.user, needsLegalSetup: false }
           setUser(currentUser)
           await pullState(trainingDataAccepted ? undefined : result.state, trainingDataAccepted ? false : Object.hasOwn(result, 'state'), true)
+        }
+        if (MOBILE && !currentUser.needsLegalSetup) {
+          try { currentUser.trainingDataConsent = (await getCloudBackupConsent(await getAuthSession())).accepted === true }
+          catch { currentUser.trainingDataConsent = false }
         }
         setUser(currentUser)
         navigate(MOBILE ? '/workout' : '/home', { replace: true })

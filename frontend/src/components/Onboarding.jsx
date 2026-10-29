@@ -86,7 +86,7 @@ function Onboarding({ close }) {
     closeWithTour()
   }
   const savePlan = () => {
-    if (!user?.id || !plan.routines.length || saving) return
+    if (!plan.routines.length || saving) return
     setSaving(true)
     try {
       update(state => {
@@ -94,7 +94,7 @@ function Onboarding({ close }) {
         state.week = { ...state.week, ...plan.week }
         state.body = body
       })
-      localStorage.setItem(onboardingSeenKey(user.id), 'completed')
+      if (user?.id) localStorage.setItem(onboardingSeenKey(user.id), 'completed')
       useUI.getState().toast(t('Your plan is ready. You can edit it any time from Plan.'))
       closeWithTour()
     } catch {
@@ -133,11 +133,12 @@ function Onboarding({ close }) {
       </>}
 
       {stepIndex === 1 && <div className="setup-duration-picker">
-        <div className="setup-duration-current"><Icon name="clock" /><div><strong>{t('{0} min each', minutes)}</strong><small>{t('minutes per workout')}</small></div></div>
+        <div className="setup-duration-current" aria-live="polite"><Icon name="clock" /><div><strong>{t('{0} min each', minutes)}</strong><small>{t('minutes per workout')}</small></div></div>
         <input className="setup-duration-range" type="range" min="15" max="180" step="15" value={minutes}
           style={{ '--duration-progress': `${((minutes - 15) / 165) * 100}%` }}
           aria-label={t('How long is each workout?')} onChange={event => setMinutes(Number(event.target.value))} />
-        <div className="setup-duration-scale"><span>{t('{0} min each', 15)}</span><span>{t('Up to 3 hours')}</span></div>
+        <small className="setup-duration-hint">{t('Slide left or right to choose the workout length')}</small>
+        <div className="setup-duration-scale"><span>{t('{0} min each', 15)}</span><span>{t('{0} min each', 60)}</span><span>{t('{0} min each', 120)}</span><span>{t('Up to 3 hours')}</span></div>
       </div>}
 
       {stepIndex === 2 && <div className="setup-choice-list">

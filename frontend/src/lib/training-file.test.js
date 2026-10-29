@@ -36,4 +36,18 @@ describe('training backup files', () => {
     expect(restored.restNotification).toBe(true)
     expect(restored).not.toHaveProperty('restBubble')
   })
+
+  it('imports the legacy plan JSON exported by the workout plan screen', () => {
+    const imported = parseTrainingFile(JSON.stringify({
+      opengym_plan: 1,
+      exported: '2026-10-29',
+      name: 'GymBook plan',
+      week: { 1: 'routine-1' },
+      routines: [{ id: 'routine-1', name: 'Strength', ex: [{ id: '0001', sets: 3, reps: 10 }] }],
+      customEx: [],
+    }))
+
+    expect(imported.kind).toBe('routines')
+    expect(imported.data.routines[0].ex[0]).toMatchObject({ id: '0001', sets: 3, reps: 10 })
+  })
 })

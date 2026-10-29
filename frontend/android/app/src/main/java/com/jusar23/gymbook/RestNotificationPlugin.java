@@ -21,7 +21,9 @@ import java.util.List;
 
 @CapacitorPlugin(name = "RestNotification")
 public class RestNotificationPlugin extends Plugin {
-    private static final String CHANNEL_ID = "gymbook_rest_timer";
+    // Use a fresh channel so devices that created the old low-visibility channel receive
+    // the visible workout-status settings below instead of retaining Android's old value.
+    private static final String CHANNEL_ID = "gymbook_workout_status_v3";
     private static final int NOTIFICATION_ID = 2601;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final List<Runnable> countdowns = new ArrayList<>();
@@ -60,7 +62,12 @@ public class RestNotificationPlugin extends Plugin {
         getActivity().runOnUiThread(() -> {
             cancelSchedule();
             scheduleFinish();
-            showNotification();
+            if (!showNotification()) {
+                timerActive = false;
+                cancelSchedule();
+                call.reject("Android notifications are disabled for GYMBOOK.");
+                return;
+            }
             call.resolve();
         });
     }
@@ -71,7 +78,11 @@ public class RestNotificationPlugin extends Plugin {
         workoutDetail = call.getString("detail", "");
         workoutActive = true;
         getActivity().runOnUiThread(() -> {
-            if (!timerActive) showNotification();
+            if (!timerActive && !showNotification()) {
+                workoutActive = false;
+                call.reject("Android notifications are disabled for GYMBOOK.");
+                return;
+            }
             call.resolve();
         });
     }
@@ -145,25 +156,27 @@ public class RestNotificationPlugin extends Plugin {
         finish = null;
     }
 
-    private void showNotification() {
-        if (!timerActive && !workoutActive) return;
+    private boolean showNotification() {
+        if (!timerActive && !workoutActive) return false;
         try {
             Context context = getContext();
             NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (manager == null) return;
+            if (manager == null || !manager.areNotificationsEnabled()) return false;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
                     context.getString(R.string.rest_timer_channel_name),
-                    NotificationManager.IMPORTANCE_LOW
+                    NotificationManager.IMPORTANCE_HIGH
                 );
                 channel.setSound(null, null);
                 channel.enableVibration(false);
                 manager.createNotificationChannel(channel);
+                NotificationChannel currentChannel = manager.getNotificationChannel(CHANNEL_ID);
+                if (currentChannel == null || currentChannel.getImportance() == NotificationManager.IMPORTANCE_NONE) return false;
             }
 
             Intent launch = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-            if (launch == null) return;
+            if (launch == null) return false;
             launch.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             PendingIntent openApp = PendingIntent.getActivity(
                 context, NOTIFICATION_ID, launch,
@@ -176,15 +189,16 @@ public class RestNotificationPlugin extends Plugin {
             boolean resting = timerActive;
             String title = resting ? restTitle : workoutTitle;
             String detail = resting ? restDetail : workoutDetail;
-            builder.setSmallIcon(R.mipmap.ic_launcher)
+            builder.setSmallIcon(R.drawable.ic_workout_notification)
                 .setContentTitle(title)
                 .setContentText(detail)
                 .setStyle(new Notification.BigTextStyle().bigText(detail))
                 .setContentIntent(openApp)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setCategory(resting ? Notification.CATEGORY_STOPWATCH : Notification.CATEGORY_SERVICE)
-                .setPriority(Notification.PRIORITY_LOW);
+                .setPriority(Notification.PRIORITY_MAX);
             if (resting) {
                 builder.setWhen(endsAt).setShowWhen(true).setUsesChronometer(true)
                     .addAction(android.R.drawable.ic_menu_edit, adjustLabel, openApp);
@@ -194,9 +208,8 @@ public class RestNotificationPlugin extends Plugin {
                 builder.setShowWhen(false);
             }
             manager.notify(NOTIFICATION_ID, builder.build());
-        } catch (SecurityException ignored) {
-            // Android notification permission may have been revoked in system settings.
-        }
+            return true;
+        } catch (SecurityException ignored) { return false; }
     }
 
     private void cancelNotification() {

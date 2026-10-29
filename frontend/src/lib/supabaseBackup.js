@@ -5,6 +5,12 @@ const URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '').replac
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 const TABLE = 'gymbook_backups'
 
+function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson)
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonicalJson(value[key])]))
+}
+
 async function rpc(name, body, activeSession = null) {
   if (!URL || !KEY) throw new Error('Supabase is not configured in this mobile build.')
   const session = activeSession || await getAuthSession()
@@ -63,7 +69,11 @@ async function request(path, options = {}, activeSession = null) {
 
 export async function saveCloudBackup(state, { skipWithoutConsent = false } = {}) {
   const session = await getAuthSession()
-  const row = { user_id: session?.user?.id, state, updated_at: new Date().toISOString() }
+  if (!state || typeof state !== 'object' || Array.isArray(state)) throw new Error('The app data snapshot is invalid.')
+  // Keep the complete JSON app state: settings, plans, exercise records, and weight history.
+  // user_id is the table primary key, so this upsert replaces that user's previous snapshot.
+  const snapshot = JSON.parse(JSON.stringify(state))
+  const row = { user_id: session?.user?.id, state: snapshot, updated_at: new Date().toISOString() }
   if (!row.user_id) throw new Error('Sign in to use cloud backup.')
   const metadata = session.user.user_metadata || {}
   const consentGiven = hasTrainingDataConsent(metadata)
@@ -73,11 +83,15 @@ export async function saveCloudBackup(state, { skipWithoutConsent = false } = {}
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(row),
   }, session)
+  const saved = await loadCloudBackup(session)
+  if (!saved || JSON.stringify(canonicalJson(saved.state)) !== JSON.stringify(canonicalJson(snapshot))) {
+    throw new Error('The server did not confirm that the complete backup was saved.')
+  }
   return { saved: true }
 }
 
-export async function loadCloudBackup() {
-  const session = await getAuthSession()
+export async function loadCloudBackup(activeSession = null) {
+  const session = activeSession || await getAuthSession()
   if (!session?.user?.id) throw new Error('Sign in to use cloud backup.')
   const { response } = await request(`${TABLE}?select=state,updated_at&user_id=eq.${encodeURIComponent(session.user.id)}&limit=1`, {}, session)
   const rows = await response.json()

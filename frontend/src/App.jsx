@@ -1,13 +1,14 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
-import { useStore } from './store/useStore.js'
+import { useStore, DEF } from './store/useStore.js'
+import { EXIDX } from './lib/exercises.js'
 import { useUI } from './store/useUI.js'
 import { bindUI } from './components/ui.jsx'
 import { ACCENTS } from './lib/format.js'
 import { setLang, useLang, t } from './lib/i18n.js'
 import { setNav } from './lib/nav.js'
 import { useWakeLock } from './lib/wakelock.js'
-import { startFlow } from './sheets.jsx'
+import { confirmSheet, startFlow } from './sheets.jsx'
 import Icon from './components/Icon.jsx'
 import Brand from './components/Brand.jsx'
 import TabBar from './components/TabBar.jsx'
@@ -16,7 +17,10 @@ import Modals from './components/Modals.jsx'
 import Toast from './components/Toast.jsx'
 import RestTimer from './components/RestTimer.jsx'
 import Login from './views/Login.jsx'
-import { MOBILE, syncStreakWidget, syncNativeWorkoutNotification } from './lib/mobile.js'
+import { MOBILE, ANDROID_APP, readPendingTrainingFile, syncStreakWidget, syncNativeWorkoutNotification } from './lib/mobile.js'
+import { parseTrainingFile } from './lib/training-file.js'
+import { mergePlan } from './lib/plan-share.js'
+import { loadCloudBackup } from './lib/supabaseBackup.js'
 import { NATIVE_OAUTH_REDIRECT, processOAuthCallback } from './lib/supabaseAuth.js'
 import { needsLegalSetup } from './lib/legalConsent.js'
 import { openOnboarding, onboardingSeenKey } from './components/Onboarding.jsx'
@@ -73,6 +77,7 @@ function Shell() {
   const workoutActive = useStore(s => !!s.S.active)
   const keepAwake = useStore(s => s.S.keepAwake)
   const lockOrientation = useStore(s => s.S.lockOrientation)
+  const replaceState = useStore(s => s.replaceState)
   const hasTrainingHistory = useStore(s => !!(s.S.workouts?.length || s.S.routines?.length || s.S.active))
   const [subscription, setSubscription] = useState(() => MOBILE && useStore.getState().user?.id
     ? { configured: true, status: 'loading', granted: false, packages: [] }
@@ -80,6 +85,9 @@ function Shell() {
   const isGuest = useStore(s => s.isGuest())
   const langV = useLang()
   const onboardingOpenedFor = useRef('')
+  const restoreCheckFor = useRef('')
+  const cloudBackupFoundFor = useRef('')
+  const [cloudRestoreCheckDone, setCloudRestoreCheckDone] = useState(!MOBILE)
   const checkSubscription = useCallback(async () => {
     if (!MOBILE || !user?.id || user.needsLegalSetup) {
       setSubscription({ configured: false, status: 'unconfigured', granted: true, packages: [] })
@@ -139,6 +147,71 @@ function Shell() {
       clearTimeout(expiryTimer)
     }
   }, [ready, user?.id, user?.needsLegalSetup, subscription.granted, subscription.expiresAt, checkSubscription])
+  useEffect(() => {
+    if (!MOBILE || !ready) return
+    if (!user?.id || user.needsLegalSetup) {
+      setCloudRestoreCheckDone(true)
+      return
+    }
+    if (user.trainingDataConsent !== true) {
+      if (user.trainingDataConsent === false) setCloudRestoreCheckDone(true)
+      return
+    }
+    const loginKey = `${user.id}:${user.lastSignInAt || 'unknown-session'}`
+    if (restoreCheckFor.current === loginKey && cloudRestoreCheckDone) return
+    restoreCheckFor.current = loginKey
+    setCloudRestoreCheckDone(false)
+    let current = true
+    void loadCloudBackup().then(backup => {
+      if (!current || !backup?.state || typeof backup.state !== 'object' || Array.isArray(backup.state)) return
+      cloudBackupFoundFor.current = loginKey
+      const promptKey = `gym_cloud_restore_prompted:${loginKey}`
+      if (localStorage.getItem(promptKey)) return
+      localStorage.setItem(promptKey, backup.updatedAt || 'shown')
+      confirmSheet({
+        title: t('Restore cloud backup?'),
+        message: t('This replaces the progress on this phone with the backup from {0}.', new Date(backup.updatedAt).toLocaleString()),
+        confirmText: t('Restore backup'), danger: true,
+        onConfirm: () => {
+          const restored = Object.assign(JSON.parse(JSON.stringify(DEF)), backup.state, { active: null })
+          replaceState(restored, false)
+          useUI.getState().toast(t('Server backup restored'))
+        },
+      })
+    }).catch(() => {}).finally(() => {
+      if (current) setCloudRestoreCheckDone(true)
+    })
+    return () => { current = false }
+  }, [ready, user?.id, user?.needsLegalSetup, user?.trainingDataConsent, user?.lastSignInAt, replaceState])
+  useEffect(() => {
+    if (!ANDROID_APP || !ready) return
+    let disposed = false
+    const processOpenedFile = async () => {
+      try {
+        const file = await readPendingTrainingFile()
+        if (disposed || !file?.content) return
+        const imported = parseTrainingFile(file.content)
+        const routinesOnly = imported.kind === 'routines'
+        confirmSheet({
+          title: t(routinesOnly ? 'Import routines?' : 'Import backup?'),
+          message: t(routinesOnly ? 'This adds the routines from the file and keeps your current progress.' : 'This replaces all current data with the backup file.'),
+          confirmText: t('Import'), danger: !routinesOnly,
+          onConfirm: () => {
+            if (routinesOnly) {
+              const next = JSON.parse(JSON.stringify(useStore.getState().S))
+              mergePlan(next, imported.data, { schedule: true })
+              replaceState(next, true)
+            } else replaceState(Object.assign(JSON.parse(JSON.stringify(DEF)), imported.data), true)
+            useUI.getState().toast(t(routinesOnly ? 'Routines imported' : 'Backup imported'))
+          },
+        })
+      } catch (error) { useUI.getState().toast(t('Import failed: {0}', error.message || 'Unknown error')) }
+    }
+    const onOpen = () => { void processOpenedFile() }
+    window.addEventListener('gymbook-training-file-open', onOpen)
+    void processOpenedFile()
+    return () => { disposed = true; window.removeEventListener('gymbook-training-file-open', onOpen) }
+  }, [ready, replaceState])
   useEffect(() => { applyPrefs(theme, accent) }, [theme, accent])
   useEffect(() => {
     let current = true
@@ -146,7 +219,8 @@ function Shell() {
       if (current && MOBILE) {
         const state = useStore.getState().S
         void syncStreakWidget(state)
-        void syncNativeWorkoutNotification(state)
+        const current = state.active?.entries?.[state.active?.cur]
+        void syncNativeWorkoutNotification(state, current ? (EXIDX[current.id]?.n || current.id) : '')
       }
     })
     return () => { current = false }
@@ -162,13 +236,16 @@ function Shell() {
 
   useEffect(() => {
     if (!MOBILE || !ready || !user?.id || user.needsLegalSetup) return
+    if (!cloudRestoreCheckDone) return
+    if (user.trainingDataConsent === true
+      && cloudBackupFoundFor.current === `${user.id}:${user.lastSignInAt || 'unknown-session'}`) return
     if (subscription.configured && (!subscription.granted || subscription.status === 'loading')) return
     if (hasTrainingHistory) return
     const key = onboardingSeenKey(user.id)
     if (onboardingOpenedFor.current === user.id || localStorage.getItem(key)) return
     onboardingOpenedFor.current = user.id
     openOnboarding()
-  }, [ready, user?.id, user?.needsLegalSetup, hasTrainingHistory, subscription.configured, subscription.granted, subscription.status])
+  }, [ready, user?.id, user?.needsLegalSetup, hasTrainingHistory, cloudRestoreCheckDone, subscription.configured, subscription.granted, subscription.status])
 
   if (signingOut) return (
     <div id="app">

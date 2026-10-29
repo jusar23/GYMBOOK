@@ -29,9 +29,10 @@ import { t, LANGS, INSTR_LANGS } from '../lib/i18n.js'
 
 import { DEMO } from '../lib/demo.js'
 
-import { ANDROID_APP, MOBILE, clearNativeRestTimer, requestRestNotificationPermission, requestStreakWidgetPin, setNativeRestTimer, shareExport, syncReminder } from '../lib/mobile.js'
+import { ANDROID_APP, MOBILE, clearNativeRestTimer, requestRestNotificationPermission, setNativeRestTimer, shareExport, syncReminder } from '../lib/mobile.js'
 
-import { loadStarterPlan, confirmSheet, importFromApp } from '../sheets.jsx'
+import { confirmSheet, importFromApp } from '../sheets.jsx'
+import { openOnboarding } from '../components/Onboarding.jsx'
 import Icon from '../components/Icon.jsx'
 import { openTutorial } from '../components/Tutorial.jsx'
 
@@ -40,6 +41,12 @@ const ACCENT_TONES = [
   { id: 'light-intense', label: 'Light intense' },
 ]
 
+function canonicalState(value) {
+  if (Array.isArray(value)) return value.map(canonicalState)
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonicalState(value[key])]))
+}
+
 async function syncActiveRestNotification() {
   const { S } = useStore.getState()
   const { timer, recentSet } = useUI.getState()
@@ -47,9 +54,9 @@ async function syncActiveRestNotification() {
     await clearNativeRestTimer()
     return
   }
-  const entry = recentSet && S.active?.entries?.[recentSet.entryIdx]
-  const set = entry?.sets?.[recentSet.setIdx]
-  const name = entry ? (EXIDX[entry.id]?.n || entry.id) : ''
+  const entry = (recentSet && S.active?.entries?.[recentSet.entryIdx]) || S.active?.entries?.[S.active?.cur]
+  const set = entry?.sets?.[recentSet?.setIdx]
+  const name = entry ? t(EXIDX[entry.id]?.n || entry.id) : ''
   const values = []
   if (Number.isFinite(set?.w)) values.push(`${set.w} ${entry.weightUnit || S.unit}`)
   if (Number.isFinite(set?.r)) values.push(`× ${set.r}`)
@@ -114,20 +121,6 @@ export default function Settings() {
   const [cloudBusy, setCloudBusy] = useState(false)
   const [accountDeleting, setAccountDeleting] = useState(false)
   const [trainingConsentBusy, setTrainingConsentBusy] = useState(false)
-  const [widgetMessage, setWidgetMessage] = useState('')
-  const [widgetBusy, setWidgetBusy] = useState(false)
-
-  const addStreakWidget = async () => {
-    if (widgetBusy) return
-    setWidgetBusy(true)
-    setWidgetMessage('')
-    try {
-      const result = await requestStreakWidgetPin()
-      setWidgetMessage(t(result === 'requested'
-        ? 'Android is asking where to add the widget.'
-        : 'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.'))
-    } finally { setWidgetBusy(false) }
-  }
 
   useEffect(() => {
     const scrollY = location.state?.restoreScrollY
@@ -237,8 +230,8 @@ export default function Settings() {
         setTrainingConsentBusy(true)
         await saveTrainingDataConsent()
       }
-      await saveCloudBackup(S)
-      toast(t('Cloud backup saved'))
+      await saveCloudBackup(useStore.getState().S)
+      showAccountNotice(t('Cloud backup saved'), t('The server confirmed that all app settings and workout history were saved.'), true)
     }
     catch (e) { toast(e.message || t('Cloud backup failed')) }
     finally { setCloudBusy(false); setTrainingConsentBusy(false) }
@@ -252,9 +245,15 @@ export default function Settings() {
     uploadCloudBackup()
   }
 
-  const restoreCloudBackup = async () => {
+  const restoreCloudBackup = async ({ authorize = false } = {}) => {
+    if (user?.trainingDataConsent !== true && !authorize) {
+      requestTrainingDataConsent(() => restoreCloudBackup({ authorize: true }))
+      return
+    }
     setCloudBusy(true)
+    if (authorize) setTrainingConsentBusy(true)
     try {
+      if (authorize) await saveTrainingDataConsent()
       const backup = await loadCloudBackup()
       if (!backup) { toast(t('No cloud backup found')); return }
       if (!backup.state || typeof backup.state !== 'object' || Array.isArray(backup.state)) {
@@ -267,13 +266,20 @@ export default function Settings() {
         onConfirm: () => {
           try {
             const restored = Object.assign(JSON.parse(JSON.stringify(DEF)), backup.state)
+            const expected = { ...restored }
             replaceState(restored, false)
+            const actual = { ...useStore.getState().S }
+            delete expected._ts
+            delete actual._ts
+            if (JSON.stringify(canonicalState(expected)) !== JSON.stringify(canonicalState(actual))) {
+              throw new Error(t('The server backup was read, but the restored app data could not be verified.'))
+            }
             toast(t('Server backup restored'))
           } catch (e) { toast(e.message || t('Cloud backup failed')) }
         },
       })
     } catch (e) { toast(e.message || t('Cloud backup failed')) }
-    finally { setCloudBusy(false) }
+    finally { setCloudBusy(false); if (authorize) setTrainingConsentBusy(false) }
   }
 
   const manageSubscription = async () => {
@@ -283,53 +289,32 @@ export default function Settings() {
 
 
 
-  const doExport = async (kind = 'history') => {
+  const doExport = async (kind = 'history') => {
+    try {
+      const json = trainingFileText(useStore.getState().S, kind)
+      const name = `Gym-Book-Training-${kind}-${todayISO()}.gbt.json`
+      if (MOBILE) await shareExport(json, name)
+      else {
+        const blob = new Blob([json], { type: 'application/json' })
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob); a.download = name; a.click()
+        URL.revokeObjectURL(a.href)
+      }
+      toast(t('Backup exported'))
+    } catch (e) {
+      if (e?.message !== 'Share canceled') showAccountNotice(t('Export failed'), t('Export failed: {0}', e.message || 'Unknown error'))
+    }
+  }
 
-    const json = trainingFileText(S, kind)
-
-    const name = `Gym-Book-Training-${kind}-${todayISO()}.gbt.json`
-
-    // WKWebView can't download blob URLs — the native build hands the file to the share sheet.
-
-    if (MOBILE) {
-
-      try { await shareExport(json, name); toast(t('Backup exported')) } catch (e) { if (e?.message !== 'Share canceled') toast(t('Export failed: {0}', e.message || 'Unknown error')) }
-
-      return
-
-    }
-
-    const blob = new Blob([json], { type: 'application/json' })
-
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); URL.revokeObjectURL(a.href)
-
-    toast(t('Backup exported'))
-
-  }
-
-  const confirmExport = (kind = 'history') => confirmSheet({
-
-    title: kind === 'routines' ? t('Export routines?') : t('Export backup?'),
-
-    message: kind === 'routines' ? t('This creates a small file with your routines and weekly schedule.') : t('This creates a JSON copy of your Gym Book Training data on this device.'),
-
-    confirmText: t('Export backup'),
-
-    onConfirm: () => doExport(kind),
-
-  })
-
-  const confirmStarterPlan = () => confirmSheet({
-
-    title: t('Load starter plan?'),
-
-    message: t('This adds three starter routines and assigns them to Monday, Wednesday and Friday. Existing assignments on those days will be replaced.'),
-
-    confirmText: t('Load plan'),
-
-    onConfirm: loadStarterPlan,
-
-  })
+  const confirmExport = value => {
+    const kind = value === 'routines' ? 'routines' : 'history'
+    confirmSheet({
+      title: kind === 'routines' ? t('Export routines?') : t('Export backup?'),
+      message: kind === 'routines' ? t('This creates a small file with your routines and weekly schedule.') : t('This creates a JSON copy of your Gym Book Training data on this device.'),
+      confirmText: t('Export backup'),
+      onConfirm: () => doExport(kind),
+    })
+  }
 
   const doImport = ev => {
 
@@ -650,14 +635,6 @@ export default function Settings() {
 
       </div>
 
-      {ANDROID_APP && <Row icon="fire" iconTint="var(--acc)" title={t('Streak widget')}
-        subtitle={t('Add your workout streak to the Android home screen.')}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-          <Button size="sm" variant="tinted" icon="plus" onClick={addStreakWidget} disabled={widgetBusy} aria-busy={widgetBusy}>{t('Add widget')}</Button>
-          {widgetMessage && <span className="small muted" role="status" style={{ maxWidth: 220, textAlign: 'right' }}>{widgetMessage}</span>}
-        </div>
-      </Row>}
-
     </Section>
 
 
@@ -740,33 +717,33 @@ export default function Settings() {
             <Icon name="chevronDown" className="data-more-chevron" />
           </summary>
           <div className="data-more-content">
-            <Row icon="dumbbell" iconTint="var(--orange)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={confirmStarterPlan} />
-            <Row icon="download" iconTint="var(--teal)" title={t('Import from another app')} subtitle={t('FitNotes, Strong, Hevy — or body weight from Apple Health')} accessory="chevron" onClick={() => importRef.current.click()} />
-            <Row icon="download" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />
+            <Row icon="sparkles" iconTint="var(--orange)" title={t('Create my plan')} accessory="chevron" onClick={openOnboarding} />
+            <Row icon="upload" iconTint="var(--teal)" title={t('Import from another app')} subtitle={t('FitNotes, Strong, Hevy — or body weight from Apple Health')} accessory="chevron" onClick={() => importRef.current.click()} />
+            <Row icon="upload" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />
             <Row icon="download" iconTint="var(--blue)" title={t('Export routines only')} accessory="chevron" onClick={() => confirmExport('routines')} />
             <Row icon="download" iconTint="var(--blue)" title={t('Export backup (JSON)')} accessory="chevron" onClick={confirmExport} />
-            <Row icon="trash" iconTint="var(--red)" title={t('Reset everything')} danger onClick={() => confirmSheet({ title: t('Reset everything?'), message: t('Deletes your plan, workouts and body weight on this device. This cannot be undone.'), confirmText: t('Delete everything'), danger: true, onConfirm: () => { replaceState(JSON.parse(JSON.stringify(DEF)), true); nav('/home'); toast(t('All data reset')) } })} />
+            <Row icon="trash" iconTint="var(--red)" title={t('Reset everything')} danger onClick={() => confirmSheet({ title: t('Reset everything?'), message: t('Deletes your plan, workouts and body weight on this device. This cannot be undone.'), confirmText: t('Delete everything'), danger: true, onConfirm: () => { replaceState(JSON.parse(JSON.stringify(DEF)), false); nav('/home'); toast(t('All data reset')) } })} />
           </div>
         </details>
       </>}
 
       {!MOBILE && user && <Row icon="reset" iconTint="var(--blue)" title={t('Restore an imported profile')} subtitle={t('Use a one-time code from your previous Gym Book Training installation.')} accessory="chevron" onClick={restoreProfile} />}
 
-      {!MOBILE && <Row icon="dumbbell" iconTint="var(--orange)" title={t('Load starter plan (PPL)')} accessory="chevron" onClick={confirmStarterPlan} />}
+      {!MOBILE && <Row icon="sparkles" iconTint="var(--orange)" title={t('Create my plan')} accessory="chevron" onClick={openOnboarding} />}
 
-      {!MOBILE && <Row icon="download" iconTint="var(--teal)" title={t('Import from another app')}
+      {!MOBILE && <Row icon="upload" iconTint="var(--teal)" title={t('Import from another app')}
 
         subtitle={t('FitNotes, Strong, Hevy — or body weight from Apple Health')}
 
         accessory="chevron" onClick={() => importRef.current.click()} />}
 
-      {!MOBILE && <Row icon="download" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />}
+      {!MOBILE && <Row icon="upload" iconTint="var(--blue)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} />}
 
       {!MOBILE && <Row icon="download" iconTint="var(--blue)" title={t('Export routines only')} accessory="chevron" onClick={() => confirmExport('routines')} />}
 
       {!MOBILE && <Row icon="download" iconTint="var(--blue)" title={t('Export backup (JSON)')} accessory="chevron" onClick={confirmExport} />}
 
-      {!MOBILE && <Row icon="trash" iconTint="var(--red)" title={t('Reset everything')} danger onClick={() => confirmSheet({ title: t('Reset everything?'), message: t('Deletes your plan, workouts and body weight on this device. This cannot be undone.'), confirmText: t('Delete everything'), danger: true, onConfirm: () => { replaceState(JSON.parse(JSON.stringify(DEF)), true); nav('/home'); toast(t('All data reset')) } })} />}
+      {!MOBILE && <Row icon="trash" iconTint="var(--red)" title={t('Reset everything')} danger onClick={() => confirmSheet({ title: t('Reset everything?'), message: t('Deletes your plan, workouts and body weight on this device. This cannot be undone.'), confirmText: t('Delete everything'), danger: true, onConfirm: () => { replaceState(JSON.parse(JSON.stringify(DEF)), false); nav('/home'); toast(t('All data reset')) } })} />}
 
     </Section>
 

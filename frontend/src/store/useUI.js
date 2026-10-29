@@ -22,9 +22,9 @@ let workDone = null
 
 const restNotificationOptions = (endsAt, settings, recent) => {
   const S = useStore.getState().S
-  const entry = recent && S.active?.entries?.[recent.entryIdx]
-  const set = entry?.sets?.[recent.setIdx]
-  const name = entry ? (EXIDX[entry.id]?.n || entry.id) : ''
+  const entry = (recent && S.active?.entries?.[recent.entryIdx]) || S.active?.entries?.[S.active?.cur]
+  const set = entry?.sets?.[recent?.setIdx]
+  const name = entry ? t(EXIDX[entry.id]?.n || entry.id) : ''
   const values = []
   if (Number.isFinite(set?.w)) values.push(`${set.w} ${entry.weightUnit || S.unit}`)
   if (Number.isFinite(set?.r)) values.push(`× ${set.r}`)
@@ -42,7 +42,14 @@ export const useUI = create((set, get) => ({
   work: null,          // work countdown DURING a timed set (issue #16) — { left, total, endsAt, label }
   recentSet: null,     // { entryIdx, setIdx } shown above the rest timer for quick corrections
   workoutAdvance: null,
-  setRecentSet(recentSet) { set({ recentSet }) },
+  setRecentSet(recentSet) {
+    set({ recentSet })
+    const timer = get().timer
+    if (timer?.nativeAlert) {
+      const settings = useStore.getState().S
+      setNativeRestTimer(restNotificationOptions(timer.endsAt, settings, recentSet))
+    }
+  },
   setWorkoutAdvance(workoutAdvance) { set({ workoutAdvance }) },
 
   openSheet(render, { kind = 'sheet', locked = false } = {}) {
