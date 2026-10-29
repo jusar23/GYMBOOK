@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 
-import { getLang, t, useLang } from '../lib/i18n.js'
+import { getLang, setLang, t, useLang } from '../lib/i18n.js'
 
 import Icon from '../components/Icon.jsx'
 
@@ -522,7 +522,9 @@ const COPY = {
 
 function LegalText({ id }) {
 
-  const lang = getLang() === 'es' ? 'es' : 'en'
+  const interfaceLang = getLang()
+  const lang = interfaceLang === 'es' ? 'es' : 'en'
+  const legalUi = WEBSITE_LEGAL_UI[interfaceLang] || WEBSITE_LEGAL_UI.en
 
   const groups = id === 'terms'
     ? [
@@ -569,9 +571,24 @@ export function LegalContent({ ids = ['terms'] }) {
   </div>
 }
 
+const WEBSITE_LEGAL_UI = {
+  en: { back: 'Back to website', center: 'INFORMATION CENTER', documents: 'Documents', navLabel: 'Legal documents', kicker: 'GYMBOOK · TRANSPARENCY', overview: 'Legal information', intro: 'Learn how the service works, what data it processes and what your rights are.', version: 'Version', updated: 'Updated', read: 'Read document', sourceNotice: 'The full legal documents are currently available in English and Spanish. Choose a language to read the full text.', english: 'English', spanish: 'Español' },
+  es: { back: 'Volver al sitio', center: 'CENTRO DE INFORMACIÓN', documents: 'Documentos', navLabel: 'Documentos legales', kicker: 'GYMBOOK · TRANSPARENCIA', overview: 'Información legal', intro: 'Consulta cómo funciona el servicio, qué datos trata y cuáles son tus derechos.', version: 'Versión', updated: 'Actualizado', read: 'Leer documento', sourceNotice: 'Los documentos legales completos están disponibles en español e inglés. Elige un idioma para leer el texto completo.', english: 'English', spanish: 'Español' },
+  de: { back: 'Zur Website', center: 'INFORMATIONSZENTRUM', documents: 'Dokumente', navLabel: 'Rechtliche Dokumente', kicker: 'GYMBOOK · TRANSPARENZ', overview: 'Rechtliche Informationen', intro: 'Erfahre, wie der Dienst funktioniert, welche Daten verarbeitet werden und welche Rechte du hast.', version: 'Version', updated: 'Aktualisiert', read: 'Dokument lesen', sourceNotice: 'Die vollständigen rechtlichen Dokumente sind derzeit auf Deutsch nicht verfügbar. Wähle Englisch oder Spanisch, um den vollständigen Text zu lesen.', english: 'English', spanish: 'Español' },
+  fr: { back: 'Retour au site', center: 'CENTRE D’INFORMATION', documents: 'Documents', navLabel: 'Documents juridiques', kicker: 'GYMBOOK · TRANSPARENCE', overview: 'Informations juridiques', intro: 'Découvrez le fonctionnement du service, les données traitées et vos droits.', version: 'Version', updated: 'Mis à jour', read: 'Lire le document', sourceNotice: 'Les documents juridiques complets ne sont actuellement pas disponibles en français. Choisissez l’anglais ou l’espagnol pour lire le texte intégral.', english: 'English', spanish: 'Español' },
+  it: { back: 'Torna al sito', center: 'CENTRO INFORMAZIONI', documents: 'Documenti', navLabel: 'Documenti legali', kicker: 'GYMBOOK · TRASPARENZA', overview: 'Informazioni legali', intro: 'Scopri come funziona il servizio, quali dati tratta e quali sono i tuoi diritti.', version: 'Versione', updated: 'Aggiornato', read: 'Leggi il documento', sourceNotice: 'I documenti legali completi non sono attualmente disponibili in italiano. Scegli inglese o spagnolo per leggere il testo integrale.', english: 'English', spanish: 'Español' },
+  pt: { back: 'Voltar ao site', center: 'CENTRO DE INFORMAÇÕES', documents: 'Documentos', navLabel: 'Documentos legais', kicker: 'GYMBOOK · TRANSPARÊNCIA', overview: 'Informações legais', intro: 'Saiba como o serviço funciona, que dados trata e quais são os seus direitos.', version: 'Versão', updated: 'Atualizado', read: 'Ler documento', sourceNotice: 'Os documentos legais completos ainda não estão disponíveis em português. Escolha inglês ou espanhol para ler o texto integral.', english: 'English', spanish: 'Español' },
+  pl: { back: 'Wróć do strony', center: 'CENTRUM INFORMACJI', documents: 'Dokumenty', navLabel: 'Dokumenty prawne', kicker: 'GYMBOOK · PRZEJRZYSTOŚĆ', overview: 'Informacje prawne', intro: 'Dowiedz się, jak działa usługa, jakie dane przetwarza i jakie masz prawa.', version: 'Wersja', updated: 'Aktualizacja', read: 'Czytaj dokument', sourceNotice: 'Pełne dokumenty prawne nie są obecnie dostępne po polsku. Wybierz angielski lub hiszpański, aby przeczytać pełny tekst.', english: 'English', spanish: 'Español' },
+  tr: { back: 'Siteye dön', center: 'BİLGİ MERKEZİ', documents: 'Belgeler', navLabel: 'Yasal belgeler', kicker: 'GYMBOOK · ŞEFFAFLIK', overview: 'Yasal bilgiler', intro: 'Hizmetin nasıl çalıştığını, hangi verileri işlediğini ve haklarını öğren.', version: 'Sürüm', updated: 'Güncelleme', read: 'Belgeyi oku', sourceNotice: 'Yasal belgelerin tam metni şu anda Türkçe olarak sunulmuyor. Tam metni okumak için İngilizce veya İspanyolca seç.', english: 'English', spanish: 'Español' },
+  ru: { back: 'Вернуться на сайт', center: 'ИНФОРМАЦИОННЫЙ ЦЕНТР', documents: 'Документы', navLabel: 'Юридические документы', kicker: 'GYMBOOK · ПРОЗРАЧНОСТЬ', overview: 'Правовая информация', intro: 'Узнай, как работает сервис, какие данные он обрабатывает и какие у тебя есть права.', version: 'Версия', updated: 'Обновлено', read: 'Читать документ', sourceNotice: 'Полные юридические документы пока недоступны на русском языке. Выбери английский или испанский, чтобы прочитать полный текст.', english: 'English', spanish: 'Español' },
+  zh: { back: '返回网站', center: '信息中心', documents: '文档', navLabel: '法律文档', kicker: 'GYMBOOK · 信息透明', overview: '法律信息', intro: '了解服务的运作方式、处理的数据以及你享有的权利。', version: '版本', updated: '更新日期', read: '阅读文档', sourceNotice: '目前暂无完整的中文法律文件。请选择英文或西班牙文阅读完整内容。', english: 'English', spanish: 'Español' },
+  ko: { back: '웹사이트로 돌아가기', center: '정보 센터', documents: '문서', navLabel: '법률 문서', kicker: 'GYMBOOK · 투명성', overview: '법률 정보', intro: '서비스 운영 방식, 처리하는 데이터와 이용자의 권리를 확인하세요.', version: '버전', updated: '업데이트', read: '문서 읽기', sourceNotice: '현재 전체 법률 문서는 한국어로 제공되지 않습니다. 전체 내용을 읽으려면 영어 또는 스페인어를 선택하세요.', english: 'English', spanish: 'Español' },
+  hi: { back: 'वेबसाइट पर वापस जाएँ', center: 'जानकारी केंद्र', documents: 'दस्तावेज़', navLabel: 'कानूनी दस्तावेज़', kicker: 'GYMBOOK · पारदर्शिता', overview: 'कानूनी जानकारी', intro: 'जानें कि सेवा कैसे काम करती है, कौन-सा डेटा प्रोसेस होता है और आपके क्या अधिकार हैं।', version: 'संस्करण', updated: 'अपडेट', read: 'दस्तावेज़ पढ़ें', sourceNotice: 'पूरे कानूनी दस्तावेज़ अभी हिंदी में उपलब्ध नहीं हैं। पूरा पाठ पढ़ने के लिए अंग्रेज़ी या स्पेनिश चुनें।', english: 'English', spanish: 'Español' },
+}
 
 
-export default function Legal() {
+
+export default function Legal({ web = false }) {
 
   useLang()
 
@@ -590,9 +607,52 @@ export default function Legal() {
   const from = location.state?.from || '/home'
   const returnState = location.state?.returnState
 
-  const title = selected ? (lang === 'es' ? selected.es : t(selected.title)) : (lang === 'es' ? 'Legal y privacidad' : t('Legal & privacy'))
+  const title = selected ? (lang === 'es' ? selected.es : t(selected.title)) : legalUi.overview
+  const chooseLegalLanguage = next => {
+    localStorage.setItem('gymbook_site_lang', next)
+    void setLang(next)
+  }
 
   const goBack = () => navigate(from, { replace: true, state: returnState })
+  const openWebDocument = id => {
+    navigate(`/legal/${id}`, { state: { from, returnState } })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (web) return <main className="legal-page website-legal-page">
+    <header className="website-legal-top">
+      <a className="website-legal-brand" href="/" aria-label="GYMBOOK home"><span className="website-legal-mark"><Icon name="dumbbell" /></span><span>GYMBOOK <small>LEGAL</small></span></a>
+      <a className="website-legal-home" href="/">{legalUi.back}<Icon name="arrowUp" /></a>
+    </header>
+    <div className="website-legal-layout">
+      <aside className="website-legal-sidebar">
+        <span className="site-eyebrow">{legalUi.center}</span>
+        <strong>{legalUi.documents}</strong>
+        <nav aria-label={legalUi.navLabel}>
+          {DOCS.map(item => <button className={selected?.id === item.id ? 'is-selected' : ''} key={item.id} onClick={() => openWebDocument(item.id)}>
+            <Icon name={item.icon} /><span>{lang === 'es' ? item.es : t(item.title)}</span><Icon name="chevronRight" />
+          </button>)}
+        </nav>
+      </aside>
+      <article className="website-legal-document">
+        <span className="website-legal-kicker">{legalUi.kicker}</span>
+        <h1>{title}</h1>
+        <p className="website-legal-intro">{legalUi.intro}</p>
+        <div className="website-legal-meta"><span>{legalUi.version} {VERSION}</span><span>{legalUi.updated} {lang === 'es' ? UPDATED_ES : UPDATED_EN}</span></div>
+        {!['en', 'es'].includes(interfaceLang) && <div className="website-legal-language-note">
+          <p>{legalUi.sourceNotice}</p>
+          <div><button onClick={() => chooseLegalLanguage('en')}>{legalUi.english}</button><button onClick={() => chooseLegalLanguage('es')}>{legalUi.spanish}</button></div>
+        </div>}
+        {selected
+          ? <LegalText id={selected.id} />
+          : <div className="website-legal-cards">{DOCS.map(item => <button key={item.id} onClick={() => openWebDocument(item.id)}>
+            <span className="website-legal-card-icon"><Icon name={item.icon} /></span>
+            <strong>{lang === 'es' ? item.es : t(item.title)}</strong>
+            <span>{legalUi.read}<Icon name="arrowUp" /></span>
+          </button>)}</div>}
+      </article>
+    </div>
+  </main>
 
 
 

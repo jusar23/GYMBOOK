@@ -7,7 +7,6 @@ import { WEBSITE_COPY } from './websiteCopy.js'
 import './Website.css'
 
 const CONTACT_EMAIL = 'xsebas23@gmail.com'
-const APK_URL = import.meta.env.VITE_ANDROID_APK_URL || ''
 const PUBLIC_SITE_URL = 'https://gymbooktraining.com/'
 const LANGUAGE_KEY = 'gymbook_site_lang'
 const FEATURE_ICONS = ['calendar', 'dumbbell', 'chart', 'star', 'timer', 'link', 'lightbulb', 'download', 'bell', 'flame', 'gear', 'shield']
@@ -166,7 +165,81 @@ const PRICING = {
     monthlyTerms: 'Suscripción mensual recurrente. Cancela antes de la siguiente renovación.', annualTerms: 'Precio introductorio para nuevos suscriptores elegibles. Se renueva a USD 12 al año.',
     detail: 'Google Play y Paddle pueden mostrar el precio convertido a moneda local y los impuestos aplicables al pagar. Antes de confirmar, la pantalla de pago indica el importe exacto, la frecuencia de renovación y cómo cancelar. Tras cancelar, conservas el acceso hasta que termine el periodo pagado. Eliminar tu cuenta o desinstalar la app no cancela la suscripción.',
     legal: 'Consulta el texto legal unificado'
+  },
+  de: {
+    eyebrow: 'EINFACHES ABO', title: 'Trainiere mit einem passenden Plan.', description: 'Wähle den Monatszugang oder spare mit dem Einführungspreis für das erste Jahr.',
+    monthly: 'Monatlich', annual: 'Jährlich · erstes Jahr', monthPrice: 'USD 1', firstYear: 'USD 9', monthUnit: '/ Monat', yearUnit: '/ erstes Jahr', renewal: 'Danach USD 12 pro Jahr',
+    monthlyTerms: 'Monatliches Abo mit automatischer Verlängerung. Vor der Verlängerung jederzeit kündbar.', annualTerms: 'Einführungspreis für berechtigte neue Abonnenten. Verlängert sich für USD 12 pro Jahr.',
+    detail: 'Google Play und Paddle können beim Bezahlen den umgerechneten lokalen Preis und anfallende Steuern anzeigen. Vor der Bestätigung zeigt der Bezahlvorgang den genauen Betrag, die Verlängerung und die Kündigungshinweise. Nach der Kündigung bleibt der Zugriff bis zum Ende des bezahlten Zeitraums bestehen. Das Löschen des Kontos oder der App kündigt das Abo nicht.', legal: 'Einheitliche rechtliche Bedingungen lesen'
+  },
+  fr: {
+    eyebrow: 'ABONNEMENT SIMPLE', title: 'Un programme adapté à votre rythme.', description: 'Choisissez l’accès mensuel ou profitez du tarif de lancement annuel.',
+    monthly: 'Mensuel', annual: 'Annuel · première année', monthPrice: 'USD 1', firstYear: 'USD 9', monthUnit: '/ mois', yearUnit: '/ première année', renewal: 'Puis USD 12 par an',
+    monthlyTerms: 'Abonnement mensuel récurrent. Résiliable à tout moment avant le renouvellement.', annualTerms: 'Tarif de lancement réservé aux nouveaux abonnés éligibles. Renouvellement à USD 12 par an.',
+    detail: 'Google Play et Paddle peuvent afficher le prix converti dans votre devise et les taxes applicables au paiement. Avant confirmation, l’écran de paiement indique le montant exact, la fréquence de renouvellement et les modalités de résiliation. Après résiliation, l’accès reste disponible jusqu’à la fin de la période payée. Supprimer votre compte ou l’application ne résilie pas l’abonnement.', legal: 'Lire les conditions juridiques unifiées'
+  },
+  it: {
+    eyebrow: 'ABBONAMENTO SEMPLICE', title: 'Allenati con un piano adatto a te.', description: 'Scegli l’accesso mensile o risparmia con l’offerta annuale introduttiva.',
+    monthly: 'Mensile', annual: 'Annuale · primo anno', monthPrice: 'USD 1', firstYear: 'USD 9', monthUnit: '/ mese', yearUnit: '/ primo anno', renewal: 'Poi USD 12 all’anno',
+    monthlyTerms: 'Abbonamento mensile ricorrente. Puoi annullarlo prima del rinnovo.', annualTerms: 'Prezzo introduttivo per i nuovi abbonati idonei. Si rinnova a USD 12 all’anno.',
+    detail: 'Google Play e Paddle possono mostrare al pagamento il prezzo convertito nella valuta locale e le imposte applicabili. Prima della conferma, la schermata di pagamento indica l’importo esatto, la frequenza di rinnovo e come annullare. Dopo l’annullamento, l’accesso resta attivo fino alla fine del periodo pagato. Eliminare l’account o l’app non annulla l’abbonamento.', legal: 'Leggi le condizioni legali complete'
+  },
+  pt: {
+    eyebrow: 'ASSINATURA SIMPLES', title: 'Treine com um plano adequado.', description: 'Escolha o acesso mensal ou poupe com a oferta anual de introdução.',
+    monthly: 'Mensal', annual: 'Anual · primeiro ano', monthPrice: 'USD 1', firstYear: 'USD 9', monthUnit: '/ mês', yearUnit: '/ primeiro ano', renewal: 'Depois, USD 12 por ano',
+    monthlyTerms: 'Assinatura mensal recorrente. Cancele antes da próxima renovação.', annualTerms: 'Preço introdutório para novos subscritores elegíveis. Renova por USD 12 por ano.',
+    detail: 'O Google Play e a Paddle podem apresentar o preço convertido para a moeda local e os impostos aplicáveis no pagamento. Antes da confirmação, o ecrã de pagamento mostra o valor exato, a frequência de renovação e como cancelar. Após o cancelamento, o acesso mantém-se até ao fim do período pago. Eliminar a conta ou a aplicação não cancela a assinatura.', legal: 'Consultar as condições legais completas'
+  },
+  pl: {
+    eyebrow: 'PROSTA SUBSKRYPCJA', title: 'Trenuj według planu dopasowanego do Ciebie.', description: 'Wybierz dostęp miesięczny lub skorzystaj z ceny wprowadzającej na pierwszy rok.',
+    monthly: 'Miesięcznie', annual: 'Rocznie · pierwszy rok', monthPrice: 'USD 1', firstYear: 'USD 9', monthUnit: '/ miesiąc', yearUnit: '/ pierwszy rok', renewal: 'Następnie USD 12 rocznie',
+    monthlyTerms: 'Subskrypcja odnawiana co miesiąc. Możesz ją anulować przed odnowieniem.', annualTerms: 'Cena wprowadzająca dla uprawnionych nowych subskrybentów. Odnowienie kosztuje USD 12 rocznie.',
+    detail: 'Google Play i Paddle mogą podczas płatności wyświetlić cenę przeliczoną na lokalną walutę oraz należne podatki. Przed potwierdzeniem ekran płatności pokazuje dokładną kwotę, częstotliwość odnowienia i sposób anulowania. Po anulowaniu dostęp trwa do końca opłaconego okresu. Usunięcie konta lub aplikacji nie anuluje subskrypcji.', legal: 'Przeczytaj pełne warunki prawne'
+  },
+  tr: {
+    eyebrow: 'BASİT ABONELİK', title: 'Sana uygun bir planla antrenman yap.', description: 'Aylık erişimi seç veya yıllık başlangıç teklifiyle tasarruf et.',
+    monthly: 'Aylık', annual: 'Yıllık · ilk yıl', monthPrice: 'USD 1', firstYear: 'USD 9', monthUnit: '/ ay', yearUnit: '/ ilk yıl', renewal: 'Sonraki yıllar USD 12',
+    monthlyTerms: 'Düzenli aylık abonelik. Yenilenmeden önce istediğin zaman iptal edebilirsin.', annualTerms: 'Uygun yeni aboneler için başlangıç fiyatı. Yıllık USD 12 ile yenilenir.',
+    detail: 'Google Play ve Paddle ödeme sırasında yerel para birimine çevrilmiş fiyatı ve geçerli vergileri gösterebilir. Onaydan önce ödeme ekranında kesin tutar, yenileme sıklığı ve iptal bilgileri gösterilir. İptalden sonra erişim, ödenen dönem bitene kadar sürer. Hesabı veya uygulamayı silmek aboneliği iptal etmez.', legal: 'Birleşik yasal koşulları oku'
+  },
+  ru: {
+    eyebrow: 'ПРОСТАЯ ПОДПИСКА', title: 'Тренируйся по подходящему плану.', description: 'Выбери помесячный доступ или годовое предложение по стартовой цене.',
+    monthly: 'Ежемесячно', annual: 'Ежегодно · первый год', monthPrice: 'USD 1', firstYear: 'USD 9', monthUnit: '/ месяц', yearUnit: '/ первый год', renewal: 'Затем USD 12 в год',
+    monthlyTerms: 'Ежемесячная подписка с продлением. Отменить можно до следующего списания.', annualTerms: 'Стартовая цена для новых подписчиков, отвечающих условиям. Далее продлевается за USD 12 в год.',
+    detail: 'Google Play и Paddle могут показать при оплате цену в местной валюте и применимые налоги. До подтверждения на экране оплаты указываются точная сумма, периодичность продления и способ отмены. После отмены доступ сохраняется до конца оплаченного периода. Удаление аккаунта или приложения не отменяет подписку.', legal: 'Читать полные юридические условия'
+  },
+  zh: {
+    eyebrow: '简单订阅', title: '选择适合你的训练计划。', description: '可选择月度方案，或享受首年年度入门优惠。',
+    monthly: '月付', annual: '年付 · 首年', monthPrice: 'USD 1', firstYear: 'USD 9', monthUnit: '/ 月', yearUnit: '/ 首年', renewal: '之后每年 USD 12',
+    monthlyTerms: '按月自动续订，可在续订前随时取消。', annualTerms: '符合条件的新订阅用户可享首年优惠，之后每年 USD 12 续订。',
+    detail: 'Google Play 和 Paddle 结账时可能显示换算后的本地价格及适用税费。确认前，结账页面会显示准确金额、续订频率和取消方式。取消后仍可使用至已付费周期结束。删除账户或卸载应用不会取消订阅。', legal: '阅读完整法律条款'
+  },
+  ko: {
+    eyebrow: '간편한 구독', title: '나에게 맞는 계획으로 운동하세요.', description: '월간 이용권을 선택하거나 연간 첫해 할인 혜택을 이용하세요.',
+    monthly: '월간', annual: '연간 · 첫해', monthPrice: 'USD 1', firstYear: 'USD 9', monthUnit: '/ 월', yearUnit: '/ 첫해', renewal: '이후 연 USD 12',
+    monthlyTerms: '매월 자동 갱신되는 구독입니다. 갱신 전에 언제든 취소할 수 있습니다.', annualTerms: '자격을 갖춘 신규 구독자 대상 첫해 할인 가격입니다. 이후 연 USD 12로 갱신됩니다.',
+    detail: 'Google Play와 Paddle은 결제 시 현지 통화로 환산된 가격과 적용 세금을 표시할 수 있습니다. 결제 확인 전에 정확한 금액, 갱신 주기와 취소 방법이 안내됩니다. 취소해도 결제한 기간이 끝날 때까지 이용할 수 있습니다. 계정 삭제나 앱 제거만으로 구독이 취소되지는 않습니다.', legal: '통합 법률 약관 읽기'
+  },
+  hi: {
+    eyebrow: 'सरल सदस्यता', title: 'अपने लिए सही योजना के साथ ट्रेन करें।', description: 'मासिक पहुँच चुनें या पहले साल की वार्षिक शुरुआती पेशकश का लाभ लें।',
+    monthly: 'मासिक', annual: 'वार्षिक · पहला साल', monthPrice: 'USD 1', firstYear: 'USD 9', monthUnit: '/ महीना', yearUnit: '/ पहला साल', renewal: 'फिर USD 12 प्रति वर्ष',
+    monthlyTerms: 'हर महीने नवीनीकृत होने वाली सदस्यता। नवीनीकरण से पहले कभी भी रद्द करें।', annualTerms: 'पात्र नए सदस्यों के लिए शुरुआती कीमत। इसके बाद USD 12 प्रति वर्ष पर नवीनीकरण।',
+    detail: 'Google Play और Paddle भुगतान के समय स्थानीय मुद्रा में परिवर्तित कीमत और लागू कर दिखा सकते हैं। पुष्टि से पहले भुगतान स्क्रीन सटीक राशि, नवीनीकरण की अवधि और रद्द करने का तरीका दिखाती है। रद्द करने के बाद भुगतान की अवधि समाप्त होने तक पहुँच बनी रहती है। खाता हटाने या ऐप अनइंस्टॉल करने से सदस्यता रद्द नहीं होती।', legal: 'एकीकृत कानूनी शर्तें पढ़ें'
   }
+}
+const WEBSITE_UI = {
+  en: { signIn: 'Sign in', gate: 'Sign in to contact the team.', department: 'Department', support: 'Support', contact: 'Contact', admin: 'Admin', suggestions: 'Suggestions', accountEmail: 'Account email', subject: 'Subject', message: 'Message', prepareEmail: 'Compose email', emailNotice: 'Your email app will open so you can review and send the message.' },
+  es: { signIn: 'Iniciar sesión', gate: 'Inicia sesión para escribir al equipo.', department: 'Área', support: 'Soporte', contact: 'Contacto', admin: 'Administración', suggestions: 'Sugerencias', accountEmail: 'Tu correo de cuenta', subject: 'Asunto', message: 'Mensaje', prepareEmail: 'Preparar correo', emailNotice: 'Se abrirá tu aplicación de correo para que revises y envíes el mensaje.' },
+  de: { signIn: 'Anmelden', gate: 'Melde dich an, um das Team zu kontaktieren.', department: 'Bereich', support: 'Support', contact: 'Kontakt', admin: 'Verwaltung', suggestions: 'Vorschläge', accountEmail: 'Konto-E-Mail', subject: 'Betreff', message: 'Nachricht', prepareEmail: 'E-Mail verfassen', emailNotice: 'Dein E-Mail-Programm wird geöffnet, damit du die Nachricht prüfen und senden kannst.' },
+  fr: { signIn: 'Se connecter', gate: 'Connectez-vous pour contacter l’équipe.', department: 'Service', support: 'Assistance', contact: 'Contact', admin: 'Administration', suggestions: 'Suggestions', accountEmail: 'E-mail du compte', subject: 'Objet', message: 'Message', prepareEmail: 'Rédiger un e-mail', emailNotice: 'Votre messagerie s’ouvrira pour vous permettre de vérifier et d’envoyer le message.' },
+  it: { signIn: 'Accedi', gate: 'Accedi per contattare il team.', department: 'Reparto', support: 'Assistenza', contact: 'Contatti', admin: 'Amministrazione', suggestions: 'Suggerimenti', accountEmail: 'E-mail dell’account', subject: 'Oggetto', message: 'Messaggio', prepareEmail: 'Prepara e-mail', emailNotice: 'Si aprirà la tua app di posta per controllare e inviare il messaggio.' },
+  pt: { signIn: 'Iniciar sessão', gate: 'Inicie sessão para contactar a equipa.', department: 'Área', support: 'Suporte', contact: 'Contacto', admin: 'Administração', suggestions: 'Sugestões', accountEmail: 'E-mail da conta', subject: 'Assunto', message: 'Mensagem', prepareEmail: 'Preparar e-mail', emailNotice: 'A aplicação de e-mail será aberta para rever e enviar a mensagem.' },
+  pl: { signIn: 'Zaloguj się', gate: 'Zaloguj się, aby skontaktować się z zespołem.', department: 'Dział', support: 'Pomoc techniczna', contact: 'Kontakt', admin: 'Administracja', suggestions: 'Sugestie', accountEmail: 'E-mail konta', subject: 'Temat', message: 'Wiadomość', prepareEmail: 'Przygotuj e-mail', emailNotice: 'Otworzy się aplikacja pocztowa, w której możesz sprawdzić i wysłać wiadomość.' },
+  tr: { signIn: 'Giriş yap', gate: 'Ekiple iletişim kurmak için giriş yap.', department: 'Bölüm', support: 'Destek', contact: 'İletişim', admin: 'Yönetim', suggestions: 'Öneriler', accountEmail: 'Hesap e-postası', subject: 'Konu', message: 'Mesaj', prepareEmail: 'E-posta oluştur', emailNotice: 'Mesajı inceleyip gönderebilmen için e-posta uygulaman açılacak.' },
+  ru: { signIn: 'Войти', gate: 'Войди, чтобы связаться с командой.', department: 'Тема обращения', support: 'Поддержка', contact: 'Связаться', admin: 'Администрация', suggestions: 'Предложения', accountEmail: 'Почта аккаунта', subject: 'Тема', message: 'Сообщение', prepareEmail: 'Подготовить письмо', emailNotice: 'Откроется почтовое приложение, где можно проверить и отправить сообщение.' },
+  zh: { signIn: '登录', gate: '登录后即可联系团队。', department: '联系类别', support: '技术支持', contact: '一般联系', admin: '管理事务', suggestions: '建议', accountEmail: '账户邮箱', subject: '主题', message: '消息', prepareEmail: '撰写邮件', emailNotice: '系统将打开邮件应用，供你检查并发送消息。' },
+  ko: { signIn: '로그인', gate: '팀에 문의하려면 로그인하세요.', department: '문의 분야', support: '지원', contact: '일반 문의', admin: '관리', suggestions: '제안', accountEmail: '계정 이메일', subject: '제목', message: '메시지', prepareEmail: '이메일 작성', emailNotice: '메시지를 확인하고 보낼 수 있도록 이메일 앱이 열립니다.' },
+  hi: { signIn: 'साइन इन करें', gate: 'टीम से संपर्क करने के लिए साइन इन करें।', department: 'विभाग', support: 'सहायता', contact: 'संपर्क', admin: 'प्रशासन', suggestions: 'सुझाव', accountEmail: 'खाते का ईमेल', subject: 'विषय', message: 'संदेश', prepareEmail: 'ईमेल तैयार करें', emailNotice: 'संदेश की समीक्षा करके भेजने के लिए आपका ईमेल ऐप खुलेगा।' },
 }
 
 export default function Website() {
@@ -174,6 +247,7 @@ export default function Website() {
   const language = getLang()
   const copy = WEBSITE_COPY[language] || WEBSITE_COPY.en
   const pricing = PRICING[language] || PRICING.en
+  const ui = WEBSITE_UI[language] || WEBSITE_UI.en
 
   useEffect(() => {
     document.documentElement.lang = language
@@ -196,10 +270,6 @@ export default function Website() {
     void setLang(next)
   }
 
-  const downloadButton = (className, label) => APK_URL
-    ? <a className={className} href={APK_URL} download><Icon name="download" /> {label}</a>
-    : <span className={`${className} site-download-disabled`} aria-disabled="true"><Icon name="download" /> {label}</span>
-
   const featureCopy = [...copy.features[4], ...(EXTRA_FEATURES[language] || EXTRA_FEATURES.en)]
   const phone = copy.phone
   const [siteUser, setSiteUser] = useState(null)
@@ -216,13 +286,13 @@ export default function Website() {
   const sendContact = event => {
     event.preventDefault()
     const categories = {
-      support: language === 'es' ? 'Soporte' : 'Support',
-      contact: language === 'es' ? 'Contacto' : 'Contact',
-      admin: 'Admin',
-      suggestions: language === 'es' ? 'Sugerencias' : 'Suggestions',
+      support: ui.support,
+      contact: ui.contact,
+      admin: ui.admin,
+      suggestions: ui.suggestions,
     }
     const subject = `[${categories[contactCategory]}] ${contactSubject.trim()}`
-    const body = `${language === 'es' ? 'Cuenta' : 'Account'}: ${siteUser?.email || ''}\n\n${contactMessage.trim()}`
+    const body = `${ui.accountEmail}: ${siteUser?.email || ''}\n\n${contactMessage.trim()}`
     window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
 
@@ -233,7 +303,7 @@ export default function Website() {
         <a href="#funciones">{copy.nav[0]}</a>
         <a href="#legal">{copy.nav[1]}</a>
         <a href="#contacto">{copy.nav[2]}</a>
-        <a className="site-account-link" href="/#/account">{language === 'es' ? 'Iniciar sesión' : 'Sign in'}</a>
+        <a className="site-account-link" href="/#/account">{ui.signIn}</a>
       </nav>
       <div className="site-nav-actions">
         <label className="site-language" aria-label="Language">
@@ -243,7 +313,6 @@ export default function Website() {
           </select>
           <Icon name="chevronDown" />
         </label>
-        {downloadButton('site-nav-download', copy.nav[3])}
       </div>
     </header>
 
@@ -254,12 +323,11 @@ export default function Website() {
           <h1>{copy.hero[1]}<br /><span>{copy.hero[2]}</span></h1>
           <p>{copy.hero[3]}</p>
           <div className="site-hero-actions">
-            {downloadButton('site-button primary', copy.download[3])}
             <a className="site-text-link" href="#funciones">{copy.hero[4]} <Icon name="arrowDown" /></a>
           </div>
           <div className="site-compat"><Icon name="info" /> {copy.hero[5]}</div>
         </div>
-        <div className="site-hero-art" aria-label="Gym Book Training app preview">
+        <div className="site-hero-art" aria-label={copy.hero[0]}>
           <div className="site-orbit orbit-one" /><div className="site-orbit orbit-two" />
           <div className="site-phone">
             <div className="site-phone-camera" />
@@ -309,8 +377,6 @@ export default function Website() {
         <span className="site-eyebrow">{copy.download[0]}</span>
         <h2>{copy.download[1]}</h2>
         <p>{copy.download[2]}</p>
-        {downloadButton('site-button primary', copy.download[3])}
-        <small>{copy.download[4]}</small>
       </section>
 
       <section className="site-legal" id="legal">
@@ -324,21 +390,21 @@ export default function Website() {
         <span className="site-eyebrow">{copy.contact[0]}</span><h2>{copy.contact[1]}</h2><p>{copy.contact[2]}</p>
         {siteUser
           ? <form className="site-contact-form" onSubmit={sendContact}>
-            <label>{language === 'es' ? 'Área' : 'Department'}
+            <label>{ui.department}
               <select value={contactCategory} onChange={event => setContactCategory(event.target.value)}>
-                <option value="support">{language === 'es' ? 'Soporte' : 'Support'}</option>
-                <option value="contact">{language === 'es' ? 'Contacto' : 'Contact'}</option>
-                <option value="admin">Admin</option>
-                <option value="suggestions">{language === 'es' ? 'Sugerencias' : 'Suggestions'}</option>
+                <option value="support">{ui.support}</option>
+                <option value="contact">{ui.contact}</option>
+                <option value="admin">{ui.admin}</option>
+                <option value="suggestions">{ui.suggestions}</option>
               </select>
             </label>
-            <label>{language === 'es' ? 'Tu correo de cuenta' : 'Account email'}<input type="email" value={siteUser.email || ''} readOnly /></label>
-            <label>{language === 'es' ? 'Asunto' : 'Subject'}<input value={contactSubject} onChange={event => setContactSubject(event.target.value)} maxLength={120} required /></label>
-            <label className="site-contact-message">{language === 'es' ? 'Mensaje' : 'Message'}<textarea value={contactMessage} onChange={event => setContactMessage(event.target.value)} rows={5} maxLength={5000} required /></label>
-            <button className="site-button primary" type="submit"><Icon name="link" />{language === 'es' ? 'Preparar correo' : 'Compose email'}</button>
-            <small>{language === 'es' ? 'Se abrirá tu aplicación de correo para que revises y envíes el mensaje.' : 'Your email app will open so you can review and send the message.'}</small>
+            <label>{ui.accountEmail}<input type="email" value={siteUser.email || ''} readOnly /></label>
+            <label>{ui.subject}<input value={contactSubject} onChange={event => setContactSubject(event.target.value)} maxLength={120} required /></label>
+            <label className="site-contact-message">{ui.message}<textarea value={contactMessage} onChange={event => setContactMessage(event.target.value)} rows={5} maxLength={5000} required /></label>
+            <button className="site-button primary" type="submit"><Icon name="link" />{ui.prepareEmail}</button>
+            <small>{ui.emailNotice}</small>
           </form>
-          : <div className="site-contact-gate"><Icon name="lock" /><span>{language === 'es' ? 'Inicia sesión para escribir al equipo.' : 'Sign in to contact the team.'}</span><a className="site-button primary" href="/#/account">{language === 'es' ? 'Iniciar sesión' : 'Sign in'}</a></div>}
+          : <div className="site-contact-gate"><Icon name="lock" /><span>{ui.gate}</span><a className="site-button primary" href="/#/account">{ui.signIn}</a></div>}
         <div className="site-social-section">
           <span className="site-social-heading">{copy.contact[3]}</span>
           <div className="site-social-grid">

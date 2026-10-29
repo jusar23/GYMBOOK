@@ -11,6 +11,7 @@ import { createTrainingFile, parseTrainingFile, trainingFileText, TRAINING_FILE_
 import { DOCS } from './Legal.jsx'
 import { openSubscriptionManagement, purchaseWebPackage, refreshWebSubscription, webBillingConfigured } from '../lib/subscription.js'
 import './Website.css'
+import { ACCOUNT_PORTAL_COPY, ACCOUNT_PORTAL_STATUS } from './accountPortalCopy.js'
 
 const clone = value => JSON.parse(JSON.stringify(value))
 
@@ -27,7 +28,8 @@ export default function AccountPortal() {
   const navigate = useNavigate()
   const languageVersion = useLang()
   const language = getLang()
-  const L = (en, es) => language === 'es' ? es : t(en)
+  const L = (en, es) => language === 'es' ? es : (ACCOUNT_PORTAL_COPY[language]?.[en] || t(en))
+  const S = en => ACCOUNT_PORTAL_STATUS[language]?.[en] || t(en)
   const inputRef = useRef(null)
   const [session, setSession] = useState(null)
   const [state, setState] = useState(null)
@@ -45,10 +47,10 @@ export default function AccountPortal() {
     try {
       const backup = await loadCloudBackup()
       setState(backup?.state ? Object.assign(clone(DEF), backup.state, { active: null }) : clone(DEF))
-      setMessage(backup ? `Server copy updated ${new Date(backup.updatedAt).toLocaleString()}.` : 'No server copy exists yet. Import a Gym Book Training file to create one.')
+      setMessage(backup ? `${S('Server copy updated {0}.').replace('{0}', new Date(backup.updatedAt).toLocaleString())}` : S('No server copy exists yet. Import a Gym Book Training file to create one.'))
     } catch (error) {
       setState(null)
-      setMessage(error.message || 'Could not load your server copy.')
+      setMessage(error.message || S('Could not load your server copy.'))
     }
     if (activeSession?.user?.id && webBillingConfigured()) {
       try { setBilling(await refreshWebSubscription(activeSession.user.id)) }
@@ -65,7 +67,7 @@ export default function AccountPortal() {
         const active = oauth || await getAuthSession()
         if (current && active) await refreshBackup(active)
         else if (current) setBusy(false)
-      } catch (error) { if (current) setMessage(error.message || 'Sign-in failed.') }
+    } catch (error) { if (current) setMessage(error.message || S('Sign-in failed.')) }
       finally { if (current) setBusy(false) }
     })()
     return () => { current = false }
@@ -75,27 +77,27 @@ export default function AccountPortal() {
     event.preventDefault()
     setBusy(true); setMessage('')
     try { await refreshBackup(await signInWithEmail({ email, password })) }
-    catch (error) { setMessage(error.message || 'Sign-in failed.') }
+    catch (error) { setMessage(error.message || S('Sign-in failed.')) }
     finally { setBusy(false) }
   }
 
   const doGoogle = async () => {
     setBusy(true); setMessage('')
     try { await signInWithGoogle() }
-    catch (error) { setMessage(error.message || 'Google sign-in failed.'); setBusy(false) }
+    catch (error) { setMessage(error.message || S('Google sign-in failed.')); setBusy(false) }
   }
 
   const doSignOut = async () => {
     setBusy(true)
-    try { await signOutSupabase(); setSession(null); setState(null); setPending(null); setMessage('You are signed out.') }
-    catch (error) { setMessage(error.message || 'Could not sign out.') }
+    try { await signOutSupabase(); setSession(null); setState(null); setPending(null); setMessage(S('You are signed out.')) }
+    catch (error) { setMessage(error.message || S('Could not sign out.')) }
     finally { setBusy(false) }
   }
 
   const acceptCurrentTerms = async () => {
     const metadata = session?.user?.user_metadata || {}
-    if (!acceptTerms) { setMessage('Accept the current Terms and Conditions and Privacy Policy to continue.'); return }
-    if (!metadata.date_of_birth || !metadata.country_code) { setMessage('Complete your date of birth and country in the app before managing the server copy.'); return }
+    if (!acceptTerms) { setMessage(S('Accept the current Terms and Conditions and Privacy Policy to continue.')); return }
+    if (!metadata.date_of_birth || !metadata.country_code) { setMessage(S('Complete your date of birth and country in the app before managing the server copy.')); return }
     setBusy(true)
     try {
       const updated = await updateAuthUserMetadata(legalConsentMetadata({
@@ -107,12 +109,12 @@ export default function AccountPortal() {
       await setCloudBackupConsent(acceptTrainingData, next)
       setAcceptTerms(false); setAcceptTrainingData(false)
       await refreshBackup({ ...next, user: updated })
-    } catch (error) { setMessage(error.message || 'Could not save your consent.') }
+    } catch (error) { setMessage(error.message || S('Could not save your consent.')) }
     finally { setBusy(false) }
   }
 
   const acceptBackupConsent = async () => {
-    if (!acceptTrainingData) { setMessage('Choose whether to authorize workout-data processing for server backups.'); return }
+    if (!acceptTrainingData) { setMessage(S('Choose whether to authorize workout-data processing for server backups.')); return }
     const metadata = session?.user?.user_metadata || {}
     setBusy(true)
     try {
@@ -126,7 +128,7 @@ export default function AccountPortal() {
       setSession({ ...session, user: updated })
       setAcceptTrainingData(false)
       await refreshBackup({ ...session, user: updated })
-    } catch (error) { setMessage(error.message || 'Could not save your authorization.') }
+    } catch (error) { setMessage(error.message || S('Could not save your authorization.')) }
     finally { setBusy(false) }
   }
 
@@ -134,14 +136,14 @@ export default function AccountPortal() {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-    if (file.size > TRAINING_FILE_MAX_BYTES) { setMessage('Files must be 10 MB or smaller.'); return }
-    if (!file.name.toLowerCase().endsWith('.gbt.json')) { setMessage('Choose a .gbt.json file exported by Gym Book Training.'); return }
+    if (file.size > TRAINING_FILE_MAX_BYTES) { setMessage(S('Files must be 10 MB or smaller.')); return }
+    if (!file.name.toLowerCase().endsWith('.gbt.json')) { setMessage(S('Choose a .gbt.json file exported by Gym Book Training.')); return }
     const reader = new FileReader()
     reader.onload = () => {
-      try { setPending(parseTrainingFile(String(reader.result), { allowLegacy: false })); setMessage('Review the file type before importing.') }
-      catch (error) { setPending(null); setMessage(error.message || 'This file is not supported.') }
+      try { setPending(parseTrainingFile(String(reader.result), { allowLegacy: false })); setMessage(S('Review the file type before importing.')) }
+      catch (error) { setPending(null); setMessage(error.message || S('This file is not supported.')) }
     }
-    reader.onerror = () => setMessage('Could not read this file.')
+    reader.onerror = () => setMessage(S('Could not read this file.'))
     reader.readAsText(file)
   }
 
@@ -155,8 +157,8 @@ export default function AccountPortal() {
         mergePlan(next, pending.data, { schedule: true })
       } else next = Object.assign(clone(DEF), pending.data, { active: null })
       await saveCloudBackup(next)
-      setState(next); setPending(null); setMessage('Your server copy was updated.')
-    } catch (error) { setMessage(error.message || 'Could not save the imported file.') }
+      setState(next); setPending(null); setMessage(S('Your server copy was updated.'))
+    } catch (error) { setMessage(error.message || S('Could not save the imported file.')) }
     finally { setBusy(false) }
   }
 
@@ -164,7 +166,7 @@ export default function AccountPortal() {
     try {
       const value = kind === 'routines' ? JSON.stringify(createTrainingFile(state || DEF, 'routines'), null, 2) : trainingFileText(state || DEF, 'history')
       saveJson(value, `Gym-Book-Training-${kind}-${new Date().toISOString().slice(0, 10)}.gbt.json`)
-    } catch (error) { setMessage(error.message || 'Could not export this copy.') }
+    } catch (error) { setMessage(error.message || S('Could not export this copy.')) }
   }
 
   const buyWebPlan = async plan => {
@@ -172,15 +174,15 @@ export default function AccountPortal() {
     try {
       const next = await purchaseWebPackage(user.id, plan.package, user.email)
       setBilling(next)
-      setMessage('Purchase completed. Your subscription is active.')
-    } catch (error) { setMessage(error.message || 'The purchase could not be completed.') }
+      setMessage(S('Purchase completed. Your subscription is active.'))
+    } catch (error) { setMessage(error.message || S('The purchase could not be completed.')) }
     finally { setBillingBusy(false) }
   }
 
   const manageWebPlan = async () => {
     setBillingBusy(true)
     try { await openSubscriptionManagement(user.id, { native: false }) }
-    catch (error) { setMessage(error.message || 'Could not open subscription management.') }
+    catch (error) { setMessage(error.message || S('Could not open subscription management.')) }
     finally { setBillingBusy(false) }
   }
 
