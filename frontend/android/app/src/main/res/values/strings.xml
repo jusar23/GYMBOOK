@@ -4,6 +4,6 @@
     <string name="title_activity_main">GYMBOOK Training</string>
     <string name="package_name">com.jusar23.gymbook</string>
     <string name="custom_url_scheme">com.jusar23.gymbook</string>
-    <string name="rest_timer_channel_name">Rest timer</string>
+    <string name="rest_timer_channel_name">Workout status</string>
     <string name="streak_widget_description">Daily workout streak and weekly training shield</string>
 </resources>

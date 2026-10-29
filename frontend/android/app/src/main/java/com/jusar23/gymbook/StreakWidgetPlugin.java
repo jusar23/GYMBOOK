@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
+import android.app.Activity;
 import android.os.Build;
 
 import com.getcapacitor.Plugin;
@@ -42,13 +43,33 @@ public class StreakWidgetPlugin extends Plugin {
     @PluginMethod
     public void pin(PluginCall call) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            call.resolve(new com.getcapacitor.JSObject().put("supported", false));
+            call.resolve(new com.getcapacitor.JSObject().put("supported", false).put("requested", false));
             return;
         }
         AppWidgetManager manager = AppWidgetManager.getInstance(getContext());
         ComponentName provider = new ComponentName(getContext(), StreakWidgetProvider.class);
-        boolean supported = manager.isRequestPinAppWidgetSupported()
-            && manager.requestPinAppWidget(provider, null, null);
-        call.resolve(new com.getcapacitor.JSObject().put("supported", supported));
+        boolean supported = manager.isRequestPinAppWidgetSupported();
+        if (!supported) {
+            call.resolve(new com.getcapacitor.JSObject().put("supported", false).put("requested", false));
+            return;
+        }
+
+        Activity activity = getActivity();
+        if (activity == null) {
+            call.resolve(new com.getcapacitor.JSObject().put("supported", true).put("requested", false));
+            return;
+        }
+        // Launch the launcher confirmation from the foreground UI thread. Some
+        // launchers silently ignore the request when it comes from the bridge thread.
+        activity.runOnUiThread(() -> {
+            try {
+                boolean requested = manager.requestPinAppWidget(provider, null, null);
+                call.resolve(new com.getcapacitor.JSObject()
+                    .put("supported", true)
+                    .put("requested", requested));
+            } catch (Exception error) {
+                call.reject("Could not open the Android widget prompt", error);
+            }
+        });
     }
 }

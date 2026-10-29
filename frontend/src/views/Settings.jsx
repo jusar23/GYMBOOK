@@ -115,10 +115,18 @@ export default function Settings() {
   const [accountDeleting, setAccountDeleting] = useState(false)
   const [trainingConsentBusy, setTrainingConsentBusy] = useState(false)
   const [widgetMessage, setWidgetMessage] = useState('')
+  const [widgetBusy, setWidgetBusy] = useState(false)
 
   const addStreakWidget = async () => {
-    const pinned = await requestStreakWidgetPin()
-    setWidgetMessage(t(pinned ? 'Confirm the Android prompt to add the streak widget.' : 'This launcher does not support pinning. Add the widget from Android’s widget picker.'))
+    if (widgetBusy) return
+    setWidgetBusy(true)
+    setWidgetMessage('')
+    try {
+      const result = await requestStreakWidgetPin()
+      setWidgetMessage(t(result === 'requested'
+        ? 'Android is asking where to add the widget.'
+        : 'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.'))
+    } finally { setWidgetBusy(false) }
   }
 
   useEffect(() => {
@@ -508,8 +516,8 @@ export default function Settings() {
           playTimerTone(true, v, 'countdown')
         }} />}
 
-      {ANDROID_APP && <Row icon="clock" iconTint="var(--teal)" title={t('Rest timer notification')}
-        subtitle={t('Show the countdown and last set when you switch apps.')}>
+      {ANDROID_APP && <Row icon="clock" iconTint="var(--teal)" title={t('Workout notification')}
+        subtitle={t('Keep workout status visible and show the rest countdown while you train, even when you leave the app.')}>
         <Switch checked={!!S.restNotification} onChange={async enabled => {
           if (enabled) {
             const granted = await requestRestNotificationPermission()
@@ -645,8 +653,8 @@ export default function Settings() {
       {ANDROID_APP && <Row icon="fire" iconTint="var(--acc)" title={t('Streak widget')}
         subtitle={t('Add your workout streak to the Android home screen.')}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-          <Button size="sm" variant="tinted" icon="plus" onClick={addStreakWidget}>{t('Add widget')}</Button>
-          {widgetMessage && <span className="small muted" style={{ maxWidth: 220, textAlign: 'right' }}>{widgetMessage}</span>}
+          <Button size="sm" variant="tinted" icon="plus" onClick={addStreakWidget} disabled={widgetBusy} aria-busy={widgetBusy}>{t('Add widget')}</Button>
+          {widgetMessage && <span className="small muted" role="status" style={{ maxWidth: 220, textAlign: 'right' }}>{widgetMessage}</span>}
         </div>
       </Row>}
 

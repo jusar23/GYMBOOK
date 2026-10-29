@@ -4,7 +4,7 @@ import { clearPendingRecoveryCode, getAuthSession, getPendingRecoveryCode, isPas
 import { localTZ } from '../lib/format.js'
 import { registerCustom } from '../lib/exercises.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
-import { MOBILE, nativeLoad, nativeSave, nativeClear, syncReminder, syncStreakWidget } from '../lib/mobile.js'
+import { MOBILE, nativeLoad, nativeSave, nativeClear, syncReminder, syncStreakWidget, syncNativeWorkoutNotification, clearNativeWorkoutNotification } from '../lib/mobile.js'
 import { getCloudBackupConsent } from '../lib/supabaseBackup.js'
 import { needsLegalSetup } from '../lib/legalConsent.js'
 import { ageFromDateOfBirth } from '../lib/routine-recommendation.js'
@@ -74,6 +74,8 @@ export const useStore = create((set, get) => {
   let saveTm = null
   let reminderTm = null
   let streakWidgetTm = null
+  let workoutNotificationTm = null
+  let workoutNotificationKey
   let stateRevision = 0
 
   // Mobile build: mirror state locally. Reminders are synced separately only when their
@@ -105,6 +107,28 @@ export const useStore = create((set, get) => {
     }, 800)
   }
 
+  const nativeWorkoutNotificationPersist = S => {
+    const active = S.active
+    const sets = active?.entries || []
+    const done = sets.reduce((sum, entry) => sum + (entry.sets || []).filter(item => item.done).length + (entry.warmupSet?.done ? 1 : 0), 0)
+    const total = sets.reduce((sum, entry) => sum + (entry.sets || []).length + (entry.warmupSet ? 1 : 0), 0)
+    const key = active && S.restNotification
+      ? JSON.stringify([active.id, active.name, active.cur, done, total])
+      : ''
+    if (key === workoutNotificationKey) return
+    workoutNotificationKey = key
+    clearTimeout(workoutNotificationTm)
+    workoutNotificationTm = null
+    if (!key) {
+      void clearNativeWorkoutNotification()
+      return
+    }
+    workoutNotificationTm = setTimeout(() => {
+      workoutNotificationTm = null
+      void syncNativeWorkoutNotification(get().S)
+    }, 120)
+  }
+
   const persist = (S, push = true) => {
     const reminderChanged = MOBILE && reminderConfig(get().S) !== reminderConfig(S)
     migrateChosenExercises(S)
@@ -117,6 +141,7 @@ export const useStore = create((set, get) => {
     if (MOBILE) {
       nativePersist()
       nativeStreakWidgetPersist()
+      nativeWorkoutNotificationPersist(S)
       if (reminderChanged) nativeReminderPersist()
     }
     if (push && get().user?.trainingDataConsent === true && !MOBILE) {
@@ -147,6 +172,11 @@ export const useStore = create((set, get) => {
       clearTimeout(streakWidgetTm)
       streakWidgetTm = null
       syncStreakWidget(get().S)
+    }
+    if (MOBILE && workoutNotificationTm) {
+      clearTimeout(workoutNotificationTm)
+      workoutNotificationTm = null
+      void syncNativeWorkoutNotification(get().S)
     }
     if (pushTm) {
       clearTimeout(pushTm)
@@ -280,6 +310,9 @@ export const useStore = create((set, get) => {
       reminderTm = null
       clearTimeout(streakWidgetTm)
       streakWidgetTm = null
+      clearTimeout(workoutNotificationTm)
+      workoutNotificationTm = null
+      workoutNotificationKey = ''
       clearTimeout(pushTm)
       pushTm = null
       await signOutSupabase(false).catch(() => {})
@@ -319,6 +352,7 @@ export const useStore = create((set, get) => {
         // The widget is optional UI. Never let a native widget call hold the app's first
         // screen open if the Android provider is unavailable or slow to respond.
         void syncStreakWidget(get().S)
+        void syncNativeWorkoutNotification(get().S)
         let authSession = null
         try { authSession = await processOAuthCallback() || await getAuthSession() }
         catch (e) { localStorage.setItem('gym_auth_error', e.message || 'Sign-in failed. Please try again.') }

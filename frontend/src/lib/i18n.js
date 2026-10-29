@@ -4,7 +4,7 @@
 // Exercise instructions come from separately generated packs in src/instr/ (one per
 // language, from the upstream dataset) — also lazy-loaded on language switch.
 import { useSyncExternalStore } from 'react'
-import uiAdditions, { chromeTranslations, dynamicContentTranslations, guidedFlowTranslations } from '../locales/ui-additions.js'
+import uiAdditions, { chromeTranslations, dynamicContentTranslations, guidedFlowTranslations, widgetTranslations, notificationTranslations } from '../locales/ui-additions.js'
 
 // UI languages. de/pt have no instruction pack upstream — instructions fall back to English.
 export const LANGS = {
@@ -247,7 +247,7 @@ export async function setLang(l) {
     ])
     if (request !== langRequest) return
     const translatedErrors = Object.fromEntries(subscriptionErrorKeys.map((key, index) => [key, subscriptionErrorTranslations[l]?.[index] || key]))
-    dict = { ...(basePack?.default || {}), ...(completionPack?.default || {}), ...(uiAdditions[l] || {}), ...(chromeTranslations[l] || {}), ...(dynamicContentTranslations[l] || {}), ...(guidedFlowTranslations[l] || {}), ...(subscriptionTranslations[l] || {}), 'Your free access or subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.': accessEndedTranslations[l] || 'Your free access or subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.', ...translatedErrors }
+    dict = { ...(basePack?.default || {}), ...(completionPack?.default || {}), ...(uiAdditions[l] || {}), ...(chromeTranslations[l] || {}), ...(dynamicContentTranslations[l] || {}), ...(guidedFlowTranslations[l] || {}), ...(widgetTranslations[l] || {}), ...(notificationTranslations[l] || {}), ...(subscriptionTranslations[l] || {}), 'Your free access or subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.': accessEndedTranslations[l] || 'Your free access or subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.', ...translatedErrors }
   } catch (e) {
     if (request !== langRequest) return
     dict = {}; instr = null

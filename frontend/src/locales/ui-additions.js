@@ -839,6 +839,123 @@ export default {
   }
 };
 
+// Android widget pinning feedback. English remains the source fallback.
+export const widgetTranslations = {
+  de: {
+    'Android is asking where to add the widget.': 'Android fragt jetzt, wo das Widget hinzugefügt werden soll.',
+    'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.': 'Das Android-Fenster zum Hinzufügen ließ sich nicht öffnen. Halte auf dem Startbildschirm einen freien Bereich gedrückt, tippe auf „Widgets“ und füge dann GYMBOOK Training hinzu.',
+  },
+  es: {
+    'Android is asking where to add the widget.': 'Android te está preguntando dónde añadir el widget.',
+    'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.': 'No se pudo abrir la ventana de Android para añadir el widget. Mantén pulsado un espacio vacío de la pantalla de inicio, toca Widgets y añade GYMBOOK Training.',
+  },
+  fr: {
+    'Android is asking where to add the widget.': 'Android vous demande où ajouter le widget.',
+    'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.': 'La fenêtre Android d’ajout du widget n’a pas pu s’ouvrir. Sur l’écran d’accueil, maintenez une zone vide appuyée, touchez Widgets, puis ajoutez GYMBOOK Training.',
+  },
+  it: {
+    'Android is asking where to add the widget.': 'Android ti sta chiedendo dove aggiungere il widget.',
+    'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.': 'Impossibile aprire la richiesta Android per aggiungere il widget. Nella schermata Home, tieni premuta un’area vuota, tocca Widget e aggiungi GYMBOOK Training.',
+  },
+  pt: {
+    'Android is asking where to add the widget.': 'O Android está perguntando onde adicionar o widget.',
+    'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.': 'Não foi possível abrir a solicitação do Android para adicionar o widget. Na tela inicial, toque e segure uma área vazia, toque em Widgets e adicione GYMBOOK Training.',
+  },
+  pl: {
+    'Android is asking where to add the widget.': 'Android pyta, gdzie dodać widżet.',
+    'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.': 'Nie udało się otworzyć okna Androida do dodania widżetu. Na ekranie głównym przytrzymaj puste miejsce, wybierz Widżety, a następnie dodaj GYMBOOK Training.',
+  },
+  tr: {
+    'Android is asking where to add the widget.': 'Android, widget’ı nereye eklemek istediğini soruyor.',
+    'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.': 'Android widget ekleme penceresi açılamadı. Ana ekranda boş bir alana basılı tut, Widget’lar’a dokun ve GYMBOOK Training’i ekle.',
+  },
+  ru: {
+    'Android is asking where to add the widget.': 'Android предлагает выбрать место для виджета.',
+    'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.': 'Не удалось открыть окно добавления виджета Android. На главном экране нажмите и удерживайте пустое место, выберите «Виджеты», затем добавьте GYMBOOK Training.',
+  },
+  zh: {
+    'Android is asking where to add the widget.': 'Android 正在询问要将小组件添加到哪里。',
+    'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.': '无法打开 Android 的小组件添加提示。请在主屏幕长按空白处，点按“小组件”，然后添加 GYMBOOK Training。',
+  },
+  ko: {
+    'Android is asking where to add the widget.': 'Android에서 위젯을 추가할 위치를 묻고 있습니다.',
+    'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.': 'Android 위젯 추가 창을 열지 못했습니다. 홈 화면의 빈 곳을 길게 누르고 위젯을 선택한 다음 GYMBOOK Training을 추가하세요.',
+  },
+  hi: {
+    'Android is asking where to add the widget.': 'Android पूछ रहा है कि विजेट कहाँ जोड़ना है।',
+    'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.': 'Android का विजेट जोड़ने वाला संदेश नहीं खुल सका। होम स्क्रीन पर खाली जगह को दबाकर रखें, Widgets पर टैप करें और GYMBOOK Training जोड़ें।',
+  },
+}
+
+export const notificationTranslations = {
+  de: {
+    'Workout notification': 'Trainingsbenachrichtigung',
+    'Keep workout status visible and show the rest countdown while you train, even when you leave the app.': 'Zeige während des Trainings den Trainingsstatus und den Pausentimer an, auch wenn du die App verlässt.',
+    'Workout in progress': 'Training läuft',
+    '{0} · {1}/{2} sets': '{0} · {1}/{2} Sätze',
+  },
+  es: {
+    'Workout notification': 'Notificación del entrenamiento',
+    'Keep workout status visible and show the rest countdown while you train, even when you leave the app.': 'Muestra el estado del entrenamiento y la cuenta regresiva del descanso, incluso al salir de la app.',
+    'Workout in progress': 'Entrenamiento en curso',
+    '{0} · {1}/{2} sets': '{0} · {1}/{2} series',
+  },
+  fr: {
+    'Workout notification': 'Notification d’entraînement',
+    'Keep workout status visible and show the rest countdown while you train, even when you leave the app.': 'Affichez l’état de l’entraînement et le compte à rebours du repos, même lorsque vous quittez l’application.',
+    'Workout in progress': 'Entraînement en cours',
+    '{0} · {1}/{2} sets': '{0} · {1}/{2} séries',
+  },
+  it: {
+    'Workout notification': 'Notifica dell’allenamento',
+    'Keep workout status visible and show the rest countdown while you train, even when you leave the app.': 'Mostra lo stato dell’allenamento e il conto alla rovescia del recupero anche quando esci dall’app.',
+    'Workout in progress': 'Allenamento in corso',
+    '{0} · {1}/{2} sets': '{0} · {1}/{2} serie',
+  },
+  pt: {
+    'Workout notification': 'Notificação do treino',
+    'Keep workout status visible and show the rest countdown while you train, even when you leave the app.': 'Mostra o estado do treino e a contagem decrescente do descanso, mesmo quando sair da aplicação.',
+    'Workout in progress': 'Treino em andamento',
+    '{0} · {1}/{2} sets': '{0} · {1}/{2} séries',
+  },
+  pl: {
+    'Workout notification': 'Powiadomienie o treningu',
+    'Keep workout status visible and show the rest countdown while you train, even when you leave the app.': 'Pokazuj stan treningu i odliczanie przerwy, także po przejściu do innej aplikacji.',
+    'Workout in progress': 'Trening w toku',
+    '{0} · {1}/{2} sets': '{0} · {1}/{2} serii',
+  },
+  tr: {
+    'Workout notification': 'Antrenman bildirimi',
+    'Keep workout status visible and show the rest countdown while you train, even when you leave the app.': 'Uygulamadan çıksan bile antrenman durumunu ve dinlenme geri sayımını göster.',
+    'Workout in progress': 'Antrenman devam ediyor',
+    '{0} · {1}/{2} sets': '{0} · {1}/{2} set',
+  },
+  ru: {
+    'Workout notification': 'Уведомление о тренировке',
+    'Keep workout status visible and show the rest countdown while you train, even when you leave the app.': 'Показывать состояние тренировки и обратный отсчёт отдыха, даже если вы выйдете из приложения.',
+    'Workout in progress': 'Тренировка идёт',
+    '{0} · {1}/{2} sets': '{0} · {1}/{2} подходов',
+  },
+  zh: {
+    'Workout notification': '训练通知',
+    'Keep workout status visible and show the rest countdown while you train, even when you leave the app.': '训练时持续显示训练状态和休息倒计时，即使离开应用也会显示。',
+    'Workout in progress': '训练进行中',
+    '{0} · {1}/{2} sets': '{0} · {1}/{2} 组',
+  },
+  ko: {
+    'Workout notification': '운동 알림',
+    'Keep workout status visible and show the rest countdown while you train, even when you leave the app.': '앱을 나가도 운동 상태와 휴식 카운트다운을 계속 표시합니다.',
+    'Workout in progress': '운동 진행 중',
+    '{0} · {1}/{2} sets': '{0} · {1}/{2}세트',
+  },
+  hi: {
+    'Workout notification': 'वर्कआउट सूचना',
+    'Keep workout status visible and show the rest countdown while you train, even when you leave the app.': 'ऐप से बाहर जाने पर भी वर्कआउट की स्थिति और आराम की उलटी गिनती दिखाएँ।',
+    'Workout in progress': 'वर्कआउट जारी है',
+    '{0} · {1}/{2} sets': '{0} · {1}/{2} सेट',
+  },
+}
+
 export const chromeTranslations = {
   "de": {
     "Signing out…": "Abmeldung läuft…",

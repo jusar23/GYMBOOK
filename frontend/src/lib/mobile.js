@@ -10,29 +10,24 @@
 // Like the demo build, MOBILE is replaced at build time, so all of this folds away in
 // web bundles; the Capacitor plugins are only ever imported behind it.
 import { t } from './i18n.js'
-import { Capacitor } from '@capacitor/core'
-import { ACCENTS, DAYS } from './format.js'
+import { Capacitor, registerPlugin } from '@capacitor/core'
+import { ACCENTS } from './format.js'
+import { dateLocale } from './i18n.js'
 
 export const MOBILE = import.meta.env.MODE === 'mobile' || import.meta.env.VITE_MOBILE === '1'
 export const ANDROID_APP = MOBILE && Capacitor.getPlatform() === 'android'
 
-let restNotificationPlugin
-let streakWidgetPlugin
+const restNotificationPlugin = registerPlugin('RestNotification')
+// Register this at module load like the other foreground native controls. Creating
+// the proxy only on first tap can race Capacitor's bridge setup on Android.
+const streakWidgetPlugin = registerPlugin('StreakWidget')
 async function getRestNotificationPlugin() {
   if (!ANDROID_APP) return null
-  if (!restNotificationPlugin) {
-    const { registerPlugin } = await import('@capacitor/core')
-    restNotificationPlugin = registerPlugin('RestNotification')
-  }
   return restNotificationPlugin
 }
 
 async function getStreakWidgetPlugin() {
   if (!ANDROID_APP) return null
-  if (!streakWidgetPlugin) {
-    const { registerPlugin } = await import('@capacitor/core')
-    streakWidgetPlugin = registerPlugin('StreakWidget')
-  }
   return streakWidgetPlugin
 }
 
@@ -49,7 +44,12 @@ export async function syncStreakWidget(S) {
       streakLabel: t('Daily streak'),
       shieldReady: t('Weekly shield ready'),
       shieldUsed: t('Weekly shield used'),
-      dayLabels: [1, 2, 3, 4, 5, 6, 0].map(day => t(DAYS[day])),
+      // Intl uses the active app locale and abbreviates all seven days, even in
+      // languages whose UI pack only translates a subset of the English day keys.
+      dayLabels: [1, 2, 3, 4, 5, 6, 0].map(day => {
+        const date = new Date(2024, 0, 1 + day, 12)
+        return new Intl.DateTimeFormat(dateLocale(), { weekday: 'short' }).format(date)
+      }),
     })
     return true
   } catch { return false }
@@ -58,10 +58,10 @@ export async function syncStreakWidget(S) {
 export async function requestStreakWidgetPin() {
   try {
     const plugin = await getStreakWidgetPlugin()
-    if (!plugin) return false
+    if (!plugin) return 'unavailable'
     const result = await plugin.pin()
-    return result?.supported === true
-  } catch { return false }
+    return result?.requested === true ? 'requested' : result?.supported === false ? 'unsupported' : 'failed'
+  } catch { return 'failed' }
 }
 
 async function clearStreakWidget() {
@@ -79,6 +79,29 @@ export async function setNativeRestTimer(options) {
 
 export async function clearNativeRestTimer() {
   try { const plugin = await getRestNotificationPlugin(); await plugin?.clearRestTimer() } catch { /* Native timer is optional. */ }
+}
+
+export async function syncNativeWorkoutNotification(S) {
+  try {
+    const plugin = await getRestNotificationPlugin()
+    const active = S?.active
+    if (!plugin || !active || !S.restNotification) {
+      await plugin?.clearWorkoutState()
+      return false
+    }
+    const entries = active.entries || []
+    const total = entries.reduce((sum, entry) => sum + (entry.sets || []).length + (entry.warmupSet ? 1 : 0), 0)
+    const done = entries.reduce((sum, entry) => sum + (entry.sets || []).filter(set => set.done).length + (entry.warmupSet?.done ? 1 : 0), 0)
+    const detail = total
+      ? t('{0} · {1}/{2} sets', active.name || t('Workout in progress'), done, total)
+      : (active.name || t('Workout in progress'))
+    await plugin.setWorkoutState({ title: t('Workout in progress'), detail })
+    return true
+  } catch { return false }
+}
+
+export async function clearNativeWorkoutNotification() {
+  try { const plugin = await getRestNotificationPlugin(); await plugin?.clearWorkoutState() } catch { /* Native workout status is optional. */ }
 }
 
 export async function requestRestNotificationPermission() {
@@ -124,6 +147,7 @@ export async function nativeClear() {
     const { LocalNotifications } = await import('@capacitor/local-notifications')
     await LocalNotifications.cancel({ notifications: [0, 1, 2, 3, 4, 5, 6].map(d => ({ id: 100 + d })) })
   } catch (e) { /* Account deletion still clears app data if notifications are unavailable. */ }
+  await clearNativeWorkoutNotification()
   await clearStreakWidget()
 }
 

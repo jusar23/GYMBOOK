@@ -18,6 +18,7 @@ export default function Home() {
   const user = useStore(s => s.user)
   const [weekOffset, setWeekOffset] = useState(0)
   const [widgetMessage, setWidgetMessage] = useState('')
+  const [widgetBusy, setWidgetBusy] = useState(false)
 
   const today = new Date()
   const routine = effectiveRoutine(S, todayISO())
@@ -49,8 +50,15 @@ export default function Home() {
   const onToday = () => { if (S.active) nav('/workout'); else if (routine) startFlow(routine.id); else dayOverrideSheet(todayISO()) }
   const addStreakWidget = async event => {
     event.stopPropagation()
-    const pinned = await requestStreakWidgetPin()
-    setWidgetMessage(t(pinned ? 'Confirm the Android prompt to add the streak widget.' : 'This launcher does not support pinning. Add the widget from Android’s widget picker.'))
+    if (widgetBusy) return
+    setWidgetBusy(true)
+    setWidgetMessage('')
+    try {
+      const result = await requestStreakWidgetPin()
+      setWidgetMessage(t(result === 'requested'
+        ? 'Android is asking where to add the widget.'
+        : 'Could not open the Android widget prompt. On your home screen, touch and hold an empty area, tap Widgets, then add GYMBOOK Training.'))
+    } finally { setWidgetBusy(false) }
   }
 
   return <div className="narrow">
@@ -138,9 +146,9 @@ export default function Home() {
       </div>
       <div className="row" style={{ gap: 8, marginTop: 10 }}>
         <Button size="sm" variant="tinted" icon="calendar" onClick={event => { event.stopPropagation(); nav('/plan') }}>{t('Schedule days')}</Button>
-        {ANDROID_APP && <Button size="sm" variant="plain" icon="plus" onClick={addStreakWidget}>{t('Add widget')}</Button>}
+        {ANDROID_APP && <Button size="sm" variant="plain" icon="plus" onClick={addStreakWidget} disabled={widgetBusy} aria-busy={widgetBusy}>{t('Add widget')}</Button>}
       </div>
-      {widgetMessage && <div className="small muted" style={{ marginTop: 7 }} onClick={event => event.stopPropagation()}>{widgetMessage}</div>}
+      {widgetMessage && <div className="small muted" role="status" style={{ marginTop: 7 }} onClick={event => event.stopPropagation()}>{widgetMessage}</div>}
     </div>
   </div>
 }

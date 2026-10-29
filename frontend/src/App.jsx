@@ -16,7 +16,7 @@ import Modals from './components/Modals.jsx'
 import Toast from './components/Toast.jsx'
 import RestTimer from './components/RestTimer.jsx'
 import Login from './views/Login.jsx'
-import { MOBILE } from './lib/mobile.js'
+import { MOBILE, syncStreakWidget, syncNativeWorkoutNotification } from './lib/mobile.js'
 import { NATIVE_OAUTH_REDIRECT, processOAuthCallback } from './lib/supabaseAuth.js'
 import { needsLegalSetup } from './lib/legalConsent.js'
 import { openOnboarding, onboardingSeenKey } from './components/Onboarding.jsx'
@@ -140,7 +140,17 @@ function Shell() {
     }
   }, [ready, user?.id, user?.needsLegalSetup, subscription.granted, subscription.expiresAt, checkSubscription])
   useEffect(() => { applyPrefs(theme, accent) }, [theme, accent])
-  useEffect(() => { setLang(lang || 'en') }, [lang])
+  useEffect(() => {
+    let current = true
+    void setLang(lang || 'en').then(() => {
+      if (current && MOBILE) {
+        const state = useStore.getState().S
+        void syncStreakWidget(state)
+        void syncNativeWorkoutNotification(state)
+      }
+    })
+    return () => { current = false }
+  }, [lang])
   useEffect(() => { document.documentElement.lang = lang || 'en' }, [langV, lang])
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
   useWakeLock(workoutActive && keepAwake !== false)
