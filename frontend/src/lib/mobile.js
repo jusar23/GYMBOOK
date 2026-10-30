@@ -59,7 +59,10 @@ export async function syncStreakWidget(S) {
       }),
     })
     return true
-  } catch { return false }
+  } catch (error) {
+    console.error('[StreakWidget] Sync failed', error)
+    return false
+  }
 }
 
 async function clearStreakWidget() {

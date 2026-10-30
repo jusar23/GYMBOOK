@@ -225,6 +225,23 @@ function Shell() {
     })
     return () => { current = false }
   }, [lang])
+  useEffect(() => {
+    if (!ANDROID_APP || !ready) return
+    let syncTimer
+    const syncOnResume = () => {
+      if (document.visibilityState === 'hidden') return
+      clearTimeout(syncTimer)
+      syncTimer = setTimeout(() => void syncStreakWidget(useStore.getState().S), 300)
+    }
+    window.addEventListener('focus', syncOnResume)
+    document.addEventListener('visibilitychange', syncOnResume)
+    syncOnResume()
+    return () => {
+      window.removeEventListener('focus', syncOnResume)
+      document.removeEventListener('visibilitychange', syncOnResume)
+      clearTimeout(syncTimer)
+    }
+  }, [ready])
   useEffect(() => { document.documentElement.lang = lang || 'en' }, [langV, lang])
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
   useWakeLock(workoutActive && keepAwake !== false)

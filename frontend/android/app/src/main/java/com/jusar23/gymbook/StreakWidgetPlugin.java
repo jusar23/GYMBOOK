@@ -25,7 +25,10 @@ public class StreakWidgetPlugin extends Plugin {
         editor.putString("shieldReady", call.getString("shieldReady", "Weekly shield ready"));
         editor.putString("shieldUsed", call.getString("shieldUsed", "Weekly shield used"));
         editor.putString("dayLabels", call.getArray("dayLabels", new com.getcapacitor.JSArray()).toString());
-        editor.apply();
+        if (!editor.commit()) {
+            call.reject("Could not save widget data.");
+            return;
+        }
         StreakWidgetProvider.updateAll(context);
         call.resolve();
     }

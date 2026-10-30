@@ -23,6 +23,18 @@ public class StreakWidgetProvider extends AppWidgetProvider {
     private static final String PREFS = "streak_widget";
 
     @Override
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        String action = intent == null ? null : intent.getAction();
+        if (Intent.ACTION_DATE_CHANGED.equals(action)
+            || Intent.ACTION_TIMEZONE_CHANGED.equals(action)
+            || Intent.ACTION_LOCALE_CHANGED.equals(action)
+            || Intent.ACTION_TIME_CHANGED.equals(action)) {
+            updateAll(context);
+        }
+    }
+
+    @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] widgetIds) {
         for (int widgetId : widgetIds) manager.updateAppWidget(widgetId, buildViews(context));
     }
