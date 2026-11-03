@@ -592,6 +592,9 @@ export default function Legal({ web = false }) {
 
   useLang()
 
+  const interfaceLang = getLang()
+  const legalUi = WEBSITE_LEGAL_UI[interfaceLang] || WEBSITE_LEGAL_UI.en
+
   const location = useLocation()
 
   // Legal is rendered directly by Shell (outside <Routes>), so useParams() is empty.
