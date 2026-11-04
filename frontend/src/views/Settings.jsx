@@ -18,7 +18,8 @@ import { loadCloudBackup, saveCloudBackup, setCloudBackupConsent } from '../lib/
 import { TRAINING_DATA_CONSENT_VERSION } from '../lib/legalConsent.js'
 import { mergePlan } from '../lib/plan-share.js'
 import { parseTrainingFile, trainingFileText } from '../lib/training-file.js'
-import { openSubscriptionManagement } from '../lib/subscription.js'
+import { openSubscriptionManagement, presentNativeCustomerCenter, presentNativePaywall } from '../lib/subscription.js'
+import { SOCIAL_URLS } from '../lib/brand-links.js'
 
 import { pushSupported, enablePush, disablePush, sendTestPush } from '../lib/push.js'
 
@@ -75,9 +76,9 @@ import { Section, Row, SelectRow, Switch, Segmented, Button, TextField } from '.
 import { DOCS } from './Legal.jsx'
 
 const SOCIAL_LINKS = [
-  { name: 'Facebook', icon: 'facebook', tint: '#1877f2', url: import.meta.env.VITE_SOCIAL_FACEBOOK_URL || '' },
-  { name: 'X', icon: 'xSocial', tint: '#222222', url: import.meta.env.VITE_SOCIAL_X_URL || '' },
-  { name: 'Instagram', icon: 'instagram', tint: '#c13584', url: import.meta.env.VITE_SOCIAL_INSTAGRAM_URL || '' },
+  { name: 'Facebook', icon: 'facebook', tint: '#1877f2', url: SOCIAL_URLS.facebook },
+  { name: 'X', icon: 'xSocial', tint: '#222222', url: SOCIAL_URLS.x },
+  { name: 'Instagram', icon: 'instagram', tint: '#c13584', url: SOCIAL_URLS.instagram },
   { name: 'Website', icon: 'globe', tint: '#3478f6', url: import.meta.env.VITE_PUBLIC_WEBSITE_URL || 'https://gymbooktraining.com/' },
 ]
 const DOC_TINT = { privacy: 'var(--blue)', collection: 'var(--teal)', 'third-parties': 'var(--purple)', terms: 'var(--brown)' }
@@ -283,8 +284,21 @@ export default function Settings() {
   }
 
   const manageSubscription = async () => {
-    try { await openSubscriptionManagement(user.id, { native: MOBILE }) }
-    catch (error) { toast(error.message || t('Could not open subscription management.')) }
+    if (!MOBILE) {
+      try { await openSubscriptionManagement(user.id, { native: false }) }
+      catch (error) { toast(error.message || t('Could not open subscription management.')) }
+      return
+    }
+    try { await presentNativeCustomerCenter(user.id) }
+    catch (error) {
+      try { await openSubscriptionManagement(user.id, { native: true }) }
+      catch (fallbackError) { toast(fallbackError.message || error.message || t('Could not open subscription management.')) }
+    }
+  }
+
+  const showSubscriptionPlans = async () => {
+    try { await presentNativePaywall(user.id) }
+    catch (error) { toast(error.message || t('The subscription screen could not be opened. Choose a plan below or try again.')) }
   }
 
 
@@ -653,6 +667,7 @@ export default function Settings() {
               <Switch checked={user.trainingDataConsent === true} disabled={trainingConsentBusy}
                 onChange={updateTrainingConsent} />
             </Row>
+            {MOBILE && <Row icon="crown" iconTint="var(--yellow)" title={t('Subscription plans')} subtitle={t('Compare monthly and yearly plans.')} accessory="chevron" onClick={showSubscriptionPlans} />}
             <Row icon="crown" iconTint="var(--yellow)" title={t('Manage subscription')} subtitle={t('View your plan, renewal date, payment method or cancellation options.')} accessory="chevron" onClick={manageSubscription} />
             <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your progress stays on this phone. Cloud backup is not changed.'), confirmText: t('Sign out'), danger: true, onConfirm: async () => { await signOut(); nav('/home') } })} />
             <Row icon="trash" iconTint="var(--red)" title={t('Delete account')} subtitle={t('Permanently delete your account and its data.')} danger onClick={deleteAccount} />

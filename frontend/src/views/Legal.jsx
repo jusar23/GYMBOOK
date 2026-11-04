@@ -5,6 +5,7 @@ import { getLang, setLang, t, useLang } from '../lib/i18n.js'
 import Icon from '../components/Icon.jsx'
 
 import { Row } from '../components/ui.jsx'
+import { CONTACT_EMAIL } from '../lib/brand-links.js'
 
 
 
@@ -13,7 +14,7 @@ import { Row } from '../components/ui.jsx'
 // ─────────────────────────────────────────────────────────────
 const OWNER = 'Juan Sebastián Arias Quintero'
 
-const CONTACT = 'xsebas23@gmail.com'
+const CONTACT = CONTACT_EMAIL
 
 const ADDRESS = 'El Carmen de Viboral, Antioquia, Colombia'
 

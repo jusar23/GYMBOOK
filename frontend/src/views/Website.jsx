@@ -4,16 +4,16 @@ import Icon from '../components/Icon.jsx'
 import Brand from '../components/Brand.jsx'
 import { getAuthSession } from '../lib/supabaseAuth.js'
 import { WEBSITE_COPY } from './websiteCopy.js'
+import { CONTACT_EMAIL, SOCIAL_URLS } from '../lib/brand-links.js'
 import './Website.css'
 
-const CONTACT_EMAIL = 'xsebas23@gmail.com'
 const PUBLIC_SITE_URL = 'https://gymbooktraining.com/'
 const LANGUAGE_KEY = 'gymbook_site_lang'
 const FEATURE_ICONS = ['calendar', 'dumbbell', 'chart', 'star', 'timer', 'link', 'lightbulb', 'download', 'bell', 'flame', 'gear', 'shield']
 const SOCIAL_LINKS = [
-  { name: 'X', icon: 'xSocial', url: import.meta.env.VITE_SOCIAL_X_URL || '' },
-  { name: 'Facebook', icon: 'facebook', url: import.meta.env.VITE_SOCIAL_FACEBOOK_URL || '' },
-  { name: 'Instagram', icon: 'instagram', url: import.meta.env.VITE_SOCIAL_INSTAGRAM_URL || '' },
+  { name: 'X', icon: 'xSocial', url: SOCIAL_URLS.x },
+  { name: 'Facebook', icon: 'facebook', url: SOCIAL_URLS.facebook },
+  { name: 'Instagram', icon: 'instagram', url: SOCIAL_URLS.instagram },
 ]
 
 function safeSocialUrl(value) {

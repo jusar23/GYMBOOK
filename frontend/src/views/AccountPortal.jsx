@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
 import { getLang, LANGS, setLang, t, useLang } from '../lib/i18n.js'
-import { DEF } from '../store/useStore.js'
-import { getAuthSession, processOAuthCallback, signInWithEmail, signInWithGoogle, signOutSupabase, updateAuthUserMetadata } from '../lib/supabaseAuth.js'
+import { DEF, useStore } from '../store/useStore.js'
+import { deleteSupabaseAccount, getAuthSession, processOAuthCallback, signInWithEmail, signInWithGoogle, signOutSupabase, updateAuthUserMetadata } from '../lib/supabaseAuth.js'
 import { TRAINING_DATA_CONSENT_VERSION, hasTrainingDataConsent, legalConsentMetadata, needsLegalSetup } from '../lib/legalConsent.js'
 import { loadCloudBackup, saveCloudBackup, setCloudBackupConsent } from '../lib/supabaseBackup.js'
 import { mergePlan } from '../lib/plan-share.js'
@@ -42,6 +42,10 @@ export default function AccountPortal() {
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [acceptTrainingData, setAcceptTrainingData] = useState(false)
   const [billingBusy, setBillingBusy] = useState(false)
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
+  const [deleteAccountConfirmed, setDeleteAccountConfirmed] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
+  const [deleteAccountMessage, setDeleteAccountMessage] = useState('')
 
   const refreshBackup = async activeSession => {
     try {
@@ -186,6 +190,27 @@ export default function AccountPortal() {
     finally { setBillingBusy(false) }
   }
 
+  const removeAccount = async () => {
+    if (!deleteAccountConfirmed || deletingAccount) return
+    setDeletingAccount(true)
+    setDeleteAccountMessage('')
+    try {
+      await deleteSupabaseAccount()
+      await useStore.getState().completeAccountDeletion()
+      setSession(null)
+      setState(null)
+      setPending(null)
+      setBilling({ configured: false, granted: true, status: 'unconfigured', packages: [] })
+      setDeleteAccountOpen(false)
+      setDeleteAccountConfirmed(false)
+      setMessage(t('Account deleted confirmation'))
+    } catch (error) {
+      setDeleteAccountMessage(t(error.message || 'Account deletion failed'))
+    } finally {
+      setDeletingAccount(false)
+    }
+  }
+
   const user = session?.user
   const metadata = user?.user_metadata || {}
   const currentTerms = !needsLegalSetup(user)
@@ -254,6 +279,30 @@ export default function AccountPortal() {
           <input ref={inputRef} type="file" accept=".gbt.json,application/json" hidden onChange={importFile} />
           </>}
         </>}
+      </section>
+      <section className="account-card account-danger-zone" aria-labelledby="account-delete-title">
+        <h2 id="account-delete-title">{L('Delete account', 'Eliminar cuenta')}</h2>
+        <p className="account-muted">{L('Permanently delete your account and its data.', 'Elimina permanentemente tu cuenta y sus datos.')}</p>
+        {!deleteAccountOpen
+          ? <button className="account-danger-trigger" onClick={() => { setDeleteAccountOpen(true); setDeleteAccountConfirmed(false); setDeleteAccountMessage('') }}>
+            <Icon name="trash" /> {L('Delete account', 'Eliminar cuenta')}
+          </button>
+          : <div className="account-delete-confirmation" role="group" aria-labelledby="account-delete-confirm-title">
+            <h3 id="account-delete-confirm-title">{L('Delete account permanently?', '¿Eliminar la cuenta definitivamente?')}</h3>
+            <p>{L('This permanently deletes your account, active server data and the training data stored in this browser. Local copies on other devices cannot be deleted remotely. Supabase technical backups may retain data for up to 30 days, depending on the plan.', 'Se eliminarán permanentemente tu cuenta, los datos activos del servidor y el progreso guardado en este navegador. No se pueden borrar a distancia las copias locales de otros dispositivos. Las copias técnicas de Supabase podrían conservar datos hasta 30 días, según el plan.')}</p>
+            <p>{L('Deleting your account does not cancel a Google Play subscription. Cancel it separately in Play Store → Payments & subscriptions → Subscriptions.', 'Eliminar tu cuenta no cancela una suscripción de Google Play. Cancélala por separado en Play Store → Pagos y suscripciones → Suscripciones.')}</p>
+            <label className="account-delete-check">
+              <input type="checkbox" checked={deleteAccountConfirmed} onChange={event => setDeleteAccountConfirmed(event.target.checked)} />
+              <span>{L('Delete account final confirmation', 'Esta es la confirmación final. La cuenta no se puede recuperar después de eliminarla.')}</span>
+            </label>
+            <div className="account-delete-actions">
+              <button className="account-delete-button" onClick={removeAccount} disabled={!deleteAccountConfirmed || deletingAccount}>
+                {deletingAccount ? L('Deleting account...', 'Eliminando cuenta...') : L('Delete my account', 'Eliminar mi cuenta')}
+              </button>
+              <button className="account-delete-cancel" onClick={() => { setDeleteAccountOpen(false); setDeleteAccountConfirmed(false); setDeleteAccountMessage('') }} disabled={deletingAccount}>{L('Cancel', 'Cancelar')}</button>
+            </div>
+            {deleteAccountMessage && <p className="account-delete-error" role="alert">{deleteAccountMessage}</p>}
+          </div>}
       </section>
     </>}
     {message && !user && <p className="account-message" role="status">{message}</p>}

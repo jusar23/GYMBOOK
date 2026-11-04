@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#090b0b"/>
+      <stop offset="1" stop-color="#171d13"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="78%" cy="48%" r="52%">
+      <stop offset="0" stop-color="#bef264" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#bef264" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="500" fill="url(#background)"/>
+  <rect width="1024" height="500" fill="url(#glow)"/>
+  <path d="M0 472H1024" stroke="#bef264" stroke-opacity=".58" stroke-width="2"/>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="72" y="100" fill="#bef264" font-size="18" font-weight="700" letter-spacing="5">GYM BOOK TRAINING</text>
+    <text x="68" y="238" fill="#f6f7f3" font-size="88" font-weight="800" letter-spacing="-4">GYMBOOK</text>
+    <text x="74" y="301" fill="#bef264" font-size="30" font-weight="700" letter-spacing="1">ENTRENA A TU RITMO</text>
+    <text x="74" y="356" fill="#c6c8c1" font-size="21">Planifica tus rutinas.</text>
+    <text x="74" y="388" fill="#c6c8c1" font-size="21">Registra cada serie. Sigue tu progreso.</text>
+  </g>
+
+  <g transform="translate(690 99)">
+    <rect x="0" y="0" width="260" height="292" rx="28" fill="#181b19" stroke="#343a30" stroke-width="2"/>
+    <circle cx="130" cy="73" r="42" fill="#bef264"/>
+    <g transform="translate(101 63)" fill="#11140e">
+      <rect x="0" y="6" width="7" height="20" rx="3.5"/>
+      <rect x="10" y="1" width="7" height="30" rx="3.5"/>
+      <rect x="20" y="10" width="38" height="7" rx="3.5"/>
+      <rect x="51" y="1" width="7" height="30" rx="3.5"/>
+      <rect x="61" y="6" width="7" height="20" rx="3.5"/>
+    </g>
+    <text x="130" y="153" text-anchor="middle" fill="#9b9e96" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" letter-spacing="2">FUERZA · CONSTANCIA</text>
+    <path d="M40 179H220" stroke="#343a30" stroke-width="2"/>
+    <g font-family="Arial, Helvetica, sans-serif">
+      <text x="40" y="216" fill="#f6f7f3" font-size="17" font-weight="700">Tu rutina, a tu manera</text>
+      <text x="40" y="247" fill="#9b9e96" font-size="14">Ejercicios · series · descansos</text>
+      <rect x="40" y="264" width="180" height="8" rx="4" fill="#343a30"/>
+      <rect x="40" y="264" width="112" height="8" rx="4" fill="#bef264"/>
+    </g>
+  </g>
+
+  <circle cx="975" cy="76" r="4" fill="#bef264" opacity=".75"/>
+  <circle cx="652" cy="414" r="3" fill="#bef264" opacity=".5"/>
+  <circle cx="612" cy="126" r="2" fill="#bef264" opacity=".45"/>
+</svg>

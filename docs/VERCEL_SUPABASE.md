@@ -47,6 +47,8 @@ This deployment serves the Vite frontend from Vercel and routes `/api/*` to a Ve
 
 Email signup starts a session immediately when Supabase email confirmations are disabled. If confirmations are enabled, GYMBOOK asks the user to confirm their email and then sign in. The client stores only Supabase's refreshable session locally; the server stores the internal profile link and workout state.
 
+For production authentication emails, configure Supabase **Authentication → SMTP Settings** with `noreply@gymbooktraining.com` as the sender address and `Gymbook` as the sender name. Keep the SMTP provider credentials in Supabase secrets; do not put them in this repository. Account support uses `support@gymbooktraining.com`; general and legal contact uses `contacto@gymbooktraining.com`.
+
 For local Docker, add `SUPABASE_URL` and `SUPABASE_ANON_KEY` to the existing root `.env` (keep its other settings) before rebuilding the web image. `.env.example` shows the expected names. For local Vite development, copy `frontend/.env.example` to `frontend/.env.local` and set the same two values; also set `SUPABASE_URL` and `SUPABASE_ANON_KEY` for the API process.
 
 ## Notes and limits

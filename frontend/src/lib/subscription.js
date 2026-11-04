@@ -3,7 +3,7 @@ import { getAuthSession } from './supabaseAuth.js'
 
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '').replace(/\/rest\/v1$/i, '')
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-export const SUBSCRIPTION_ENTITLEMENT = import.meta.env.VITE_RC_ENTITLEMENT_ID || 'gymbook_premium'
+export const SUBSCRIPTION_ENTITLEMENT = import.meta.env.VITE_RC_ENTITLEMENT_ID || 'gymbook_training_premium'
 const ANDROID_KEY = import.meta.env.VITE_RC_ANDROID_API_KEY || ''
 const WEB_KEY = import.meta.env.VITE_RC_WEB_API_KEY || ''
 const CACHE_PREFIX = 'gymbook_subscription_v1:'
@@ -86,14 +86,15 @@ function cachedAccess(userId) {
 function packageDetails(packages) {
   return (packages || []).map(item => {
     const product = item.product || {}
-    const type = String(item.packageType || item.identifier || '').toLowerCase()
+    const type = [item.packageType, item.identifier, product.identifier].filter(Boolean).join(' ').toLowerCase()
     const period = product.subscriptionPeriod || product.normalPeriodDuration || product.period?.iso8601 || ''
-    const annual = type.includes('annual') || type.includes('year') || /P1Y/i.test(period)
+    const annual = type.includes('annual') || type.includes('year') || /P(?:1Y|12M)/i.test(period)
     const monthly = type.includes('month') || /P1M/i.test(period)
     return {
       identifier: item.identifier,
+      productIdentifier: product.identifier || '',
       package: item,
-      title: annual ? 'Annual plan' : monthly ? 'Monthly plan' : (product.title || 'Subscription'),
+      title: annual ? 'Yearly plan' : monthly ? 'Monthly plan' : (product.title || 'Subscription'),
       price: product.priceString || product.price?.formattedPrice || '',
       introPrice: product.introPrice?.priceString || product.introPricePhase?.price?.formattedPrice || '',
       period: annual ? 'year' : monthly ? 'month' : '',
@@ -107,12 +108,12 @@ function termsFor(packages) {
   const terms = []
   for (const item of packages || []) {
     const product = item.product || {}
-    const type = String(item.packageType || item.identifier || '').toLowerCase()
+    const type = [item.packageType, item.identifier, product.identifier].filter(Boolean).join(' ').toLowerCase()
     const period = product.subscriptionPeriod || product.normalPeriodDuration || product.period?.iso8601 || ''
-    const annual = type.includes('annual') || type.includes('year') || /P1Y/i.test(period)
+    const annual = type.includes('annual') || type.includes('year') || /P(?:1Y|12M)/i.test(period)
     const monthly = type.includes('month') || /P1M/i.test(period)
     const basePrice = product.priceString || product.price?.formattedPrice || ''
-    if (annual) terms.push(`Annual plan: ${product.introPrice?.priceString || product.introPricePhase?.price?.formattedPrice || basePrice} for the first year, then ${basePrice} per year, automatically renewing until canceled.`)
+    if (annual) terms.push(`Yearly plan: ${product.introPrice?.priceString || product.introPricePhase?.price?.formattedPrice || basePrice} for the first year, then ${basePrice} per year, automatically renewing until canceled.`)
     else if (monthly) terms.push(`Monthly plan: ${basePrice} per month, automatically renewing until canceled.`)
   }
   return terms
@@ -185,6 +186,29 @@ export async function purchaseNativePackage(userId, identifier) {
   const selected = current?.availablePackages?.find(item => item.identifier === identifier)
   if (!selected) throw new Error('That subscription plan is no longer available. Refresh and try again.')
   await Purchases.purchasePackage({ aPackage: selected })
+  return refreshNativeSubscription(userId)
+}
+
+export function isPurchaseCancelled(error) {
+  return error?.userCancelled === true || String(error?.code ?? '') === '1'
+}
+
+export async function presentNativePaywall(userId, { onlyIfNeeded = false } = {}) {
+  const Purchases = await getNativePurchases(userId)
+  if (!Purchases) throw new Error('Google Play billing is not configured yet.')
+  const { RevenueCatUI } = await import('@revenuecat/purchases-capacitor-ui')
+  const result = onlyIfNeeded
+    ? await RevenueCatUI.presentPaywallIfNeeded({ requiredEntitlementIdentifier: SUBSCRIPTION_ENTITLEMENT })
+    : await RevenueCatUI.presentPaywall()
+  const subscription = await refreshNativeSubscription(userId)
+  return { ...result, subscription }
+}
+
+export async function presentNativeCustomerCenter(userId) {
+  const Purchases = await getNativePurchases(userId)
+  if (!Purchases) throw new Error('Google Play billing is not configured yet.')
+  const { RevenueCatUI } = await import('@revenuecat/purchases-capacitor-ui')
+  await RevenueCatUI.presentCustomerCenter()
   return refreshNativeSubscription(userId)
 }
 

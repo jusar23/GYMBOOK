@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+  <title>Confirm your Gymbook account</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0b0f0c;font-family:Arial,Helvetica,sans-serif;color:#f4f6f2;-webkit-text-size-adjust:100%;">
+  <!-- Preview text -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">
+    One quick step to finish creating your Gymbook account.
+  </div>
+
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background-color:#0b0f0c;">
+    <tr>
+      <td align="center" style="padding:32px 14px;">
+        <!-- Main card -->
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background-color:#111412;border:1px solid #292e2a;border-radius:18px;overflow:hidden;">
+          <!-- Brand header -->
+          <tr>
+            <td align="center" style="padding:32px 24px 27px;background-color:#151a16;border-bottom:1px solid #292e2a;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;">
+                <tr>
+                  <td valign="middle" style="padding-right:12px;">
+                    <!-- Gymbook dumbbell mark -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="42" height="30" style="width:42px;height:30px;">
+                      <tr>
+                        <td width="9" style="width:9px;background:#b8f36b;border-radius:5px;font-size:0;line-height:0;">&nbsp;</td>
+                        <td width="4" style="width:4px;font-size:0;line-height:0;">&nbsp;</td>
+                        <td width="6" style="width:6px;background:#b8f36b;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                        <td width="4" style="width:4px;font-size:0;line-height:0;">&nbsp;</td>
+                        <td width="14" style="width:14px;background:#b8f36b;font-size:0;line-height:0;">&nbsp;</td>
+                        <td width="4" style="width:4px;font-size:0;line-height:0;">&nbsp;</td>
+                        <td width="6" style="width:6px;background:#b8f36b;border-radius:4px;font-size:0;line-height:0;">&nbsp;</td>
+                        <td width="4" style="width:4px;font-size:0;line-height:0;">&nbsp;</td>
+                        <td width="9" style="width:9px;background:#b8f36b;border-radius:5px;font-size:0;line-height:0;">&nbsp;</td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td valign="middle" style="font-size:23px;line-height:1;font-weight:800;letter-spacing:-1px;color:#f4f6f2;white-space:nowrap;">
+                    GYMBOOK <span style="font-size:13px;font-weight:500;letter-spacing:0;color:#a3aaa4;">training</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Message -->
+          <tr>
+            <td style="padding:38px 42px 18px;">
+              <p style="margin:0 0 12px;color:#b8f36b;font-size:12px;line-height:1.4;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;">ONE QUICK STEP</p>
+              <h1 style="margin:0 0 16px;color:#f4f6f2;font-size:30px;line-height:1.2;letter-spacing:-.6px;font-weight:700;">Confirm your account</h1>
+              <p style="margin:0 0 14px;color:#c5cbc5;font-size:16px;line-height:1.65;">Thanks for joining Gymbook. Confirm your email address to finish setting up your account and keep your training progress connected to you.</p>
+              <p style="margin:0;color:#c5cbc5;font-size:16px;line-height:1.65;">Tap the button below to verify your email.</p>
+            </td>
+          </tr>
+
+          <!-- Call to action -->
+          <tr>
+            <td align="left" style="padding:18px 42px 28px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td align="center" bgcolor="#b8f36b" style="border-radius:10px;">
+                    <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:15px 25px;border:1px solid #b8f36b;border-radius:10px;background-color:#b8f36b;color:#11170b;font-size:16px;line-height:1.2;font-weight:700;text-decoration:none;">Confirm email address</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Fallback link and security note -->
+          <tr>
+            <td style="padding:0 42px 34px;">
+              <p style="margin:0 0 8px;color:#a3aaa4;font-size:13px;line-height:1.55;">If the button doesn’t work, copy and paste this link into your browser:</p>
+              <p style="margin:0 0 20px;font-size:13px;line-height:1.55;word-break:break-all;"><a href="{{ .ConfirmationURL }}" target="_blank" style="color:#b8f36b;text-decoration:underline;">{{ .ConfirmationURL }}</a></p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-top:1px solid #292e2a;">
+                <tr>
+                  <td style="padding-top:18px;color:#858d86;font-size:13px;line-height:1.6;">If you didn’t create a Gymbook account, you can safely ignore this email. Your account won’t be activated.</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding:19px 24px;background-color:#0e110f;border-top:1px solid #292e2a;color:#747c75;font-size:12px;line-height:1.6;">
+              Gymbook · Train consistently. Track your progress.<br>
+              Need help? <a href="mailto:support@gymbooktraining.com" style="color:#a3aaa4;text-decoration:underline;">support@gymbooktraining.com</a>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:16px 0 0;color:#687069;font-size:11px;line-height:1.5;">This is an automated message. Please don’t reply to this email.</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
