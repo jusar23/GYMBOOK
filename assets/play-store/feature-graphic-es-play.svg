@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#20291a"/><stop offset=".54" stop-color="#182018"/><stop offset="1" stop-color="#111614"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="76%" cy="49%" r="52%">
+      <stop offset="0" stop-color="#b8f36b" stop-opacity=".25"/><stop offset="1" stop-color="#b8f36b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="line" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#b8f36b" stop-opacity=".16"/><stop offset="1" stop-color="#b8f36b" stop-opacity=".9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="500" fill="url(#bg)"/>
+  <rect width="1024" height="500" fill="url(#glow)"/>
+  <g fill="none" stroke="#b8f36b" stroke-opacity=".09">
+    <circle cx="816" cy="250" r="196" stroke-width="1"/><circle cx="816" cy="250" r="156" stroke-width="1"/>
+    <path d="M570 0v500M640 0v500M710 0v500M780 0v500M850 0v500M920 0v500M990 0v500"/>
+    <path d="M570 70h454M570 140h454M570 210h454M570 280h454M570 350h454M570 420h454"/>
+  </g>
+  <path d="M588 365 C642 349 666 332 706 338 S764 299 803 308 S866 250 900 258 S952 207 1004 193" fill="none" stroke="url(#line)" stroke-width="5" stroke-linecap="round"/>
+  <g fill="#b8f36b" stroke="#162016" stroke-width="5">
+    <circle cx="706" cy="338" r="8"/><circle cx="803" cy="308" r="8"/><circle cx="900" cy="258" r="8"/><circle cx="1004" cy="193" r="8"/>
+  </g>
+  <path d="M588 365 C642 349 666 332 706 338 S764 299 803 308 S866 250 900 258 S952 207 1004 193 L1004 434 L588 434 Z" fill="#b8f36b" fill-opacity=".08"/>
+  <g transform="translate(675 104)" fill="#b8f36b" opacity=".98">
+    <rect x="55" y="64" width="204" height="18" rx="9"/>
+    <rect x="34" y="25" width="34" height="96" rx="12"/>
+    <rect x="69" y="42" width="25" height="62" rx="9"/>
+    <rect x="220" y="42" width="25" height="62" rx="9"/>
+    <rect x="246" y="25" width="34" height="96" rx="12"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="72" y="82" fill="#b8f36b" font-size="17" font-weight="700" letter-spacing="4">GYMBOOK TRAINING</text>
+    <text x="68" y="224" fill="#f7f8f3" font-size="47" font-weight="700" letter-spacing="-.8">ENTRENA CON</text>
+    <text x="68" y="284" fill="#b8f36b" font-size="55" font-weight="800" letter-spacing="-1.4">INTENCIÓN.</text>
+    <text x="72" y="350" fill="#e4e8dd" font-size="21">Planifica rutinas. Registra cada serie.</text>
+    <text x="72" y="383" fill="#e4e8dd" font-size="21">Sigue tu progreso con constancia.</text>
+  </g>
+  <rect x="72" y="423" width="60" height="5" rx="2.5" fill="#b8f36b"/>
+</svg>
