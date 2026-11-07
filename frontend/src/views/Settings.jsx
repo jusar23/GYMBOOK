@@ -18,7 +18,8 @@ import { loadCloudBackup, saveCloudBackup, setCloudBackupConsent } from '../lib/
 import { TRAINING_DATA_CONSENT_VERSION } from '../lib/legalConsent.js'
 import { mergePlan } from '../lib/plan-share.js'
 import { parseTrainingFile, trainingFileText } from '../lib/training-file.js'
-import { openSubscriptionManagement, presentNativeCustomerCenter, presentNativePaywall } from '../lib/subscription.js'
+import { openSubscriptionManagement, presentNativeCustomerCenter, presentNativePaywall, refreshNativeSubscription } from '../lib/subscription.js'
+import { freeTrialEndsAt, hasFreeTrialAccess } from '../lib/freeTrial.js'
 import { SOCIAL_URLS } from '../lib/brand-links.js'
 
 import { pushSupported, enablePush, disablePush, sendTestPush } from '../lib/push.js'
@@ -26,7 +27,7 @@ import { pushSupported, enablePush, disablePush, sendTestPush } from '../lib/pus
 import { wakeLockSupported } from '../lib/wakelock.js'
 import { playTimerTone, TIMER_TONES } from '../lib/sound.js'
 
-import { t, LANGS, INSTR_LANGS } from '../lib/i18n.js'
+import { t, LANGS, INSTR_LANGS, dateLocale } from '../lib/i18n.js'
 
 import { DEMO } from '../lib/demo.js'
 
@@ -41,6 +42,59 @@ const ACCENT_TONES = [
   { id: 'vivid', label: 'Vivid' },
   { id: 'light-intense', label: 'Light intense' },
 ]
+
+function remainingDaysUntil(value) {
+  const timestamp = value ? Date.parse(value) : NaN
+  return Number.isFinite(timestamp) ? Math.max(0, Math.ceil((timestamp - Date.now()) / 86400000)) : null
+}
+
+function formatRemainingDays(days) {
+  return days === 1 ? t('1 day') : t('{0} days', days)
+}
+
+function ActiveSubscriptionDetails({ subscription, close, onManage }) {
+  const date = value => {
+    if (!value) return ''
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? '' : new Intl.DateTimeFormat(dateLocale(), { dateStyle: 'long' }).format(parsed)
+  }
+  const expires = date(subscription.expiresAt)
+  const purchase = date(subscription.purchaseDate)
+  const days = remainingDaysUntil(subscription.expiresAt)
+  const details = [
+    [t('Plan'), t(subscription.planName)],
+    subscription.price ? [t('Price'), subscription.price] : null,
+    days != null ? [t('Days remaining'), formatRemainingDays(days)] : null,
+    expires ? [t(subscription.willRenew === true ? 'Next renewal' : subscription.willRenew === false ? 'Access through' : 'Expiration date'), expires] : null,
+    subscription.willRenew != null ? [t('Renewal'), t(subscription.willRenew ? 'Renews automatically' : 'Does not renew automatically')] : null,
+    purchase ? [t('Started'), purchase] : null,
+    subscription.store ? [t('Purchased through'), /PLAY_STORE/i.test(subscription.store) ? t('Google Play') : subscription.store] : null,
+  ].filter(Boolean)
+
+  return <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', padding: 'max(24px, var(--sat)) 22px max(24px, var(--sab))' }}>
+    <div className="sheet-full-head">
+      <h3>{t('Active subscription')}</h3>
+      <button className="iconbtn" onClick={close} aria-label={t('Close')}><Icon name="xmark" /></button>
+    </div>
+    <div style={{ display: 'grid', placeItems: 'center', padding: '30px 0 22px' }}>
+      <div style={{ width: 68, height: 68, borderRadius: 34, display: 'grid', placeItems: 'center', color: 'var(--green)', background: 'color-mix(in srgb, var(--green) 13%, transparent)' }}>
+        <Icon name="checkCircle" size={34} />
+      </div>
+    </div>
+    <div className="sect-b" style={{ width: '100%', marginBottom: 20 }}>
+      {details.map(([label, value]) => <div key={label} className="lrow" style={{ justifyContent: 'space-between', gap: 18 }}>
+        <span className="lrow-s">{label}</span><span className="lrow-t" style={{ textAlign: 'right' }}>{value}</span>
+      </div>)}
+    </div>
+    <p className="muted small" style={{ textAlign: 'center', lineHeight: 1.5, margin: '0 0 20px' }}>
+      {t('Google Play manages subscription renewals and cancellation.')}
+    </p>
+    <div style={{ marginTop: 'auto', display: 'grid', gap: 8 }}>
+      <Button variant="primary" onClick={onManage}>{t('Manage or cancel subscription')}</Button>
+      <Button variant="ghost" onClick={close}>{t('Close')}</Button>
+    </div>
+  </div>
+}
 
 function canonicalState(value) {
   if (Array.isArray(value)) return value.map(canonicalState)
@@ -122,6 +176,7 @@ export default function Settings() {
   const [cloudBusy, setCloudBusy] = useState(false)
   const [accountDeleting, setAccountDeleting] = useState(false)
   const [trainingConsentBusy, setTrainingConsentBusy] = useState(false)
+  const [subscriptionAction, setSubscriptionAction] = useState('')
 
   useEffect(() => {
     const scrollY = location.state?.restoreScrollY
@@ -209,7 +264,7 @@ export default function Settings() {
   }
 
   const showAccountNotice = (title, message, success = false) => useUI.getState().openSheet(close => (
-    <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', padding: 'max(24px, env(safe-area-inset-top)) 22px max(24px, env(safe-area-inset-bottom))' }}>
+    <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', padding: 'max(24px, var(--sat)) 22px max(24px, var(--sab))' }}>
       <div className="sheet-full-head">
         <h3>{title}</h3>
         <button className="iconbtn" onClick={close} aria-label={t('Close')}><Icon name="xmark" /></button>
@@ -283,22 +338,72 @@ export default function Settings() {
     finally { setCloudBusy(false); if (authorize) setTrainingConsentBusy(false) }
   }
 
-  const manageSubscription = async () => {
-    if (!MOBILE) {
-      try { await openSubscriptionManagement(user.id, { native: false }) }
-      catch (error) { toast(error.message || t('Could not open subscription management.')) }
-      return
-    }
+  const manageActiveSubscription = async close => {
+    close()
+    setSubscriptionAction('manage')
     try { await presentNativeCustomerCenter(user.id) }
-    catch (error) {
+    catch {
       try { await openSubscriptionManagement(user.id, { native: true }) }
-      catch (fallbackError) { toast(fallbackError.message || error.message || t('Could not open subscription management.')) }
-    }
+      catch (error) { toast(error.message || t('Could not open subscription management.')) }
+    } finally { setSubscriptionAction('') }
+  }
+
+  const manageSubscription = async () => {
+    if (subscriptionAction) return
+    setSubscriptionAction('manage')
+    try {
+      if (!MOBILE) await openSubscriptionManagement(user.id, { native: false })
+      else {
+        const current = await refreshNativeSubscription(user.id)
+        if (current.status === 'error') throw new Error(current.error || t('Could not verify your subscription.'))
+        if (current.status === 'active' || current.subscriptionInfo?.isActive) {
+          const subscription = current.subscriptionInfo || {
+            isActive: true,
+            planName: 'Subscription',
+            expiresAt: current.expiresAt || null,
+            willRenew: null,
+            purchaseDate: null,
+            price: '',
+            store: '',
+          }
+          useUI.getState().openSheet(close => <ActiveSubscriptionDetails
+            subscription={subscription}
+            close={close}
+            onManage={() => manageActiveSubscription(close)}
+          />, { kind: 'full', locked: true })
+          return
+        }
+        if (current.status !== 'active') {
+          const sqlExempt = current.status === 'exempt'
+          const inFreeTrial = hasFreeTrialAccess(user.createdAt)
+          const trialEnd = inFreeTrial ? freeTrialEndsAt(user.createdAt) : null
+          const trialDays = remainingDaysUntil(trialEnd)
+          const trialEndLabel = trialEnd ? new Intl.DateTimeFormat(dateLocale(), { dateStyle: 'long' }).format(trialEnd) : ''
+          showAccountNotice(
+            t('Manage subscription'),
+            sqlExempt
+              ? t('This account has a complimentary payment exemption. No Google Play subscription is linked to that exemption.')
+              : inFreeTrial
+                ? t('Your 30-day free period is active. {0} remain; it ends on {1}. There is no Google Play subscription to manage yet. Open Subscription plans to review the available plans.', formatRemainingDays(trialDays), trialEndLabel)
+                : t('There is no active paid subscription on this account. If you purchased through Google Play, use the Google account that made the purchase and restore purchases.'),
+            sqlExempt || inFreeTrial,
+          )
+          return
+        }
+      }
+    } catch (error) {
+      toast(error.message || t('Could not open subscription management.'))
+    } finally { setSubscriptionAction('') }
   }
 
   const showSubscriptionPlans = async () => {
-    try { await presentNativePaywall(user.id) }
-    catch (error) { toast(error.message || t('The subscription screen could not be opened. Choose a plan below or try again.')) }
+    if (subscriptionAction) return
+    setSubscriptionAction('plans')
+    try {
+      await presentNativePaywall(user.id, { displayCloseButton: true })
+    }
+    catch (error) { toast(t(error.message || 'The subscription screen could not be opened. Choose a plan below or try again.')) }
+    finally { setSubscriptionAction('') }
   }
 
 
@@ -667,8 +772,8 @@ export default function Settings() {
               <Switch checked={user.trainingDataConsent === true} disabled={trainingConsentBusy}
                 onChange={updateTrainingConsent} />
             </Row>
-            {MOBILE && <Row icon="crown" iconTint="var(--yellow)" title={t('Subscription plans')} subtitle={t('Compare monthly and yearly plans.')} accessory="chevron" onClick={showSubscriptionPlans} />}
-            <Row icon="crown" iconTint="var(--yellow)" title={t('Manage subscription')} subtitle={t('View your plan, renewal date, payment method or cancellation options.')} accessory="chevron" onClick={manageSubscription} />
+            {MOBILE && <Row icon="crown" iconTint="var(--yellow)" title={t('Subscription plans')} subtitle={t('Compare monthly and yearly plans.')} value={subscriptionAction === 'plans' ? t('Opening…') : null} disabled={!!subscriptionAction} accessory="chevron" onClick={showSubscriptionPlans} />}
+            <Row icon="crown" iconTint="var(--yellow)" title={t('Manage subscription')} subtitle={t('View your plan, renewal date, payment method or cancellation options.')} value={subscriptionAction === 'manage' ? t('Opening…') : null} disabled={!!subscriptionAction} accessory="chevron" onClick={manageSubscription} />
             <Row icon="signOut" iconTint="var(--red)" title={t('Sign out')} danger onClick={() => confirmSheet({ title: t('Sign out?'), message: t('Your progress stays on this phone. Cloud backup is not changed.'), confirmText: t('Sign out'), danger: true, onConfirm: async () => { await signOut(); nav('/home') } })} />
             <Row icon="trash" iconTint="var(--red)" title={t('Delete account')} subtitle={t('Permanently delete your account and its data.')} danger onClick={deleteAccount} />
           </>

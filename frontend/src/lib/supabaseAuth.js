@@ -3,6 +3,7 @@
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '').replace(/\/rest\/v1$/i, '')
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 const SESSION_KEY = 'gym_supabase_session_v1'
+export const AUTH_SESSION_INVALID_EVENT = 'gymbook-auth-session-invalid'
 const OAUTH_KEY = 'gym_supabase_oauth_v1'
 export const NATIVE_OAUTH_REDIRECT = 'com.jusar23.gymbook://auth-callback'
 const RECOVERY_KEY = 'gym_pending_recovery_code'
@@ -22,6 +23,31 @@ function authTimeoutError(error) {
     return new Error('Authentication request timed out. Check your connection and try again.')
   }
   return error
+}
+
+const SESSION_INVALID_MESSAGE = 'Your session is no longer valid. Sign in again to continue.'
+const DEFINITIVE_SESSION_ERROR_CODES = new Set([
+  'bad_jwt', 'invalid_grant', 'refresh_token_already_used', 'refresh_token_not_found', 'session_expired', 'session_not_found', 'user_banned', 'user_not_found'
+])
+
+export function isDefinitiveAuthFailure(error) {
+  const code = String(error?.code || '').toLowerCase()
+  if (DEFINITIVE_SESSION_ERROR_CODES.has(code)) return true
+  const message = String(error?.message || '').toLowerCase()
+  if (error?.status === 401 && !/invalid api key|api key.{0,20}invalid/.test(message)) return true
+  return /invalid refresh token|refresh token.{0,50}(not found|already used|revoked)|session.{0,40}(expired|not found|revoked)|user.{0,30}(not found|banned)|supabase session is invalid|invalid jwt|jwt expired|account has been disabled/.test(message)
+}
+
+export function invalidateSupabaseSession(error, expectedSession = null) {
+  if (!isDefinitiveAuthFailure(error)) return false
+  const current = readSession()
+  if (expectedSession?.access_token && current?.access_token !== expectedSession.access_token) return false
+  if (expectedSession?.refresh_token && current?.refresh_token !== expectedSession.refresh_token) return false
+  localStorage.removeItem(SESSION_KEY)
+  localStorage.removeItem('gym_user')
+  localStorage.setItem('gym_auth_error', SESSION_INVALID_MESSAGE)
+  window.dispatchEvent(new Event(AUTH_SESSION_INVALID_EVENT))
+  return true
 }
 
 // Android's emulator live-reload origin (http://10.0.2.2) is not a secure context, so
@@ -125,7 +151,13 @@ export async function updateRecoveredPassword(password) {
     body: JSON.stringify({ password })
   })
   const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(data.msg || data.message || data.error_description || data.error || 'Could not update the password.')
+  if (!response.ok) {
+    const error = new Error(data.msg || data.message || data.error_description || data.error || 'Could not update the password.')
+    error.status = response.status
+    error.code = data.code || data.error_code || data.error || ''
+    invalidateSupabaseSession(error, session)
+    throw error
+  }
   localStorage.removeItem(SESSION_KEY)
   sessionStorage.removeItem(PASSWORD_RECOVERY_KEY)
   localStorage.removeItem(PASSWORD_RECOVERY_FLOW_KEY)
@@ -156,7 +188,12 @@ async function authRequest(path, body) {
     })
   } catch (error) { throw authTimeoutError(error) }
   const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(data.msg || data.message || data.error_description || data.error || `Authentication failed (HTTP ${response.status}).`)
+  if (!response.ok) {
+    const error = new Error(data.msg || data.message || data.error_description || data.error || `Authentication failed (HTTP ${response.status}).`)
+    error.status = response.status
+    error.code = data.code || data.error_code || data.error || ''
+    throw error
+  }
   return data
 }
 
@@ -234,7 +271,13 @@ export async function updateAuthUserMetadata(metadata) {
     })
   } catch (error) { throw authTimeoutError(error) }
   const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(data.msg || data.message || data.error_description || 'Could not save your registration details.')
+  if (!response.ok) {
+    const error = new Error(data.msg || data.message || data.error_description || 'Could not save your registration details.')
+    error.status = response.status
+    error.code = data.code || data.error_code || data.error || ''
+    invalidateSupabaseSession(error, session)
+    throw error
+  }
   const updated = saveSession({ ...session, user: data.user || data })
   return updated.user
 }
@@ -284,8 +327,16 @@ export async function getAuthSession() {
   try {
     session = saveSession(await authRequest('token?grant_type=refresh_token', { refresh_token: session.refresh_token }))
     return session
-  } catch {
-    localStorage.removeItem(SESSION_KEY)
+  } catch (error) {
+    // Only Supabase's definitive invalid-session responses close the local session.
+    // Network errors, timeouts, rate limits, and service failures remain retryable.
+    if (invalidateSupabaseSession(error, session)) {
+      const invalid = new Error(SESSION_INVALID_MESSAGE)
+      invalid.code = error.code
+      invalid.status = error.status
+      invalid.sessionInvalid = true
+      throw invalid
+    }
     return null
   }
 }
@@ -327,6 +378,9 @@ export async function deleteSupabaseAccount() {
   if (!response.ok) {
     const error = new Error(data.error || data.message || `Could not delete the account (HTTP ${response.status}).`)
     error.details = data.details || ''
+    error.status = response.status
+    error.code = data.code || data.error_code || data.error || ''
+    invalidateSupabaseSession(error, session)
     throw error
   }
 }

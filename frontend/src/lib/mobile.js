@@ -14,7 +14,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core'
 import { ACCENTS } from './format.js'
 import { dateLocale } from './i18n.js'
 
-export const MOBILE = import.meta.env.MODE === 'mobile' || import.meta.env.VITE_MOBILE === '1'
+export const MOBILE = ['mobile', 'mobile-test'].includes(import.meta.env.MODE) || import.meta.env.VITE_MOBILE === '1'
 export const ANDROID_APP = MOBILE && Capacitor.getPlatform() === 'android'
 
 const restNotificationPlugin = registerPlugin('RestNotification')
@@ -26,19 +26,19 @@ export async function readPendingTrainingFile() {
   if (!ANDROID_APP) return null
   return trainingFilePlugin.readPending()
 }
-async function getRestNotificationPlugin() {
+function getRestNotificationPlugin() {
   if (!ANDROID_APP) return null
   return restNotificationPlugin
 }
 
-async function getStreakWidgetPlugin() {
+function getStreakWidgetPlugin() {
   if (!ANDROID_APP) return null
   return streakWidgetPlugin
 }
 
 export async function syncStreakWidget(S) {
   try {
-    const plugin = await getStreakWidgetPlugin()
+    const plugin = getStreakWidgetPlugin()
     if (!plugin) return false
     const dates = [...new Set((S.workouts || []).map(workout => workout.d).filter(Boolean))]
     await plugin.update({
@@ -66,12 +66,12 @@ export async function syncStreakWidget(S) {
 }
 
 async function clearStreakWidget() {
-  try { const plugin = await getStreakWidgetPlugin(); await plugin?.clear() } catch { /* Widget support is optional. */ }
+  try { const plugin = getStreakWidgetPlugin(); await plugin?.clear() } catch { /* Widget support is optional. */ }
 }
 
 export async function setNativeRestTimer(options) {
   try {
-    const plugin = await getRestNotificationPlugin()
+    const plugin = getRestNotificationPlugin()
     if (!plugin) return false
     await plugin.setRestTimer(options)
     return true
@@ -79,12 +79,12 @@ export async function setNativeRestTimer(options) {
 }
 
 export async function clearNativeRestTimer() {
-  try { const plugin = await getRestNotificationPlugin(); await plugin?.clearRestTimer() } catch { /* Native timer is optional. */ }
+  try { const plugin = getRestNotificationPlugin(); await plugin?.clearRestTimer() } catch { /* Native timer is optional. */ }
 }
 
 export async function syncNativeWorkoutNotification(S, currentExerciseName = '') {
   try {
-    const plugin = await getRestNotificationPlugin()
+    const plugin = getRestNotificationPlugin()
     const active = S?.active
     if (!plugin || !active || !S.restNotification) {
       await plugin?.clearWorkoutState()
@@ -103,7 +103,7 @@ export async function syncNativeWorkoutNotification(S, currentExerciseName = '')
 }
 
 export async function clearNativeWorkoutNotification() {
-  try { const plugin = await getRestNotificationPlugin(); await plugin?.clearWorkoutState() } catch { /* Native workout status is optional. */ }
+  try { const plugin = getRestNotificationPlugin(); await plugin?.clearWorkoutState() } catch { /* Native workout status is optional. */ }
 }
 
 export async function requestRestNotificationPermission() {
@@ -117,7 +117,7 @@ export async function requestRestNotificationPermission() {
 }
 
 export async function listenRestNotificationEvents(onFinished) {
-  const plugin = await getRestNotificationPlugin()
+  const plugin = getRestNotificationPlugin()
   if (!plugin) return null
   const finishedHandle = await plugin.addListener('restFinished', onFinished)
   return { remove: () => finishedHandle.remove() }

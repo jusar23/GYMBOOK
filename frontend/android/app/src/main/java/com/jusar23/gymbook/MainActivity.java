@@ -1,6 +1,7 @@
 package com.jusar23.gymbook;
 
 import com.getcapacitor.BridgeActivity;
+import androidx.core.view.WindowCompat;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -12,6 +13,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(TrainingFilePlugin.class);
         TrainingFilePlugin.setPendingUri(getIntent() == null ? null : getIntent().getData(), getIntent() == null ? null : getIntent().getType());
         super.onCreate(savedInstanceState);
+        WindowCompat.enableEdgeToEdge(getWindow());
     }
 
     @Override

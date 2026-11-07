@@ -455,7 +455,7 @@ const COPY = {
 
     en: [
 
-      ['Plans, free access and prices', 'One month of free access starts when you register, with no payment method required. The app does not show or start a paid plan during this period. When the month ends, training features are locked and you can choose a monthly or annual plan to continue. The monthly plan is USD 1/month. Eligible new subscribers may receive USD 9 for the first year on the annual plan, then USD 12/year. Google Play localizes price and currency; the amount, taxes and renewal terms shown at checkout control. This app-provided free access is not a Google Play free-trial offer.'],
+      ['Plans, free access and prices', 'Thirty days of free access start when you register, with no payment method required. You may save a preferred plan during this period, but saving it does not start a purchase or charge. After those 30 days, training features are locked until you confirm a monthly or annual purchase in Google Play. The monthly plan is USD 1/month. Eligible new subscribers may receive USD 9 for the first year on the annual plan, then USD 12/year. Google Play localizes price and currency; the amount, taxes and renewal terms shown at checkout control. This app-provided free access is not a Google Play free-trial offer.'],
 
       ['Renewal, management and cancellation', [
 
@@ -475,7 +475,7 @@ const COPY = {
 
     es: [
 
-      ['Planes, acceso gratis y precios', 'El mes de acceso gratis empieza al registrarte y no requiere método de pago. La app no muestra ni inicia un plan de pago durante ese periodo. Al terminar el mes, las funciones de entrenamiento se bloquean y puedes elegir un plan mensual o anual para continuar. El plan mensual cuesta USD 1/mes. Los nuevos suscriptores que cumplan los requisitos pueden recibir USD 9 el primer año del plan anual y luego USD 12/año. Google Play adapta precio y moneda; rigen el importe, los impuestos y la renovación que aparezcan en el pago. Este acceso gratis lo concede la app; no es una prueba gratuita de Google Play.'],
+      ['Planes, acceso gratis y precios', 'Los primeros 30 días de acceso gratis empiezan al registrarte y no requieren método de pago. Durante ese periodo puedes guardar el plan que prefieres, pero guardarlo no inicia una compra ni genera un cobro. Al terminar los 30 días, las funciones de entrenamiento se bloquean hasta que confirmes la compra de un plan mensual o anual en Google Play. El plan mensual cuesta USD 1/mes. Los nuevos suscriptores que cumplan los requisitos pueden recibir USD 9 el primer año del plan anual y luego USD 12/año. Google Play adapta precio y moneda; rigen el importe, los impuestos y la renovación que aparezcan en el pago. Este acceso gratis lo concede la app; no es una prueba gratuita de Google Play.'],
 
       ['Renovación, gestión y cancelación', [
 

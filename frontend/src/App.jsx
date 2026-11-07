@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+import { SystemBarType, SystemBars, SystemBarsStyle } from '@capacitor/core'
 import { useStore, DEF } from './store/useStore.js'
 import { EXIDX } from './lib/exercises.js'
 import { useUI } from './store/useUI.js'
@@ -25,7 +26,7 @@ import { NATIVE_OAUTH_REDIRECT, processOAuthCallback } from './lib/supabaseAuth.
 import { needsLegalSetup } from './lib/legalConsent.js'
 import { openOnboarding, onboardingSeenKey } from './components/Onboarding.jsx'
 import SubscriptionGate from './views/SubscriptionGate.jsx'
-import { refreshNativeSubscription } from './lib/subscription.js'
+import { clearPendingSubscriptionPlan, refreshNativeSubscription } from './lib/subscription.js'
 import { freeTrialEndsAt, hasFreeTrialAccess } from './lib/freeTrial.js'
 import { setWorkoutOrientationLocked } from './lib/workout-orientation.js'
 
@@ -96,6 +97,7 @@ function Shell() {
     setSubscription(current => ({ ...current, configured: true, status: 'loading' }))
     const next = await refreshNativeSubscription(user.id)
     if (next.configured && next.granted && next.status !== 'unconfigured') {
+      clearPendingSubscriptionPlan(user.id)
       setSubscription(next)
       return
     }
@@ -212,7 +214,13 @@ function Shell() {
     void processOpenedFile()
     return () => { disposed = true; window.removeEventListener('gymbook-training-file-open', onOpen) }
   }, [ready, replaceState])
-  useEffect(() => { applyPrefs(theme, accent) }, [theme, accent])
+  useEffect(() => {
+    applyPrefs(theme, accent)
+    if (!ANDROID_APP) return
+    const style = theme === 'light' ? SystemBarsStyle.Light : SystemBarsStyle.Dark
+    void SystemBars.setStyle({ style, bar: SystemBarType.StatusBar }).catch(() => {})
+    void SystemBars.setStyle({ style, bar: SystemBarType.NavigationBar }).catch(() => {})
+  }, [theme, accent])
   useEffect(() => {
     let current = true
     void setLang(lang || 'en').then(() => {
@@ -310,7 +318,7 @@ function Shell() {
             ? (user && !user.needsLegalSetup ? <Navigate to={DEFAULT_ROUTE} replace /> : <Login legalSetup={!!user?.needsLegalSetup} />)
             : user?.needsLegalSetup
               ? <Login legalSetup />
-            : MOBILE && !!user?.id && subscription.configured && (!subscription.granted || subscription.status === 'loading')
+            : MOBILE && !!user?.id && subscription.configured && (!subscription.granted || subscription.status === 'loading') && loc.pathname !== '/settings'
               ? <SubscriptionGate user={user} status={subscription} refresh={checkSubscription} />
             : !authed
               ? <Login />

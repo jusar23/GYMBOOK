@@ -1,4 +1,6 @@
 // Backend + WebAuthn helpers (ported from the vanilla app).
+import { invalidateSupabaseSession } from './supabaseAuth.js'
+
 export const IS_APPLE = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)
 export const IS_ANDROID = /Android/.test(navigator.userAgent)
 export const BIO = IS_APPLE ? 'Face ID / Touch ID' : IS_ANDROID ? 'fingerprint or face unlock' : 'your fingerprint, face or PIN'
@@ -59,7 +61,14 @@ export async function passkeyLogin() {
 }
 
 export async function createAppSessionWithSupabase(accessToken, recoveryCode = '') {
-  return api('/api/auth/supabase', {
-    method: 'POST', body: JSON.stringify({ access_token: accessToken, recovery_code: recoveryCode })
-  })
+  try {
+    return await api('/api/auth/supabase', {
+      method: 'POST', body: JSON.stringify({ access_token: accessToken, recovery_code: recoveryCode })
+    })
+  } catch (error) {
+    // This endpoint returns 401 only when Supabase rejects the supplied access token.
+    if (error.status === 401) invalidateSupabaseSession(error, { access_token: accessToken })
+    else if (error.status === 403 && /account has been disabled/i.test(error.message)) invalidateSupabaseSession(error, { access_token: accessToken })
+    throw error
+  }
 }

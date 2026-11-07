@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
 import { useStore } from '../store/useStore.js'
 import { t } from '../lib/i18n.js'
-import { isPurchaseCancelled, openSubscriptionManagement, presentNativeCustomerCenter, purchaseNativePackage, restoreNativePurchases } from '../lib/subscription.js'
+import { clearPendingSubscriptionPlan, getPendingSubscriptionPlan, isPurchaseCancelled, presentNativePaywall, purchaseNativePackage, restoreNativePurchases } from '../lib/subscription.js'
 
 const BENEFITS = [
   { icon: 'calendar', title: 'Training that fits your plan', copy: 'Build routines and take them into every session.' },
@@ -11,39 +12,67 @@ const BENEFITS = [
 ]
 
 export default function SubscriptionGate({ user, status, refresh }) {
+  const navigate = useNavigate()
   const signOut = useStore(s => s.signOut)
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState('')
   const [selectedIdentifier, setSelectedIdentifier] = useState('')
+  const autoPaywallFor = useRef('')
   const plans = [...(status.packages || [])].sort((a, b) => Number(b.annual) - Number(a.annual))
   const selectedPlan = plans.find(plan => plan.identifier === selectedIdentifier) || plans[0]
 
   useEffect(() => {
-    setSelectedIdentifier(current => plans.some(plan => plan.identifier === current) ? current : plans[0]?.identifier || '')
-  }, [status.packages])
+    const pending = getPendingSubscriptionPlan(user?.id)
+    const savedPlan = plans.find(plan => plan.identifier === pending?.identifier
+      || (pending?.productIdentifier && plan.productIdentifier === pending.productIdentifier))
+    setSelectedIdentifier(current => plans.some(plan => plan.identifier === current) ? current : savedPlan?.identifier || plans[0]?.identifier || '')
+  }, [status.packages, user?.id])
+
+  useEffect(() => {
+    if (!user?.id || status.granted || status.status !== 'inactive' || autoPaywallFor.current === user.id) return
+    autoPaywallFor.current = user.id
+    let current = true
+    setBusy('paywall')
+    setMessage('')
+    void presentNativePaywall(user.id, { onlyIfNeeded: true })
+      .then(result => {
+        if (!current) return
+        if (result.subscription?.granted) clearPendingSubscriptionPlan(user.id)
+        return refresh()
+      })
+      .catch(error => { if (current && !isPurchaseCancelled(error)) setMessage(error.message || t('The subscription screen could not be opened. Choose a plan below or try again.')) })
+      .finally(() => { if (current) setBusy('') })
+    return () => { current = false }
+  }, [user?.id, status.granted, status.status, refresh])
 
   const buy = async plan => {
     if (!plan) return
     setBusy(plan.identifier); setMessage('')
-    try { await purchaseNativePackage(user.id, plan.identifier); await refresh() }
+    try { await purchaseNativePackage(user.id, plan.identifier); clearPendingSubscriptionPlan(user.id); await refresh() }
     catch (error) { if (!isPurchaseCancelled(error)) setMessage(error.message || t('Purchase could not be completed. Check Google Play and try again.')) }
     finally { setBusy('') }
   }
 
   const restore = async () => {
     setBusy('restore'); setMessage('')
-    try { await restoreNativePurchases(user.id); await refresh() }
+    try {
+      const restored = await restoreNativePurchases(user.id)
+      if (restored.granted) clearPendingSubscriptionPlan(user.id)
+      await refresh()
+    }
     catch (error) { setMessage(error.message || t('Could not restore purchases.')) }
     finally { setBusy('') }
   }
 
   const manage = async () => {
     setBusy('manage'); setMessage('')
-    try { await presentNativeCustomerCenter(user.id); await refresh() }
-    catch {
-      try { await openSubscriptionManagement(user.id, { native: true }) }
-      catch (error) { setMessage(error.message || t('Could not open subscription management.')) }
-    } finally { setBusy('') }
+    try {
+      const result = await presentNativePaywall(user.id, { onlyIfNeeded: true })
+      if (result.subscription?.granted) clearPendingSubscriptionPlan(user.id)
+      await refresh()
+    }
+    catch (error) { if (!isPurchaseCancelled(error)) setMessage(error.message || t('Could not open subscription management.')) }
+    finally { setBusy('') }
   }
 
   const selectedTerms = selectedPlan?.annual
@@ -66,10 +95,10 @@ export default function SubscriptionGate({ user, status, refresh }) {
 
       <header className="premium-intro">
         <span className="premium-eyebrow">{t('TRAIN WITH PURPOSE')}</span>
-        <h1 id="premium-title">{errorState ? t('Let’s check your access.') : t('Make every session count.')}</h1>
+        <h1 id="premium-title">{errorState ? t('Let’s check your access.') : t('Keep your training going.')}</h1>
         <p>{errorState
           ? t('We could not verify your subscription. Check your connection, then try again.')
-          : t('Your routines, every set and your progress — together in one place.')}</p>
+          : t('Your free access or subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.')}</p>
       </header>
 
       <div className="premium-benefits" aria-label={t('Included with Gymbook Premium')}>
@@ -123,6 +152,7 @@ export default function SubscriptionGate({ user, status, refresh }) {
         </nav>
         <button className="subscription-signout" onClick={() => signOut()}>{t('Sign out')}</button>
       </>}
+      <button className="subscription-link subscription-settings-link" onClick={() => navigate('/settings')}><Icon name="gear" /> {t('Settings')}</button>
     </section>
   </main>
 }

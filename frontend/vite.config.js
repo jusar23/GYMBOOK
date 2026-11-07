@@ -10,7 +10,7 @@ const root = dirname(fileURLToPath(import.meta.url))
 export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
-    ...(mode === 'mobile' ? [{
+    ...(['mobile', 'mobile-test'].includes(mode) ? [{
       name: 'copy-exercise-media-for-mobile',
       async closeBundle() {
         await import('./scripts/convert-mobile-media.mjs')

@@ -1,4 +1,4 @@
-import { getAuthSession } from './supabaseAuth.js'
+import { getAuthSession, invalidateSupabaseSession } from './supabaseAuth.js'
 import { TRAINING_DATA_CONSENT_VERSION, hasTrainingDataConsent } from './legalConsent.js'
 
 const URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '').replace(/\/rest\/v1$/i, '')
@@ -21,7 +21,13 @@ async function rpc(name, body, activeSession = null) {
     body: JSON.stringify(body),
   })
   const result = await response.json().catch(() => null)
-  if (!response.ok) throw new Error(result?.message || result?.hint || 'Could not update cloud-backup authorization. Apply the latest Supabase migration.')
+  if (!response.ok) {
+    const error = new Error(result?.message || result?.hint || 'Could not update cloud-backup authorization. Apply the latest Supabase migration.')
+    error.status = response.status
+    error.code = result?.code || result?.error_code || ''
+    invalidateSupabaseSession(error, session)
+    throw error
+  }
   return { session, result }
 }
 
@@ -62,7 +68,11 @@ async function request(path, options = {}, activeSession = null) {
   })
   if (!response.ok) {
     const detail = await response.json().catch(() => ({}))
-    throw new Error(detail.message || detail.hint || 'Could not access the cloud backup. Check the Supabase backup table setup.')
+    const error = new Error(detail.message || detail.hint || 'Could not access the cloud backup. Check the Supabase backup table setup.')
+    error.status = response.status
+    error.code = detail.code || detail.error_code || ''
+    invalidateSupabaseSession(error, session)
+    throw error
   }
   return { session, response }
 }

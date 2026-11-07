@@ -35,7 +35,7 @@ function maxBirthDate() {
 }
 
 function LegalPreview({ close, ids, title }) {
-  return <div style={{ padding: 'max(18px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom))' }}>
+  return <div style={{ padding: 'max(18px, var(--sat)) 18px max(22px, var(--sab))' }}>
     <div className="sheet-full-head">
       <h3 style={{ flex: 1 }}>{title}</h3>
       <button type="button" className="iconbtn" onClick={close} aria-label={t('Close')}><Icon name="xmark" /></button>
@@ -187,9 +187,8 @@ export default function Login({ legalSetup = false }) {
     setUser(user)
     try { await pullState(trainingDataAccepted ? undefined : state, trainingDataAccepted ? false : Object.hasOwn(result, 'state'), true) }
     catch (e) {
-      setUser(null)
-      localStorage.setItem('gym_auth_error', e.message || t('Could not load your profile data.'))
-      throw e
+      // Keep the new session and local workout data active when initial cloud sync fails.
+      useUI.getState().toast(e.message || t('Could not load your profile data.'))
     }
     useUI.getState().toast(t('Welcome, {0}', user.name))
   }
@@ -309,6 +308,7 @@ export default function Login({ legalSetup = false }) {
       {head}
       <div className="login-panel">
       <div className="login-price-notice">
+        {t('30 days free, then $1/month')}<br />
         {t('Planned subscription prices: USD 1 per month, or an eligible new subscriber offer of USD 9 for the first year then USD 12 per year. Local price and cancellation terms appear before checkout; no charge is made unless a plan is displayed and you confirm it.')}
         <button type="button" className="login-legal-link" onClick={() => navigate('/legal/subscription')}>{t('Subscription terms')}</button>
       </div>

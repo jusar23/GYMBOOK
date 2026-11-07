@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { api, createAppSessionWithSupabase } from '../lib/api.js'
-import { clearPendingRecoveryCode, getAuthSession, getPendingRecoveryCode, isPasswordRecovery, processOAuthCallback, signOutSupabase } from '../lib/supabaseAuth.js'
+import { AUTH_SESSION_INVALID_EVENT, clearPendingRecoveryCode, getAuthSession, getPendingRecoveryCode, isPasswordRecovery, processOAuthCallback, signOutSupabase } from '../lib/supabaseAuth.js'
 import { localTZ } from '../lib/format.js'
 import { EXIDX, registerCustom } from '../lib/exercises.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
@@ -191,6 +191,13 @@ export const useStore = create((set, get) => {
     }
   })
 
+  window.addEventListener(AUTH_SESSION_INVALID_EVENT, () => {
+    // Supabase explicitly rejected this account's credentials. End the app identity
+    // too, while leaving the local workout history intact for the next sign-in.
+    get().setUser(null)
+    if (!MOBILE) void api('/api/logout', { method: 'POST', body: '{}' }).catch(() => {})
+  })
+
   // Everything a sign-out leaves behind on this device, whichever way it was triggered.
   const clearLocalSession = () => {
     localStorage.setItem(SIGNED_OUT_KEY, '1')
@@ -269,6 +276,7 @@ export const useStore = create((set, get) => {
     async signOut() {
       set({ signingOut: true })
       if (MOBILE) {
+        localStorage.setItem(SIGNED_OUT_KEY, '1')
         await signOutSupabase(false)
         get().setUser(null)
         get().setGuest(false)
@@ -389,7 +397,8 @@ export const useStore = create((set, get) => {
           }).catch(() => {
             if (get().user?.id === user.id) get().setUser({ ...get().user, trainingDataConsent: false })
           })
-        } else {
+        } else if (localStorage.getItem(SIGNED_OUT_KEY) === '1') {
+          // An explicit Settings sign-out wins over any cached app profile.
           get().setUser(null)
         }
         clearTimeout(reminderTm)
@@ -474,7 +483,8 @@ export const useStore = create((set, get) => {
           initialStateFetched = Object.hasOwn(result, 'state')
         }
         catch {
-          get().setUser(null)
+          // Keep the locally cached profile if the server cannot be reached. This
+          // preserves the signed-in app session during outages; cloud actions can retry.
           try {
             authSession = await getAuthSession()
             if (authSession?.access_token) {
@@ -492,7 +502,8 @@ export const useStore = create((set, get) => {
         get().setUser({ ...appUser, tutorialSeenAt: appUser.tutorialSeenAt || authSession?.user?.user_metadata?.gymbook_tutorial_seen_at || localUser?.tutorialSeenAt || null })
         try { await get().pullState(initialState, initialStateFetched, true) }
         catch (e) {
-          get().setUser(null)
+          // A profile-data sync failure must not sign the user out. Local workout data
+          // remains available and the next sync can retry with the same session.
           localStorage.setItem('gym_auth_error', e.message || 'Could not load your profile data.')
         }
         // Re-stamp the reminder's timezone on every load — keeps it correct if you're travelling,
