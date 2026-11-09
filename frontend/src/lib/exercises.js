@@ -50,6 +50,11 @@ export const gifSrc = (ex, body = 'male') => {
 // Cardio exercises log time + speed instead of weight × reps.
 export const isCardio = idOrEx => (typeof idOrEx === 'string' ? EXIDX[idOrEx] : idOrEx)?.bp === 'cardio'
 
+export const isTreadmill = idOrEx => {
+  const exercise = typeof idOrEx === 'string' ? EXIDX[idOrEx] : idOrEx
+  return /\b(treadmill|caminadora)\b/i.test(`${exercise?.n || ''} ${exercise?.eq || ''}`)
+}
+
 // Exercises the dataset already knows carry no external load (issue #32) — a quarter of the
 // catalogue. This seeds the `bw` flag on a fresh config so a push-up never asks for a weight
 // nobody was going to enter. It is only the default: the flag lives on the config, so a dip

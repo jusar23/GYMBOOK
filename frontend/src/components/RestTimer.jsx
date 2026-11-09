@@ -8,7 +8,7 @@ import { Button, NumberField } from './ui.jsx'
 import { modeOf, effortOf, EFFORT, capEffort, stepEffort, isBw, usesPairedSides } from '../lib/history.js'
 import { convertWeight } from '../lib/units.js'
 import { fmtNum } from '../lib/format.js'
-import { EXIDX } from '../lib/exercises.js'
+import { EXIDX, isTreadmill } from '../lib/exercises.js'
 import Icon from './Icon.jsx'
 
 const clock = sec => Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0')
@@ -25,7 +25,11 @@ function RecentSetMetrics() {
   const mode = modeOf(cfg)
   const effort = effortOf(S)
   const fields = mode === 'cardio'
-    ? [{ key: 'min', label: t('Duration (min)'), decimal: false, step: 1 }, { key: 'speed', label: t('Speed (km/h)'), decimal: true, step: 0.5 }]
+    ? [
+      { key: 'min', label: t('Duration (min)'), decimal: true, step: 0.5 },
+      { key: 'speed', label: t('Speed (km/h)'), decimal: true, step: 0.5 },
+      ...(isTreadmill(entry.id) ? [{ key: 'incline', label: t('Incline (%)'), decimal: true, step: 0.5 }] : []),
+    ]
     : mode === 'time'
       ? [{ key: 'sec', label: t('Seconds'), decimal: false, step: 5 }, { key: 'w', label: t(isBw(cfg) ? 'Added / assistance ({0})' : 'Weight ({0})', entry.weightUnit || S.unit), decimal: true, step: (entry.weightUnit || S.unit) === 'lb' ? 5 : 2.5 }]
       : [
@@ -36,19 +40,24 @@ function RecentSetMetrics() {
   const change = (key, value) => update(state => {
     const target = state.active?.entries[recent.entryIdx]?.sets[recent.setIdx]
     if (!target) return
-    const next = key === 'rpe' ? capEffort('rpe', value) : value
+    const next = key === 'rpe' ? capEffort('rpe', value) : key === 'incline' ? Math.max(0, value) : value
     if (next == null) delete target[key]
-    else target[key] = key === 'w' ? convertWeight(next, entry.weightUnit || S.unit, S.unit) : next
+    else if (key === 'min' && target.sec != null) {
+      target.min = next
+      target.sec = Math.max(1, Math.round(next * 60))
+    } else target[key] = key === 'w' ? convertWeight(next, entry.weightUnit || S.unit, S.unit) : next
   }, true)
   const bump = (field, direction) => {
     if (field.key === 'rir' || field.key === 'rpe') { change(field.key, stepEffort(field.key, set[field.key], direction)); return }
     const current = field.key === 'w'
       ? convertWeight(Number(set.w) || 0, S.unit, entry.weightUnit || S.unit)
-      : Number(set[field.key]) || 0
+      : field.key === 'min' && set.sec != null ? set.sec / 60 : Number(set[field.key]) || 0
     const next = Math.round((current + direction * field.step) * 100) / 100
     change(field.key, field.key === 'w' && isBw(cfg) ? next : Math.max(0, next))
   }
-  const value = (key) => key === 'w' ? fmtNum(convertWeight(set.w || 0, S.unit, entry.weightUnit || S.unit)) : set[key] ?? ''
+  const value = key => key === 'w'
+    ? fmtNum(convertWeight(set.w || 0, S.unit, entry.weightUnit || S.unit))
+    : key === 'min' && set.sec != null ? Math.round(set.sec / 6) / 10 : set[key] ?? ''
   return <div className="recent-set-metrics" aria-label={t('Edit last set')}>
     <div className="recent-set-title">{t('Last set')}: <span>{EXIDX[entry.id]?.n || entry.id}</span></div>
     <div className={'recent-set-fields' + (fields.length > 2 ? ' three' : '')}>{fields.map(field => <label className="recent-set-metric" key={field.key}>

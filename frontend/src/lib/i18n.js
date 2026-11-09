@@ -18,6 +18,75 @@ const DATE_LOCALES = {
   pl: 'pl-PL', tr: 'tr-TR', ru: 'ru-RU', zh: 'zh-CN', ko: 'ko-KR', hi: 'hi-IN'
 }
 
+const paywallTranslations = {
+  de: {
+    'Train with purpose.': 'Trainiere mit einem klaren Ziel.', 'Your routines, every set and your progress, all in one place.': 'Deine Trainingspläne, jede Serie und dein Fortschritt – alles an einem Ort.',
+    'Organized routines for every session.': 'Organisierte Trainingspläne für jede Einheit.', 'Log weight, reps, RPE, RIR and rest times.': 'Erfasse Gewicht, Wiederholungen, RPE, RIR und Pausen.', 'Review your history and track your progress.': 'Sieh dir deinen Verlauf an und verfolge deinen Fortschritt.',
+    'Annual plan': 'Jahresabo', 'Monthly plan': 'Monatsabo', 'Just {0}/mo': 'Nur {0}/Monat', 'No commitment': 'Keine Bindung', 'SAVE {0}%': 'SPARE {0}%', '/yr': '/Jahr', '/mo': '/Monat', 'Already subscribed?': 'Bereits abonniert?', 'Choose your plan': 'Wähle deinen Tarif', 'Try again': 'Erneut versuchen',
+    'We could not verify your subscription. Check your connection, then try again.': 'Dein Abonnement konnte nicht überprüft werden. Prüfe deine Verbindung und versuche es erneut.'
+  },
+  es: {
+    'Train with purpose.': 'Entrena con propósito.', 'Your routines, every set and your progress, all in one place.': 'Tus rutinas, cada serie y tu progreso, en un solo lugar.',
+    'Organized routines for every session.': 'Organiza tus rutinas para cada sesión.', 'Log weight, reps, RPE, RIR and rest times.': 'Registra peso, repeticiones, RPE, RIR y descansos.', 'Review your history and track your progress.': 'Revisa tu historial y sigue tu progreso.',
+    'Annual plan': 'Plan anual', 'Monthly plan': 'Plan mensual', 'Just {0}/mo': 'Solo {0}/mes', 'No commitment': 'Sin permanencia', 'SAVE {0}%': 'AHORRA {0}%', '/yr': '/año', '/mo': '/mes', 'Already subscribed?': '¿Ya tienes una suscripción?', 'Choose your plan': 'Elige tu plan', 'Try again': 'Volver a intentar',
+    'We could not verify your subscription. Check your connection, then try again.': 'No pudimos verificar tu suscripción. Comprueba tu conexión e inténtalo de nuevo.'
+  },
+  fr: {
+    'Train with purpose.': 'Entraînez-vous avec un objectif.', 'Your routines, every set and your progress, all in one place.': 'Vos programmes, chaque série et vos progrès, réunis au même endroit.',
+    'Organized routines for every session.': 'Des programmes organisés pour chaque séance.', 'Log weight, reps, RPE, RIR and rest times.': 'Notez les poids, répétitions, RPE, RIR et temps de repos.', 'Review your history and track your progress.': 'Consultez votre historique et suivez vos progrès.',
+    'Annual plan': 'Offre annuelle', 'Monthly plan': 'Offre mensuelle', 'Just {0}/mo': 'Seulement {0}/mois', 'No commitment': 'Sans engagement', 'SAVE {0}%': 'ÉCONOMISEZ {0} %', '/yr': '/an', '/mo': '/mois', 'Already subscribed?': 'Déjà abonné ?', 'Choose your plan': 'Choisissez une offre', 'Try again': 'Réessayer',
+    'We could not verify your subscription. Check your connection, then try again.': 'Impossible de vérifier votre abonnement. Vérifiez votre connexion et réessayez.'
+  },
+  it: {
+    'Train with purpose.': 'Allenati con uno scopo.', 'Your routines, every set and your progress, all in one place.': 'Le tue routine, ogni serie e i tuoi progressi, tutto in un unico posto.',
+    'Organized routines for every session.': 'Routine organizzate per ogni sessione.', 'Log weight, reps, RPE, RIR and rest times.': 'Registra pesi, ripetizioni, RPE, RIR e tempi di recupero.', 'Review your history and track your progress.': 'Consulta lo storico e segui i tuoi progressi.',
+    'Annual plan': 'Piano annuale', 'Monthly plan': 'Piano mensile', 'Just {0}/mo': 'Solo {0}/mese', 'No commitment': 'Senza vincoli', 'SAVE {0}%': 'RISPARMIA {0}%', '/yr': '/anno', '/mo': '/mese', 'Already subscribed?': 'Hai già un abbonamento?', 'Choose your plan': 'Scegli il tuo piano', 'Try again': 'Riprova',
+    'We could not verify your subscription. Check your connection, then try again.': 'Impossibile verificare l’abbonamento. Controlla la connessione e riprova.'
+  },
+  pt: {
+    'Train with purpose.': 'Treine com propósito.', 'Your routines, every set and your progress, all in one place.': 'Suas rotinas, cada série e seu progresso, tudo em um só lugar.',
+    'Organized routines for every session.': 'Rotinas organizadas para cada treino.', 'Log weight, reps, RPE, RIR and rest times.': 'Registre peso, repetições, RPE, RIR e tempos de descanso.', 'Review your history and track your progress.': 'Consulte seu histórico e acompanhe seu progresso.',
+    'Annual plan': 'Plano anual', 'Monthly plan': 'Plano mensal', 'Just {0}/mo': 'Apenas {0}/mês', 'No commitment': 'Sem compromisso', 'SAVE {0}%': 'ECONOMIZE {0}%', '/yr': '/ano', '/mo': '/mês', 'Already subscribed?': 'Já tem uma assinatura?', 'Choose your plan': 'Escolha seu plano', 'Try again': 'Tentar novamente',
+    'We could not verify your subscription. Check your connection, then try again.': 'Não foi possível verificar sua assinatura. Confira sua conexão e tente novamente.'
+  },
+  pl: {
+    'Train with purpose.': 'Trenuj z celem.', 'Your routines, every set and your progress, all in one place.': 'Twoje plany, każda seria i postępy w jednym miejscu.',
+    'Organized routines for every session.': 'Uporządkowane plany na każdy trening.', 'Log weight, reps, RPE, RIR and rest times.': 'Zapisuj ciężar, powtórzenia, RPE, RIR i przerwy.', 'Review your history and track your progress.': 'Przeglądaj historię i śledź swoje postępy.',
+    'Annual plan': 'Plan roczny', 'Monthly plan': 'Plan miesięczny', 'Just {0}/mo': 'Tylko {0}/mies.', 'No commitment': 'Bez zobowiązań', 'SAVE {0}%': 'OSZCZĘDZASZ {0}%', '/yr': '/rok', '/mo': '/mies.', 'Already subscribed?': 'Masz już subskrypcję?', 'Choose your plan': 'Wybierz plan', 'Try again': 'Spróbuj ponownie',
+    'We could not verify your subscription. Check your connection, then try again.': 'Nie udało się zweryfikować subskrypcji. Sprawdź połączenie i spróbuj ponownie.'
+  },
+  tr: {
+    'Train with purpose.': 'Amacına uygun antrenman yap.', 'Your routines, every set and your progress, all in one place.': 'Antrenman planların, her setin ve ilerlemen tek yerde.',
+    'Organized routines for every session.': 'Her antrenman için düzenli planlar.', 'Log weight, reps, RPE, RIR and rest times.': 'Ağırlık, tekrar, RPE, RIR ve dinlenme sürelerini kaydet.', 'Review your history and track your progress.': 'Geçmişini incele ve gelişimini takip et.',
+    'Annual plan': 'Yıllık plan', 'Monthly plan': 'Aylık plan', 'Just {0}/mo': 'Ayda yalnızca {0}', 'No commitment': 'Taahhüt yok', 'SAVE {0}%': '%{0} TASARRUF', '/yr': '/yıl', '/mo': '/ay', 'Already subscribed?': 'Zaten abone misin?', 'Choose your plan': 'Planını seç', 'Try again': 'Tekrar dene',
+    'We could not verify your subscription. Check your connection, then try again.': 'Aboneliğini doğrulayamadık. Bağlantını kontrol edip tekrar dene.'
+  },
+  ru: {
+    'Train with purpose.': 'Тренируйтесь с целью.', 'Your routines, every set and your progress, all in one place.': 'Ваши планы, каждый подход и прогресс — в одном месте.',
+    'Organized routines for every session.': 'План тренировок для каждого занятия.', 'Log weight, reps, RPE, RIR and rest times.': 'Записывайте вес, повторы, RPE, RIR и время отдыха.', 'Review your history and track your progress.': 'Просматривайте историю и следите за прогрессом.',
+    'Annual plan': 'Годовой план', 'Monthly plan': 'Помесячный план', 'Just {0}/mo': 'Всего {0} в месяц', 'No commitment': 'Без обязательств', 'SAVE {0}%': 'ЭКОНОМИЯ {0}%', '/yr': '/год', '/mo': '/мес.', 'Already subscribed?': 'Уже подписаны?', 'Choose your plan': 'Выберите план', 'Try again': 'Повторить',
+    'We could not verify your subscription. Check your connection, then try again.': 'Не удалось проверить подписку. Проверьте подключение и попробуйте снова.'
+  },
+  zh: {
+    'Train with purpose.': '有目标地训练。', 'Your routines, every set and your progress, all in one place.': '训练计划、每组记录和进度，一处尽览。',
+    'Organized routines for every session.': '为每次训练整理训练计划。', 'Log weight, reps, RPE, RIR and rest times.': '记录重量、次数、RPE、RIR 和休息时间。', 'Review your history and track your progress.': '查看训练记录并追踪进步。',
+    'Annual plan': '年度计划', 'Monthly plan': '月度计划', 'Just {0}/mo': '每月仅 {0}', 'No commitment': '无长期承诺', 'SAVE {0}%': '立省 {0}%', '/yr': '/年', '/mo': '/月', 'Already subscribed?': '已经订阅？', 'Choose your plan': '选择套餐', 'Try again': '重试',
+    'We could not verify your subscription. Check your connection, then try again.': '无法验证订阅。请检查网络连接后重试。'
+  },
+  ko: {
+    'Train with purpose.': '목표를 가지고 훈련하세요.', 'Your routines, every set and your progress, all in one place.': '운동 계획, 모든 세트와 진행 상황을 한곳에서 확인하세요.',
+    'Organized routines for every session.': '매 세션을 위한 체계적인 운동 계획.', 'Log weight, reps, RPE, RIR and rest times.': '무게, 횟수, RPE, RIR 및 휴식 시간을 기록하세요.', 'Review your history and track your progress.': '기록을 확인하고 진행 상황을 추적하세요.',
+    'Annual plan': '연간 요금제', 'Monthly plan': '월간 요금제', 'Just {0}/mo': '월 {0}만', 'No commitment': '약정 없음', 'SAVE {0}%': '{0}% 절약', '/yr': '/년', '/mo': '/월', 'Already subscribed?': '이미 구독 중인가요?', 'Choose your plan': '요금제를 선택하세요', 'Try again': '다시 시도',
+    'We could not verify your subscription. Check your connection, then try again.': '구독을 확인할 수 없습니다. 연결을 확인한 뒤 다시 시도하세요.'
+  },
+  hi: {
+    'Train with purpose.': 'उद्देश्य के साथ प्रशिक्षण करें।', 'Your routines, every set and your progress, all in one place.': 'आपकी दिनचर्या, हर सेट और आपकी प्रगति — सब एक ही जगह।',
+    'Organized routines for every session.': 'हर सत्र के लिए व्यवस्थित दिनचर्या।', 'Log weight, reps, RPE, RIR and rest times.': 'वज़न, रेप्स, RPE, RIR और आराम का समय दर्ज करें।', 'Review your history and track your progress.': 'अपना इतिहास देखें और प्रगति ट्रैक करें।',
+    'Annual plan': 'वार्षिक योजना', 'Monthly plan': 'मासिक योजना', 'Just {0}/mo': 'सिर्फ़ {0}/माह', 'No commitment': 'कोई प्रतिबद्धता नहीं', 'SAVE {0}%': '{0}% की बचत', '/yr': '/वर्ष', '/mo': '/माह', 'Already subscribed?': 'पहले से सदस्यता है?', 'Choose your plan': 'अपनी योजना चुनें', 'Try again': 'फिर से प्रयास करें',
+    'We could not verify your subscription. Check your connection, then try again.': 'आपकी सदस्यता सत्यापित नहीं हो सकी। कनेक्शन जाँचकर फिर प्रयास करें।'
+  },
+}
+
 const localePacks = import.meta.glob('../locales/*.js')
 const localeCompletionPacks = import.meta.glob('../locales/completion/*.js')
 const subscriptionTranslations = {
@@ -254,7 +323,7 @@ export async function setLang(l) {
     ])
     if (request !== langRequest) return
     const translatedErrors = Object.fromEntries(subscriptionErrorKeys.map((key, index) => [key, subscriptionErrorTranslations[l]?.[index] || key]))
-    dict = { ...(basePack?.default || {}), ...(completionPack?.default || {}), ...(uiAdditions[l] || {}), ...(chromeTranslations[l] || {}), ...(dynamicContentTranslations[l] || {}), ...(guidedFlowTranslations[l] || {}), ...(widgetTranslations[l] || {}), ...(notificationTranslations[l] || {}), ...(subscriptionTranslations[l] || {}), 'Your free access or subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.': accessEndedTranslations[l] || 'Your free access or subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.', ...translatedErrors }
+    dict = { ...(basePack?.default || {}), ...(completionPack?.default || {}), ...(uiAdditions[l] || {}), ...(chromeTranslations[l] || {}), ...(dynamicContentTranslations[l] || {}), ...(guidedFlowTranslations[l] || {}), ...(widgetTranslations[l] || {}), ...(notificationTranslations[l] || {}), ...(subscriptionTranslations[l] || {}), ...(paywallTranslations[l] || {}), 'Your free access or subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.': accessEndedTranslations[l] || 'Your free access or subscription has ended. Choose a plan to continue using Gym Book Training. Your workouts remain saved on this phone.', ...translatedErrors }
   } catch (e) {
     if (request !== langRequest) return
     dict = {}; instr = null

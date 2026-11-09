@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from './store/useStore.js'
 import { useUI } from './store/useUI.js'
-import { EXDB, EXIDX, BODYPARTS, isCardio, isBodyweightEq, allExercises, equipmentOf } from './lib/exercises.js'
+import { EXDB, EXIDX, BODYPARTS, isCardio, isTreadmill, isBodyweightEq, allExercises, equipmentOf } from './lib/exercises.js'
 import { fmtDate, fmtNum, fmtVol, fmtDur, durPart, todayISO, uid, exCount, DAYN, MONTHS_LONG, ACCENTS } from './lib/format.js'
 import { lastEntryFor, bestWeightFor, buildSets, effectiveRoutineId, workoutVolume, setsDone, setsDoneActive, lastBW, supersetUnits, unitOf, setLabel, fmtSec, defaultConfig, cleanupSg, modeOf, effortOf, isBw, isPerSide } from './lib/history.js'
 import { beep, vibrate } from './lib/sound.js'
@@ -538,7 +538,7 @@ function ExConfig({ ex, existing, onSave, onDelete, close, routine }) {
     // rather than carrying a flag nothing downstream can read.
     const flags = {}
     if (bw !== isBodyweightEq(ex.id)) flags.bodyweight = bw
-    if (cardio) onSave({ sets, min: Math.max(1, Math.round(c.min) || 20), speed: Math.max(0, c.speed || 8) })
+    if (cardio) onSave({ sets, min: Math.max(1, Math.round(c.min) || 20), speed: Math.max(0, c.speed || 8), ...(isTreadmill(ex.id) ? { incline: Math.max(0, c.incline || 0) } : {}) })
     else if (mode === 'time') onSave({ sets, mode: 'time', sec: Math.max(1, Math.round(c.sec) || 45), weight: Math.max(0, c.weight || 0), ...flags, ...prog })
     else {
       // A unilateral target is stored even: the split has to divide, and a typed 15 would
@@ -568,6 +568,7 @@ function ExConfig({ ex, existing, onSave, onDelete, close, routine }) {
         <Stepper label={t('Intervals')} value={c.sets} step={1} decimal={false} onChange={v => setC(x => ({ ...x, sets: v }))} />
         <Stepper label={t('Minutes')} value={c.min} step={1} decimal={false} onChange={v => setC(x => ({ ...x, min: v }))} />
         <Stepper label={t('Speed (km/h)')} value={c.speed} step={0.5} onChange={v => setC(x => ({ ...x, speed: v }))} />
+        {isTreadmill(ex.id) && <Stepper label={t('Incline (%)')} value={c.incline ?? 0} step={0.5} onChange={v => setC(x => ({ ...x, incline: Math.max(0, v) }))} />}
       </> : mode === 'time' ? <>
         <Stepper label={t('Sets')} value={c.sets} step={1} decimal={false} onChange={v => setC(x => ({ ...x, sets: v }))} />
         <Stepper label={t('Seconds')} value={c.sec} step={5} decimal={false} onChange={v => setC(x => ({ ...x, sec: v }))} />

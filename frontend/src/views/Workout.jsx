@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
-import { exOr } from '../lib/exercises.js'
+import { exOr, isTreadmill } from '../lib/exercises.js'
 import { effectiveRoutine, lastEntryFor, bestWeightFor, buildSets, setsDoneActive, supersetUnits, unitOf, setLabel, fmtSec, modeOf, isBw, isPerSide, sideReps, usesPairedSides, repStep, EFFORT, effortOf, stepEffort, capEffort } from '../lib/history.js'
 import { fmtNum, fmtDate, todayISO, exCount, DAYN } from '../lib/format.js'
 import { beep, vibrate } from '../lib/sound.js'
@@ -23,6 +23,7 @@ function setLabelInUnit(id, set, cfg, fromUnit, toUnit) {
   const w = displayW !== 0 ? fmtNum(displayW) : ''
   const effort = set.rir != null ? ` (RIR ${fmtNum(set.rir)})` : set.rpe != null ? ` (RPE ${fmtNum(set.rpe)})` : ''
   const mode = modeOf(cfg || { id })
+  if (mode === 'cardio') return setLabel(id, set, cfg)
   if (mode === 'time') return fmtSec(set.sec) + (w ? ` · ${w} ${toUnit}` : '') + effort
   const side = usesPairedSides(cfg) && set.side ? ` · ${t(set.side === 'left' ? 'Left' : 'Right')}` : ''
   if (isBw({ ...(cfg || {}), id })) return (w ? `${displayW > 0 ? '+' : '−'}${fmtNum(Math.abs(displayW))} ${toUnit} × ` : '') + (set.r || 0) + side + effort
@@ -76,6 +77,7 @@ function ExerciseBlock({ entryIdx, compact, focusMode = false, onToggle, onToggl
   const ex = exOr(entry.id)
   const mode = modeOf({ ...(entry.target || {}), id: entry.id })
   const cardio = mode === 'cardio'
+  const treadmill = cardio && isTreadmill(entry.id)
   const timed = mode === 'time'
   const last = lastEntryFor(S, entry.id)
   // The same number the "confirm your working weight" sheet calls your best, so the two
@@ -100,7 +102,8 @@ function ExerciseBlock({ entryIdx, compact, focusMode = false, onToggle, onToggl
   // because an unlogged effort is not the same as 0 — RIR 0 says the set went to failure.
   const kind = effortOf(S)
   const eff = EFFORT[kind]
-  const col3 = mode === 'reps' && eff ? { ...eff, eff: kind, dec: kind !== 'rpe', opt: true, hd: t(eff.hd) } : null
+  const col3 = treadmill ? { f: 'incline', step: 0.5, dec: true, hd: t('Incline (%)') }
+    : mode === 'reps' && eff ? { ...eff, eff: kind, dec: kind !== 'rpe', opt: true, hd: t(eff.hd) } : null
   const rows = entry.sets.map((set, index) => ({ set, index }))
   if (usesPairedSides(cfg)) {
     for (let i = 0; i + 1 < rows.length; i += 2) {
@@ -123,8 +126,8 @@ function ExerciseBlock({ entryIdx, compact, focusMode = false, onToggle, onToggl
     <div className={'stp ' + cls}>
       <button aria-label="Decrease" onClick={() => bump(s, i, col, -1)}><Icon name="minus" /></button>
       {/* a typed effort is capped — there is no RPE 12, and 12 reps in reserve is a warm-up */}
-      <span className="val"><NumberField decimal={col.dec} nullable={col.opt} allowNegative={bw && col.f === 'w'} value={s[col.f] == null ? '' : col.eff === 'rpe' ? Math.round(s[col.f]) : col.f === 'w' ? Math.round(convertWeight(s.w, S.unit, weightUnit) * 10) / 10 : s[col.f]}
-        onChange={v => onField(i, col.f, col.eff ? capEffort(col.eff, v) : col.f === 'w' ? convertWeight(v, weightUnit, S.unit) : v)} /></span>
+      <span className="val"><NumberField decimal={col.dec} nullable={col.opt} allowNegative={bw && col.f === 'w'} value={s[col.f] == null ? (col.f === 'incline' ? 0 : '') : col.eff === 'rpe' ? Math.round(s[col.f]) : col.f === 'w' ? Math.round(convertWeight(s.w, S.unit, weightUnit) * 10) / 10 : s[col.f]}
+        onChange={v => onField(i, col.f, col.eff ? capEffort(col.eff, v) : col.f === 'w' ? convertWeight(v, weightUnit, S.unit) : col.f === 'incline' ? Math.max(0, v) : v)} /></span>
       <button aria-label="Increase" onClick={() => bump(s, i, col, 1)}><Icon name="plus" /></button>
     </div>
   )
@@ -159,15 +162,15 @@ function ExerciseBlock({ entryIdx, compact, focusMode = false, onToggle, onToggl
     </div>}
     <div className="card" style={{ marginTop: 10, marginBottom: 0 }}>
       {/* the header carries the same eff3 sizing as the rows, or the labels drift off their columns */}
-      <div className={'sethead' + (col3 ? ' eff3' : '')}><span className="n-sp" /><span className="w-sp">{col1.hd}</span>{col2 && <span className="r-sp">{col2.hd}</span>}{col3 && <span className="eff-sp">{col3.hd}</span>}{timed && <span className="ck-sp" />}<span className="ck-sp" /></div>
-      {rows.map(({ set: s, index: i }, rowIndex) => <div key={i} className={'setrow' + (s.done ? ' done' : '') + (col3 ? ' eff3' : '') + (usesPairedSides(cfg) ? ' paired' + (rowIndex % 2 === 1 ? ' pair-end' : '') : '')}>
+      <div className={'sethead' + (col3 && !treadmill ? ' eff3' : '') + (treadmill ? ' treadmill-cardio' : '')}><span className="n-sp" /><span className="w-sp">{col1.hd}</span>{col2 && <span className="r-sp">{col2.hd}</span>}{col3 && (treadmill ? <span className="i-sp">{col3.hd}</span> : <span className="eff-sp">{col3.hd}</span>)}{(timed || cardio) && <span className="ck-sp" />}<span className="ck-sp" /></div>
+      {rows.map(({ set: s, index: i }, rowIndex) => <div key={i} className={'setrow' + (s.done ? ' done' : '') + (col3 && !treadmill ? ' eff3' : '') + (treadmill ? ' treadmill-cardio' : '') + (usesPairedSides(cfg) ? ' paired' + (rowIndex % 2 === 1 ? ' pair-end' : '') : '')}>
         <div className="n" aria-label={s.side ? t(s.side === 'left' ? 'Left' : 'Right') : t('Set {0}', rowIndex + 1)}>{s.side ? `${Math.floor(rowIndex / 2) + 1}${s.side === 'left' ? 'L' : 'R'}` : rowIndex + 1}</div>
         {cell(s, i, col1, 'w')}
         {col2 && cell(s, i, col2, 'r')}
-        {col3 && cell(s, i, col3, 'eff')}
+        {col3 && cell(s, i, col3, treadmill ? 'i' : 'eff')}
         {/* A timed set is started, not typed: the timer counts the hold down and checks the
             set off itself. The checkbox stays for anyone who timed it on their own watch. */}
-        {timed && <button className="setgo" aria-label={t('Start set')} disabled={s.done || !!working}
+        {(timed || cardio) && <button className="setgo" aria-label={t('Start set')} disabled={s.done || !!working}
           onClick={() => onStartTimed(i)}><Icon name="play" /></button>}
         <Check checked={s.done} onChange={() => onToggle(i)} />
       </div>)}
@@ -287,7 +290,7 @@ function ActiveWorkout() {
   const addSet = idx => mutEntry(idx, e => {
     const l = e.sets[e.sets.length - 1]
     const m = modeOf({ ...(e.target || {}), id: e.id })
-    if (m === 'cardio') e.sets.push({ min: l ? l.min : (e.target.min || 20), speed: l ? l.speed : (e.target.speed || 8), done: false })
+    if (m === 'cardio') e.sets.push({ min: l ? l.min : (e.target.min || 20), speed: l ? l.speed : (e.target.speed || 8), ...(isTreadmill(e.id) ? { incline: l?.incline ?? e.target.incline ?? 0 } : {}), done: false })
     else if (m === 'time') e.sets.push({ sec: l ? l.sec : (e.target.sec || 45), w: l ? (l.w || 0) : (e.target.weight || 0), done: false })
     else if (usesPairedSides(e.target)) {
       const right = [...e.sets].reverse().find(s => s.side === 'right') || l || { w: e.target.weight || 0, r: e.target.reps }
@@ -306,8 +309,16 @@ function ActiveWorkout() {
   // behave exactly as they do for a reps set.
   const startTimed = (idx, i) => {
     const e = A.entries[idx]
-    useUI.getState().startWork(e.sets[i].sec || 45, exOr(e.id).n, elapsed => {
-      mutEntry(idx, en => { en.sets[i].sec = elapsed })
+    const cardio = modeAt(idx) === 'cardio'
+    const duration = cardio ? (e.sets[i].min || 20) * 60 : (e.sets[i].sec || 45)
+    useUI.getState().startWork(duration, exOr(e.id).n, elapsed => {
+      mutEntry(idx, en => {
+        if (cardio) {
+          en.sets[i].min = Math.max(1, Math.round(elapsed / 60))
+          en.sets[i].sec = elapsed
+        }
+        else en.sets[i].sec = elapsed
+      })
       if (!useStore.getState().S.active.entries[idx].sets[i].done) toggle(idx, i)
     })
   }
@@ -360,7 +371,7 @@ function ActiveWorkout() {
       const entry = A.entries[idx]
       const nextSet = entry.sets.findIndex(set => !set.done)
       if (nextSet < 0) continue
-      if (modeAt(idx) === 'time') startTimed(idx, nextSet)
+      if (modeAt(idx) === 'time' || modeAt(idx) === 'cardio') startTimed(idx, nextSet)
       else toggle(idx, nextSet)
       return
     }

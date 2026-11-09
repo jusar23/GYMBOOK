@@ -371,38 +371,6 @@ export function isPurchaseCancelled(error) {
   return error?.userCancelled === true || String(error?.code ?? '') === '1'
 }
 
-export async function presentNativePaywall(userId, { onlyIfNeeded = false, displayCloseButton = false } = {}) {
-  const native = await getNativePurchases(userId)
-  const Purchases = native?.Purchases
-  if (!Purchases) throw new Error('Google Play billing is not configured yet.')
-  const { RevenueCatUI } = await import('@revenuecat/purchases-capacitor-ui')
-  let offering = null
-  try { offering = selectedOffering(await getNativeOfferings(userId)) }
-  catch { /* Let RevenueCatUI try its current offering and native cache as a fallback. */ }
-  const options = { displayCloseButton, ...(offering ? { offering } : {}) }
-  let result
-  try {
-    result = onlyIfNeeded
-      ? await RevenueCatUI.presentPaywallIfNeeded({
-        requiredEntitlementIdentifier: SUBSCRIPTION_ENTITLEMENT,
-        ...options,
-      })
-      : await RevenueCatUI.presentPaywall(options)
-  } catch (error) { throw billingAvailabilityError(error) }
-  const subscription = await refreshNativeSubscription(userId)
-  return { ...result, subscription }
-}
-
-export async function presentNativeCustomerCenter(userId) {
-  const native = await getNativePurchases(userId)
-  const Purchases = native?.Purchases
-  if (!Purchases) throw new Error('Google Play billing is not configured yet.')
-  const { RevenueCatUI } = await import('@revenuecat/purchases-capacitor-ui')
-  await withTimeout(RevenueCatUI.presentCustomerCenter(), 12000, 'RevenueCat Customer Center took too long to open.')
-  void refreshNativeSubscription(userId).catch(() => {})
-  return true
-}
-
 export async function purchaseWebPackage(userId, rcPackage, email) {
   const purchases = await getWebPurchases(userId)
   await purchases.purchase({ rcPackage, customerEmail: email || undefined })

@@ -15,7 +15,6 @@ dependencies {
     implementation project(':capacitor-local-notifications')
     implementation project(':capacitor-share')
     implementation project(':revenuecat-purchases-capacitor')
-    implementation project(':revenuecat-purchases-capacitor-ui')
 
 }
 

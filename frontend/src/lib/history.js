@@ -1,6 +1,6 @@
 // Pure helpers over the state object S (ported 1:1 from the vanilla app).
 import { todayISO, isoOf, weekKey, fmtNum } from './format.js'
-import { isCardio, isBodyweightEq } from './exercises.js'
+import { isCardio, isBodyweightEq, isTreadmill } from './exercises.js'
 import { t } from './i18n.js'
 
 // How an exercise is logged (issue #16). This used to be derived from the body part alone,
@@ -94,7 +94,11 @@ const effortTail = s => {
 export function setLabel(id, s, cfg) {
   const c = cfg || { id }
   const mode = modeOf(c)
-  if (mode === 'cardio') return `${s.min || 0} min @ ${fmtNum(s.speed || 0)} km/h`
+  if (mode === 'cardio') {
+    const duration = s.sec > 0 ? fmtSec(s.sec) : `${s.min || 0} min`
+    const incline = isTreadmill(c.id ?? id) && s.incline != null ? ` · ${t('Incline {0}%', fmtNum(s.incline))}` : ''
+    return `${duration} @ ${fmtNum(s.speed || 0)} km/h${incline}`
+  }
   if (mode === 'time') return fmtSec(s.sec) + (s.w ? ` · ${isBw({ ...c, id: c.id ?? id }) && s.w > 0 ? '+' : ''}${fmtNum(s.w)}` : '')
   // Bodyweight reads as what you did — "12", or "+10 × 12" once there is a belt involved —
   // rather than "0×12", which says a set was performed with no weight and means nothing.
@@ -109,7 +113,7 @@ export function setLabel(id, s, cfg) {
 // Default config for a freshly added exercise.
 export function defaultConfig(id, mode) {
   const m = mode || modeOf({ id })
-  if (m === 'cardio') return { sets: 1, min: 20, speed: 8 }
+  if (m === 'cardio') return { sets: 1, min: 20, speed: 8, ...(isTreadmill(id) ? { incline: 0 } : {}) }
   // Written only when it is true, so a barbell config is byte-for-byte what it was before
   // the flag existed and a plan file gains nothing it does not need.
   const bw = isBodyweightEq(id) ? { bodyweight: true } : {}
@@ -123,7 +127,10 @@ export function exLine(cfg, unit) {
   const n = cfg.sets || 1
   // Added weight reads as added: "+10 kg" on a dip belt, "60 kg" on a barbell.
   const load = cfg.weight ? ' · ' + (isBw(cfg) && cfg.weight > 0 ? '+' : '') + fmtNum(cfg.weight) + ' ' + unit : ''
-  if (mode === 'cardio') return `${n} × ${cfg.min || 20} min @ ${fmtNum(cfg.speed || 8)} km/h`
+  if (mode === 'cardio') {
+    const incline = isTreadmill(cfg.id) ? ` · ${t('Incline {0}%', fmtNum(cfg.incline ?? 0))}` : ''
+    return `${n} × ${cfg.min || 20} min @ ${fmtNum(cfg.speed || 8)} km/h${incline}`
+  }
   if (mode === 'time') return `${n} × ${fmtSec(cfg.sec || 45)}${load}`
   if (usesPairedSides(cfg)) return `${n * 2} × ${cfg.reps} ${t('per side')}${load}`
   // Legacy plans stored a total across both sides; keep their old summary readable.
@@ -180,7 +187,12 @@ export function buildSets(S, cfg) {
   if (mode === 'cardio') {
     for (let i = 0; i < n; i++) {
       const prev = prevAt(i)
-      sets.push({ min: prev ? prev.min : (cfg.min || 20), speed: prev ? prev.speed : (cfg.speed || 8), done: false })
+      sets.push({
+        min: prev?.sec ? Math.max(1, Math.round(prev.sec / 60)) : prev ? prev.min : (cfg.min || 20),
+        speed: prev ? prev.speed : (cfg.speed || 8),
+        ...(isTreadmill(cfg.id) ? { incline: prev?.incline ?? cfg.incline ?? 0 } : {}),
+        done: false,
+      })
     }
     return sets
   }

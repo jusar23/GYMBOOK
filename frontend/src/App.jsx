@@ -26,6 +26,7 @@ import { NATIVE_OAUTH_REDIRECT, processOAuthCallback } from './lib/supabaseAuth.
 import { needsLegalSetup } from './lib/legalConsent.js'
 import { openOnboarding, onboardingSeenKey } from './components/Onboarding.jsx'
 import SubscriptionGate from './views/SubscriptionGate.jsx'
+import SubscriptionCheck from './views/SubscriptionCheck.jsx'
 import { clearPendingSubscriptionPlan, refreshNativeSubscription } from './lib/subscription.js'
 import { freeTrialEndsAt, hasFreeTrialAccess } from './lib/freeTrial.js'
 import { setWorkoutOrientationLocked } from './lib/workout-orientation.js'
@@ -122,6 +123,17 @@ function Shell() {
   const loginRoute = loc.pathname === '/login'
 
   useEffect(() => { setNav(navigate) }, [navigate])
+  useEffect(() => {
+    const updateSubscription = event => {
+      const next = event.detail
+      if (next?.configured && next.granted) {
+        clearPendingSubscriptionPlan(user?.id)
+        setSubscription(next)
+      } else void checkSubscription()
+    }
+    window.addEventListener('gymbook:subscription-updated', updateSubscription)
+    return () => window.removeEventListener('gymbook:subscription-updated', updateSubscription)
+  }, [checkSubscription, user?.id])
   useEffect(() => {
     if (!ready) return
     void checkSubscription()
@@ -318,7 +330,9 @@ function Shell() {
             ? (user && !user.needsLegalSetup ? <Navigate to={DEFAULT_ROUTE} replace /> : <Login legalSetup={!!user?.needsLegalSetup} />)
             : user?.needsLegalSetup
               ? <Login legalSetup />
-            : MOBILE && !!user?.id && subscription.configured && (!subscription.granted || subscription.status === 'loading') && loc.pathname !== '/settings'
+            : MOBILE && !!user?.id && subscription.configured && subscription.status === 'error' && loc.pathname !== '/settings'
+              ? <SubscriptionCheck refresh={checkSubscription} />
+            : MOBILE && !!user?.id && subscription.configured && subscription.status === 'inactive' && loc.pathname !== '/settings'
               ? <SubscriptionGate user={user} status={subscription} refresh={checkSubscription} />
             : !authed
               ? <Login />

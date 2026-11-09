@@ -257,11 +257,14 @@ export default function Login({ legalSetup = false }) {
 
   const openLegal = (ids, title) => useUI.getState().openSheet(close => <LegalPreview close={close} ids={ids} title={title} />, { kind: 'full', locked: true })
 
-  const legalFields = () => <>
+  const languageField = () => <>
     <label className="signup-field-label" htmlFor="gymbook-language">{t('Language')}</label>
     <select id="gymbook-language" className="input" value={appLanguage} onChange={event => { void chooseLanguage(event.target.value) }}>
       {Object.entries(LANGS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
     </select>
+  </>
+
+  const legalFields = () => <>
     <label className="signup-field-label" htmlFor="gymbook-dob">{t('Date of birth')}</label>
     <input id="gymbook-dob" className="input" type="date" autoComplete="bday" max={maxBirthDate()} value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} required />
     <label className="signup-field-label" htmlFor="gymbook-country">{t('Country of residence')}</label>
@@ -317,6 +320,7 @@ export default function Login({ legalSetup = false }) {
         <h2 style={{ textAlign: 'left', margin: '10px 0' }}>{t('Complete your account')}</h2>
         <div className="muted small" style={{ textAlign: 'left', marginBottom: 12 }}>{t('Before using a signed-in account, add your age and country and accept the current legal documents.')}</div>
         <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
+          {languageField()}
           {legalFields()}
           <Button variant="primary" type="submit" disabled={busy}>{busy ? t('Please wait…') : t('Save and continue')}</Button>
         </form>
@@ -349,6 +353,7 @@ export default function Login({ legalSetup = false }) {
         </div>
         </>}
         <form onSubmit={submit} style={{ display: 'grid', gap: 10 }}>
+          {mode === 'signup' && languageField()}
           {mode === 'signup' && <input className="input" autoComplete="name" placeholder={t('Your name')} maxLength={40} value={name} onChange={e => setName(e.target.value)} required />}
           <input className="input" type="email" autoComplete="email" placeholder={t('Email')} value={email} onChange={e => setEmail(e.target.value)} required />
           {mode !== 'forgot' && <div className="password-field">

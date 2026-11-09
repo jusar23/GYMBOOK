@@ -18,7 +18,7 @@ import { loadCloudBackup, saveCloudBackup, setCloudBackupConsent } from '../lib/
 import { TRAINING_DATA_CONSENT_VERSION } from '../lib/legalConsent.js'
 import { mergePlan } from '../lib/plan-share.js'
 import { parseTrainingFile, trainingFileText } from '../lib/training-file.js'
-import { openSubscriptionManagement, presentNativeCustomerCenter, presentNativePaywall, refreshNativeSubscription } from '../lib/subscription.js'
+import { openSubscriptionManagement, refreshNativeSubscription } from '../lib/subscription.js'
 import { freeTrialEndsAt, hasFreeTrialAccess } from '../lib/freeTrial.js'
 import { SOCIAL_URLS } from '../lib/brand-links.js'
 
@@ -37,6 +37,7 @@ import { confirmSheet, importFromApp } from '../sheets.jsx'
 import { openOnboarding } from '../components/Onboarding.jsx'
 import Icon from '../components/Icon.jsx'
 import { openTutorial } from '../components/Tutorial.jsx'
+import { SubscriptionPlansSheet } from './SubscriptionGate.jsx'
 
 const ACCENT_TONES = [
   { id: 'vivid', label: 'Vivid' },
@@ -341,11 +342,9 @@ export default function Settings() {
   const manageActiveSubscription = async close => {
     close()
     setSubscriptionAction('manage')
-    try { await presentNativeCustomerCenter(user.id) }
-    catch {
-      try { await openSubscriptionManagement(user.id, { native: true }) }
-      catch (error) { toast(error.message || t('Could not open subscription management.')) }
-    } finally { setSubscriptionAction('') }
+    try { await openSubscriptionManagement(user.id, { native: true }) }
+    catch (error) { toast(error.message || t('Could not open subscription management.')) }
+    finally { setSubscriptionAction('') }
   }
 
   const manageSubscription = async () => {
@@ -400,7 +399,17 @@ export default function Settings() {
     if (subscriptionAction) return
     setSubscriptionAction('plans')
     try {
-      await presentNativePaywall(user.id, { displayCloseButton: true })
+      let access = null
+      if (MOBILE) {
+        access = await refreshNativeSubscription(user.id)
+        if (access.status === 'error') throw new Error(access.error || t('We could not verify your subscription. Check your connection, then try again.'))
+      }
+      useUI.getState().openSheet(close => <SubscriptionPlansSheet
+        user={user}
+        status={access}
+        close={close}
+        refresh={() => refreshNativeSubscription(user.id)}
+      />, { kind: 'full', locked: true })
     }
     catch (error) { toast(t(error.message || 'The subscription screen could not be opened. Choose a plan below or try again.')) }
     finally { setSubscriptionAction('') }
